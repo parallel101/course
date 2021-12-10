@@ -1,2 +1,2 @@
 x:
-	./main.py
+	./danmu.py
