@@ -1,23 +1,20 @@
 #!/usr/bin/python
 
-from selenium import webdriver
-import time, re, os
+import requests
+import json
+import time
+import os
 
-url = 'https://live.bilibili.com/2171135'
-
-opts = webdriver.ChromeOptions()
-opts.add_argument('headless')
-wd = webdriver.Chrome(options=opts)
-wd.implicitly_wait(10)
-wd.get(url)
-
+roomid = 14248205
+url = f'https://api.live.bilibili.com/xlive/web-room/v1/dM/gethistory?roomid={roomid}'
 while True:
-    res = []
-    for e in wd.find_elements_by_css_selector('div.chat-item.danmaku-item'):
-        usr = e.get_attribute('data-uname')
-        msg = e.get_attribute('data-danmaku')
-        res.append((usr, msg))
-    os.system('clear')
-    for usr, msg in res:
-        print(f'{usr}: {msg}')
-    time.sleep(8)
+    req = requests.get(url)
+    data = json.loads(req.text)
+    msgs = data['data']['room']
+    res = '\033[2J'
+    for msg in msgs:
+        user = msg['nickname']
+        text = msg['text']
+        res += f'\033[31;1m{user}\033[0m: \033[32;1m{text}\033[0m\n'
+    print(res, end='')
+    time.sleep(1)
