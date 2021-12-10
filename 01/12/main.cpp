@@ -1,8 +1,13 @@
-#include <fmt/core.h>
+#include <glm/vec3.hpp>
 #include <iostream>
 
+inline std::ostream &operator<<(std::ostream &os, glm::vec3 const &v) {
+    return os << v.x << ' ' << v.y << ' ' << v.z;
+}
+
 int main() {
-    std::string msg = fmt::format("The answer is {}.\n", 42);
-    std::cout << msg << std::endl;
+    glm::vec3 v(1, 2, 3);
+    v += 1;
+    std::cout << v << std::endl;
     return 0;
 }
