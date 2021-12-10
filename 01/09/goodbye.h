@@ -1,3 +1,3 @@
 #include "MyClass.h"
 
-void hello(MyClass mc);
+void goodbye(MyClass mc);
