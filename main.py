@@ -33,10 +33,13 @@ class MainWindow(QWidget):
 
         self.setWindowOpacity(0.85)
         self.setWindowFlag(Qt.FramelessWindowHint)
+        self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowTitle('双笙子佯谬的弹幕姬')
-        self.setGeometry(750, 200, 480, 480)
+        self.setGeometry(0, 0, 300, 200)
 
         self.lv = QListView()
+        self.lv.setSelectionMode(QAbstractItemView.NoSelection)
         self.slm = QStringListModel()
         self.slm.setStringList(['(没有弹幕)'])
         self.lv.setModel(self.slm)
@@ -49,7 +52,7 @@ class MainWindow(QWidget):
         self.update()
 
     def update(self):
-        threading.Timer(1, self.update)
+        threading.Timer(1, self.update).start()
         msgs = get_messages()
         print('update got:', msgs)
         self.slm.setStringList(msgs)
