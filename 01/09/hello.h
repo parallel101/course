@@ -1,3 +1,5 @@
+#pragma once
+
 #include "MyClass.h"
 
-void goodbye(MyClass mc);
+void hello(MyClass mc);
