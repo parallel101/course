@@ -2,9 +2,13 @@
 #include <iostream>
 
 int main() {
-    std::vector<int> v(4);
+    std::vector<int> v(2);
+
     v[0] = 4;
     v[1] = 3;
+
+    v.resize(4);
+
     v[2] = 2;
     v[3] = 1;
 
