@@ -55,7 +55,8 @@
 # 参考资料
 
 - [C++ 官方文档](https://en.cppreference.com/w/)
-- [C++ 并行教材书](https://www.bookstack.cn/read/Cpp_Concurrency_In_Action/README.md)
+- [C++ 并行教材](https://www.bookstack.cn/read/Cpp_Concurrency_In_Action/README.md)
+- [CMake 实用教材](https://www.bookstack.cn/read/CMake-Cookbook/README.md)
 - [CMake 官方文档](https://cmake.org/cmake/help/latest/)
 - [Git 官方文档](https://git-scm.com/doc)
 - [GitHub 官方文档](https://docs.github.com/en)

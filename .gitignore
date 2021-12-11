@@ -2,3 +2,4 @@ a.out
 *.o
 build
 .~*
+GNUmakefile
