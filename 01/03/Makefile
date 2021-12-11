@@ -1,6 +1,3 @@
-run: a.out
-	./a.out
-
 a.out: hello.o main.o
 	g++ hello.o main.o -o a.out
 
