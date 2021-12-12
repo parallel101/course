@@ -1,6 +1,5 @@
 #include <cstdio>
-#include <cstdlib>
-#include <vector>
+#include <memory>
 
 struct C {
     C() {
@@ -13,9 +12,9 @@ struct C {
 };
 
 int main() {
-    std::vector<C> p(1);
+    std::unique_ptr<C> p = std::make_unique<C>();
 
-    if (rand() != 0) {
+    if (1 + 1 == 2) {
         printf("出了点小状况……\n");
         return 1;  // 自动释放 p
     }

@@ -1,6 +1,5 @@
 #include <cstdio>
-#include <cstdlib>
-#include <vector>
+#include <memory>
 
 struct C {
     C() {
@@ -13,12 +12,11 @@ struct C {
 };
 
 int main() {
-    std::vector<C> p(1);
+    std::unique_ptr<C> p = std::make_unique<C>();
 
-    if (rand() != 0) {
-        printf("出了点小状况……\n");
-        return 1;  // 自动释放 p
-    }
+    printf("提前释放……\n");
+    p = nullptr;
+    printf("……释放成功\n");
 
-    return 0;  // 自动释放 p
+    return 0;  // p 不会再释放一遍
 }
