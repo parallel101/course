@@ -41,5 +41,5 @@ int main() {
     Vector v2 = v1;
     // Vector v2(v1);  // 与上一种等价
 
-    return 0;    // 自动释放 v1, v2
+    return 0;
 }

@@ -15,12 +15,6 @@ struct Vector {
         free(m_data);
     }
 
-    Vector(Vector const &other) {
-        m_size = other.m_size;
-        m_data = (int *)malloc(m_size * sizeof(int));
-        memcpy(m_data, other.m_data, m_size * sizeof(int));
-    }
-
     size_t size() {
         return m_size;
     }
@@ -41,5 +35,5 @@ int main() {
     Vector v2 = v1;
     // Vector v2(v1);  // 与上一种等价
 
-    return 0;    // 自动释放 v1, v2
+    return 0;
 }

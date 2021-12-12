@@ -21,6 +21,12 @@ struct Vector {
         memcpy(m_data, other.m_data, m_size * sizeof(int));
     }
 
+    Vector &operator=(Vector const &other) {
+        this->~Vector();             // 先销毁现有的
+        new (this) Vector(other);    // 再重新构造（placement new）
+        return *this;                // 支持连等号：v1 = v2 = v3
+    }
+
     size_t size() {
         return m_size;
     }
@@ -37,9 +43,9 @@ struct Vector {
 
 int main() {
     Vector v1(32);
+    Vector v2(64);
 
-    Vector v2 = v1;
-    // Vector v2(v1);  // 与上一种等价
+    v2 = v1;
 
-    return 0;    // 自动释放 v1, v2
+    return 0;
 }
