@@ -55,8 +55,12 @@
 # 参考资料
 
 - [C++ 官方文档](https://en.cppreference.com/w/)
-- [C++ 并行教材](https://www.bookstack.cn/read/Cpp_Concurrency_In_Action/README.md)
-- [CMake 实用教材](https://www.bookstack.cn/read/CMake-Cookbook/README.md)
+- [LearnCpp 中文版](https://learncpp-cn.github.io/)
+- [C++ 并发编程实战](https://www.bookstack.cn/read/Cpp_Concurrency_In_Action/README.md)
+- [因特尔 TBB 编程指南](https://www.inf.ed.ac.uk/teaching/courses/ppls/TBBtutorial.pdf)
+- [并行体系结构与编程 (CMU 15-418)](https://www.bilibili.com/video/av48153629/)
+- [深入理解计算机原理 (CSAPP)](http://csapp.cs.cmu.edu/)
+- [CMake “菜谱”](https://www.bookstack.cn/read/CMake-Cookbook/README.md)
 - [CMake 官方文档](https://cmake.org/cmake/help/latest/)
 - [Git 官方文档](https://git-scm.com/doc)
 - [GitHub 官方文档](https://docs.github.com/en)
