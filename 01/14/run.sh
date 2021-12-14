@@ -1,5 +1,6 @@
-git submodule update --init --recursive
 set -e
+
+git clone https://github.com/microsoft/vcpkg.git --depth=1
 
 rm -rf build
 cmake -B build -DCMAKE_TOOLCHAIN_FILE="$PWD/vcpkg/scripts/buildsystems/vcpkg.cmake"
