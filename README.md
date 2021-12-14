@@ -54,6 +54,7 @@
 
 # 参考资料
 
+- [热心观众整理的学习资料](https://github.com/jiayaozhang/OpenVDB_and_TBB)
 - [C++ 官方文档](https://en.cppreference.com/w/)
 - [LearnCpp 中文版](https://learncpp-cn.github.io/)
 - [C++ 并发编程实战](https://www.bookstack.cn/read/Cpp_Concurrency_In_Action/README.md)
@@ -64,4 +65,5 @@
 - [CMake 官方文档](https://cmake.org/cmake/help/latest/)
 - [Git 官方文档](https://git-scm.com/doc)
 - [GitHub 官方文档](https://docs.github.com/en)
+- [助教老师知乎](https://www.zhihu.com/people/AlbertRen/posts)
 
