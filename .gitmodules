@@ -1,0 +1,3 @@
+[submodule "hw01"]
+	path = hw01
+	url = https://github.com/parallel101/hw01.git
