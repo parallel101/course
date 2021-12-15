@@ -17,3 +17,16 @@ int main() {
         ...
     }
 }
+
+void func(std::tuple<int, float, std::string> arg, std::vector<int> arr) {
+    ...
+}
+
+int main() {
+    func({1, 3.14f, "佩奇"}, {1, 4, 2, 8, 5, 7});
+    // 等价于：
+    func(std::tuple<int, float, std::string>(1, 3.14f, "佩奇"),
+         std::vector<int>({1, 4, 2, 8, 5, 7}));
+    // （C++17起）等价于：
+    func(std::tuple(1, 3.14f, "佩奇"), std::vector({1, 4, 2, 8, 5, 7}));
+}
