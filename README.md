@@ -56,6 +56,7 @@
 
 - [热心观众整理的学习资料](https://github.com/jiayaozhang/OpenVDB_and_TBB)
 - [C++ 官方文档](https://en.cppreference.com/w/)
+- [C++ 核心开发规范](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md)
 - [LearnCpp 中文版](https://learncpp-cn.github.io/)
 - [C++ 并发编程实战](https://www.bookstack.cn/read/Cpp_Concurrency_In_Action/README.md)
 - [因特尔 TBB 编程指南](https://www.inf.ed.ac.uk/teaching/courses/ppls/TBBtutorial.pdf)
