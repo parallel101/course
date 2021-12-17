@@ -4,10 +4,6 @@
 struct Pig {
     std::string m_name;
     int m_weight{0};
-
-    Pig(Pig const &other)
-        : m_name(other.m_name), m_weight(other.m_weight)
-    {}
 };
 
 void show(Pig pig) {

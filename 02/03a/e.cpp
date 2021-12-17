@@ -4,6 +4,12 @@
 struct Pig {
     std::string m_name;
     int m_weight{0};
+
+    Pig() = default;
+
+    Pig(std::string name, int weight)
+        : m_name(name), m_weight(weight)
+    {}
 };
 
 void show(Pig pig) {
@@ -12,14 +18,8 @@ void show(Pig pig) {
 }
 
 int main() {
-    Pig pig{"佩奇", 80};
+    Pig pig;
 
     show(pig);
-
-    Pig pig2 = pig;    // 调用 Pig(Pig const &)
-    // Pig pig2(pig);  // 与上一种方式等价
-
-    show(pig);
-
     return 0;
 }
