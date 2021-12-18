@@ -12,7 +12,7 @@ while True:
     data = json.loads(req.text)
     msgs = data['data']['room']
     with open('/tmp/danmu.txt', 'w') as f:
-        res = '\033[2J'
+        res = '\033[H\033[2J\033[3J'
         for msg in msgs:
             user = msg['nickname']
             text = msg['text']
