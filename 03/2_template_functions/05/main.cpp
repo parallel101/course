@@ -1,14 +1,13 @@
 #include <iostream>
 
-template <int N>
-void show_times(std::string msg) {
-    for (int i = 0; i < N; i++) {
-        std::cout << msg << std::endl;
-    }
+template <class T = int>
+T two() {
+    return 2;
 }
 
 int main() {
-    show_times<1>("one");
-    show_times<3>("three");
-    show_times<4>("four");
+    std::cout << two<int>() << std::endl;
+    std::cout << two<float>() << std::endl;
+    std::cout << two<double>() << std::endl;
+    std::cout << two() << std::endl;  // 等价于 two<int>()
 }

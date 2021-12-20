@@ -1,14 +1,14 @@
 #include <iostream>
 
-template <int N = 1, class T>
-void show_times(T msg) {
+template <int N>
+void show_times(std::string msg) {
     for (int i = 0; i < N; i++) {
         std::cout << msg << std::endl;
     }
 }
 
 int main() {
-    show_times("one");
-    show_times<3>(42);
-    show_times<4>('%');
+    show_times<1>("one");
+    show_times<3>("three");
+    show_times<4>("four");
 }
