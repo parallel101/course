@@ -11,8 +11,12 @@ int sumto(int n) {
     return res;
 }
 
+constexpr bool isnegative(int n) {
+    return n < 0;
+}
+
 int main() {
-    constexpr bool debug = true;
+    constexpr bool debug = isnegative(-2014);
     std::cout << sumto<debug>(4) << std::endl;
     return 0;
 }
