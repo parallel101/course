@@ -1,24 +1,15 @@
-#include <cstdio>
-
-struct print_t {
-    void operator()(float n) {
-        printf("Float %f\n", n);
-    }
-
-    void operator()(int n) {
-        printf("Int %d\n", n);
-    }
-};
-print_t print;
+#include <iostream>
 
 template <class Func>
 void call_twice(Func func) {
-    func(0);
-    func(1);
-    func(3.14f);
+    std::cout << func(0) << std::endl;
+    std::cout << func(1) << std::endl;
 }
 
 int main() {
-    call_twice(print);
+    auto twice = [] (int n) -> int {
+        return n * 2;
+    };
+    call_twice(twice);
     return 0;
 }
