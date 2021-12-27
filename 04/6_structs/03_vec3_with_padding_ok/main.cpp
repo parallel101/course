@@ -1,7 +1,8 @@
-struct alignas(16) MyVec {
+struct MyVec {
     float x;
     float y;
     float z;
+    char padding[4];
 };
 
 MyVec a[1024];

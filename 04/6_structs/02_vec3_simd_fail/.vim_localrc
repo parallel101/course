@@ -1,0 +1,2 @@
+" vim: ft=vim
+nnoremap <silent> <F7> :wa<CR>:!make\|\|(echo -n .;read -n1)<CR><CR>
