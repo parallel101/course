@@ -1,11 +1,12 @@
 #include "common.h"
 
-namespace aos {
+namespace aos_aligned {
 
 struct Point {
     float x;
     float y;
     float z;
+    char padding[4];
 };
 
 Point ps[N];

@@ -1,6 +1,7 @@
+#include <cstdint>
 #include "common.h"
 
-namespace soa {
+namespace soa_size_t {
 
 struct Point {
     float x[N];
@@ -11,7 +12,7 @@ struct Point {
 Point ps;
 
 void compute() {
-    for (int i = 0; i < N; i++) {
+    for (std::size_t i = 0; i < N; i++) {
         ps.x[i] = ps.x[i] + ps.y[i] + ps.z[i];
     }
 }

@@ -8,7 +8,11 @@ project(testbench LANGUAGES CXX)
 add_executable(testbench
     main.cpp
     aos.cpp
+    aos_aligned.cpp
     soa.cpp
+    soa_size_t.cpp
+    soa_unroll.cpp
+    aosoa.cpp
     )
 
 find_package(OpenMP REQUIRED)

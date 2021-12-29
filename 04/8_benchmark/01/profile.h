@@ -10,6 +10,6 @@ static inline void profile(int times, Name const &name, Func const &func) {
         func();
     }
     auto t1 = std::chrono::steady_clock::now();
-    long dt = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count() / times;
-    std::cout << name << ": " << dt << " us" << std::endl;
+    long dt = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count() / times;
+    std::cout << name << ": " << dt << " ns" << std::endl;
 }
