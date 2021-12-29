@@ -2,6 +2,8 @@
 
 namespace aosoa {
 
+#define M (1<<4)
+
 struct Point {
     float x[M];
     float y[M];
