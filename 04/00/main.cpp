@@ -1,13 +1,9 @@
-struct alignas(16) MyVec {
-    float x;
-    float y;
-    float z;
+struct A {
+    static inline int other(int a) {
+        return a;
+    }
 };
 
-MyVec a[1024];
-
-void func() {
-    for (int i = 0; i < 1024; i++) {
-        a[i].x *= a[i].y;
-    }
+int func() {
+    return A().other(233);
 }
