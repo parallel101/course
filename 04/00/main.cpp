@@ -1,9 +1,11 @@
-struct A {
-    static inline int other(int a) {
-        return a;
-    }
-};
+#include <cmath>
 
-int func() {
-    return A().other(233);
+void func(float *a, float *b, float *c) {
+    for (int i = 0; i < 1024; i++) {
+        float tmp = 0;
+        for (int j = 0; j < 1024; j++) {
+            tmp += a[i] * b[j];
+        }
+        c[i] += tmp;
+    }
 }
