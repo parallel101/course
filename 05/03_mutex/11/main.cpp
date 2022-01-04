@@ -1,20 +1,23 @@
-#include <iostream>
+#include <cstdio>
+#include <thread>
 #include <mutex>
 
-std::mutex mtx1;
-
-/// NOTE: please lock mtx1 before calling other()
-void other() {
-    // do something
-}
-
-void func() {
-    mtx1.lock();
-    other();
-    mtx1.unlock();
-}
-
 int main() {
-    func();
+    std::mutex mtx;
+    std::thread t1([&] {
+        std::unique_lock grd(mtx);
+        printf("t1 owns the lock\n");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    });
+
+    std::thread t2([&] {
+        mtx.lock();
+        std::unique_lock grd(mtx, std::adopt_lock);
+        printf("t2 owns the lock\n");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    });
+
+    t1.join();
+    t2.join();
     return 0;
 }
