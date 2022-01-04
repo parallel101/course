@@ -10,17 +10,17 @@ int main() {
     std::thread t1([&] {
         for (int i = 0; i < 1000; i++) {
             mtx1.lock();
+            mtx1.unlock();
             mtx2.lock();
             mtx2.unlock();
-            mtx1.unlock();
         }
     });
     std::thread t2([&] {
         for (int i = 0; i < 1000; i++) {
             mtx2.lock();
+            mtx2.unlock();
             mtx1.lock();
             mtx1.unlock();
-            mtx2.unlock();
         }
     });
     t1.join();
