@@ -13,3 +13,6 @@
 [submodule "subtitles"]
 	path = subtitles
 	url = https://github.com/parallel101/subtitles.git
+[submodule "hw05"]
+	path = hw05
+	url = https://github.com/parallel101/hw05.git

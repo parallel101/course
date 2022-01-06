@@ -1,9 +1,0 @@
-## DOC: https://git-scm.com/docs/gitattributes
-# Auto detect text files and perform LF normalization
-*       text=auto
-
-# keep ASS file use CRLF
-*.ass   text    eol=crlf
-
-# binary files should be left untouched
-*.pptx  binary
