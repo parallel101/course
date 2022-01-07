@@ -1,12 +1,12 @@
 #include <iostream>
-#include <unistd.h>
+#include <thread>
 #include <string>
 
 void download(std::string file) {
     for (int i = 0; i < 10; i++) {
         std::cout << "Downloading " << file
                   << " (" << i * 10 << "%)..." << std::endl;
-        usleep(400000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(400));
     }
     std::cout << "Download complete: " << file << std::endl;
 }
