@@ -19,7 +19,7 @@ void interact() {
 
 int main() {
     std::thread t1([&] {
-        download("hello.zip"); 
+        download("hello.zip");
     });
     interact();
     return 0;

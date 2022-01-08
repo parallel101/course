@@ -19,7 +19,7 @@ void interact() {
 
 void myfunc() {
     std::thread t1([&] {
-        download("hello.zip"); 
+        download("hello.zip");
     });
     t1.detach();
     // t1 所代表的线程被分离了，不再随 t1 对象销毁

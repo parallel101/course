@@ -19,7 +19,7 @@ void interact() {
 
 void myfunc() {
     std::thread t1([&] {
-        download("hello.zip"); 
+        download("hello.zip");
     });
     // 退出函数体时，会销毁 t1 线程的句柄！
 }

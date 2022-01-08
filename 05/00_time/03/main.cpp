@@ -3,7 +3,6 @@
 #include <chrono>
 
 int main() {
-    auto t = std::chrono::steady_clock::now() + std::chrono::milliseconds(400);
-    std::this_thread::sleep_until(t);
+    std::this_thread::sleep_for(std::chrono::milliseconds(400));
     return 0;
 }
