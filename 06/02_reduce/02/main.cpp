@@ -22,7 +22,7 @@ int main() {
         });
     }
     tg.wait();
-    for (int t = 0; t < maxt; t++) {
+    for (size_t t = 0; t < maxt; t++) {
         res += tmp_res[t];
     }
 

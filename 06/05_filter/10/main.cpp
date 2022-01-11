@@ -10,6 +10,7 @@ int main() {
 
     TICK(filter);
 
+    TICK(init);
     std::vector<pod<float>> a(n);
     tbb::parallel_for(tbb::blocked_range<size_t>(0, n),
     [&] (tbb::blocked_range<size_t> r) {
@@ -17,7 +18,9 @@ int main() {
             a[i] = std::sin(i);
         }
     });
+    TOCK(init);
 
+    TICK(scan);
     std::vector<pod<size_t>> ind(n + 1);
     ind[0] = 0;
     tbb::parallel_scan(tbb::blocked_range<size_t>(0, n), (size_t)0,
@@ -31,7 +34,9 @@ int main() {
     }, [] (size_t x, size_t y) {
         return x + y;
     });
+    TOCK(scan);
 
+    TICK(fill);
     std::vector<pod<float>> b(ind.back());
     tbb::parallel_for(tbb::blocked_range<size_t>(0, n),
     [&] (tbb::blocked_range<size_t> r) {
@@ -40,6 +45,7 @@ int main() {
                 b[ind[i]] = a[i];
         }
     });
+    TOCK(fill);
 
     TOCK(filter);
 
