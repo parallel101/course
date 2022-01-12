@@ -1,16 +1,19 @@
 #include <iostream>
 #include <cstdlib>
-#include <vector>
 #include <cmath>
-#include <algorithm>
 #include "ticktock.h"
 
+int fib(int n) {
+    if (n < 2)
+        return n;
+    int first = fib(n - 1);
+    int second = fib(n - 2);
+    return first + second;
+}
+
 int main() {
-    size_t n = 1<<24;
-    std::vector<int> arr(n);
-    std::generate(arr.begin(), arr.end(), std::rand);
-    TICK(std_sort);
-    std::sort(arr.begin(), arr.end(), std::less<int>{});
-    TOCK(std_sort);
+    TICK(fib);
+    std::cout << fib(39) << std::endl;
+    TOCK(fib);
     return 0;
 }

@@ -1,49 +1,32 @@
 #include <iostream>
 #include <cstdlib>
-#include <vector>
 #include <cmath>
-#include <algorithm>
-#include <tbb/parallel_invoke.h>
 #include "ticktock.h"
+#include <tbb/parallel_invoke.h>
 
-template <class T>
-void quick_sort(T *data, size_t size) {
-    if (size < 1)
-        return;
-    if (size < (1<<16)) {
-        std::sort(data, data + size, std::less<T>{});
-        return;
-    }
-    size_t mid = std::hash<size_t>{}(size);
-    mid ^= std::hash<void *>{}(static_cast<void *>(data));
-    mid %= size;
-    std::swap(data[0], data[mid]);
-    T pivot = data[0];
-    size_t left = 0, right = size - 1;
-    while (left < right) {
-        while (left < right && !(data[right] < pivot))
-            right--;
-        if (left < right)
-            data[left++] = data[right];
-        while (left < right && data[left] < pivot)
-            left++;
-        if (left < right)
-            data[right--] = data[left];
-    }
-    data[left] = pivot;
+int serial_fib(int n) {
+    if (n < 2)
+        return n;
+    int first = serial_fib(n - 1);
+    int second = serial_fib(n - 2);
+    return first + second;
+}
+
+int fib(int n) {
+    if (n < 29)
+        return serial_fib(n);
+    int first, second;
     tbb::parallel_invoke([&] {
-        quick_sort(data, left);
+        first = fib(n - 1);
     }, [&] {
-        quick_sort(data + left + 1, size - left - 1);
+        second = fib(n - 2);
     });
+    return first + second;
 }
 
 int main() {
-    size_t n = 1<<24;
-    std::vector<int> arr(n);
-    std::generate(arr.begin(), arr.end(), std::rand);
-    TICK(better_parallel_sort);
-    quick_sort(arr.data(), arr.size());
-    TOCK(better_parallel_sort);
+    TICK(fib);
+    std::cout << fib(39) << std::endl;
+    TOCK(fib);
     return 0;
 }
