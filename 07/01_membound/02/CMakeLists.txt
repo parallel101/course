@@ -12,3 +12,5 @@ target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX)
 
 #find_package(TBB REQUIRED)
 #target_link_libraries(main PUBLIC TBB::tbb)
+
+target_compile_options(main PUBLIC -fno-tree-vectorize)
