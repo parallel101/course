@@ -8,5 +8,5 @@
 
 #define TICK(x) auto bench_##x = tbb::tick_count::now();
 #define TOCK(x) std::cout << #x ": " << (tbb::tick_count::now() - bench_##x).seconds() << "s" << std::endl;
-#define MTICK(x, times) auto bench_##x = tbb::tick_count::now(); int times_##x = times; for (int count_##x = 0; count_##x < times_##x; count_##x++) {
-#define MTOCK(x) } std::cout << #x ": " << (tbb::tick_count::now() - bench_##x).seconds() / times_##x << "s" << std::endl;
+//#define MTICK(x, times) auto bench_##x = tbb::tick_count::now(); int times_##x = times; for (int count_##x = 0; count_##x < times_##x; count_##x++) {
+//#define MTOCK(x) } std::cout << #x ": " << (tbb::tick_count::now() - bench_##x).seconds() / times_##x << "s" << std::endl;

@@ -16,4 +16,4 @@ target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX)
 find_package(benchmark REQUIRED)
 target_link_libraries(main PUBLIC benchmark::benchmark)
 
-#target_compile_options(main PUBLIC -ffast-math -march=native)
+target_compile_options(main PUBLIC -ffast-math -march=native)
