@@ -13,7 +13,7 @@ int main() {
         for (size_t i = r.pages().begin(); i < r.pages().end(); i++) {
             for (size_t j = r.cols().begin(); j < r.cols().end(); j++) {
                 for (size_t k = r.rows().begin(); k < r.rows().end(); k++) {
-                    a[(i * n + k) * n + j] = std::sin(i) * std::sin(j) * std::sin(k);
+                    a[(i * n + j) * n + k] = std::sin(i) * std::sin(j) * std::sin(k);
                 }
             }
         }

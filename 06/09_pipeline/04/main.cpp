@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <vector>
 #include <cmath>
-#include <numeric>
 #include "ticktock.h"
 #include <tbb/parallel_pipeline.h>
 
@@ -49,7 +48,6 @@ int main() {
     size_t n = 1<<11;
 
     std::vector<Data> dats(n);
-    std::vector<float> result;
 
     TICK(process);
     auto it = dats.begin();
@@ -77,14 +75,9 @@ int main() {
         dat->step3();
         return dat;
     })
-    , tbb::make_filter<Data *, float>(tbb::filter_mode::parallel,
-    [&] (Data *dat) -> float {
-        float sum = std::reduce(dat->arr.begin(), dat->arr.end());
-        return sum;
-    })
-    , tbb::make_filter<float, void>(tbb::filter_mode::serial_out_of_order,
-    [&] (float sum) -> void {
-        result.push_back(sum);
+    , tbb::make_filter<Data *, void>(tbb::filter_mode::parallel,
+    [&] (Data *dat) -> void {
+        dat->step4();
     })
     );
     TOCK(process);

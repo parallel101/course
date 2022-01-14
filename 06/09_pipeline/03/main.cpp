@@ -3,7 +3,7 @@
 #include <vector>
 #include <cmath>
 #include "ticktock.h"
-#include <tbb/parallel_pipeline.h>
+#include <tbb/parallel_for_each.h>
 
 struct Data {
     std::vector<float> arr;
@@ -50,36 +50,18 @@ int main() {
     std::vector<Data> dats(n);
 
     TICK(process);
-    auto it = dats.begin();
-    tbb::parallel_pipeline(8
-    , tbb::make_filter<void, Data *>(tbb::filter_mode::serial_in_order,
-    [&] (tbb::flow_control &fc) -> Data * {
-        if (it == dats.end()) {
-            fc.stop();
-            return nullptr;
-        }
-        return &*it++;
-    })
-    , tbb::make_filter<Data *, Data *>(tbb::filter_mode::parallel,
-    [&] (Data *dat) -> Data * {
-        dat->step1();
-        return dat;
-    })
-    , tbb::make_filter<Data *, Data *>(tbb::filter_mode::parallel,
-    [&] (Data *dat) -> Data * {
-        dat->step2();
-        return dat;
-    })
-    , tbb::make_filter<Data *, Data *>(tbb::filter_mode::parallel,
-    [&] (Data *dat) -> Data * {
-        dat->step3();
-        return dat;
-    })
-    , tbb::make_filter<Data *, void>(tbb::filter_mode::parallel,
-    [&] (Data *dat) -> void {
-        dat->step4();
-    })
-    );
+    tbb::parallel_for_each(dats.begin(), dats.end(), [&] (Data &dat) {
+        dat.step1();
+    });
+    tbb::parallel_for_each(dats.begin(), dats.end(), [&] (Data &dat) {
+        dat.step2();
+    });
+    tbb::parallel_for_each(dats.begin(), dats.end(), [&] (Data &dat) {
+        dat.step3();
+    });
+    tbb::parallel_for_each(dats.begin(), dats.end(), [&] (Data &dat) {
+        dat.step4();
+    });
     TOCK(process);
 
     return 0;
