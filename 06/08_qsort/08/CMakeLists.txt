@@ -7,8 +7,8 @@ project(main LANGUAGES CXX)
 
 add_executable(main main.cpp)
 
-find_package(OpenMP REQUIRED)
-target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX)
+#find_package(OpenMP REQUIRED)
+#target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX)
 
 find_package(TBB REQUIRED)
 target_link_libraries(main PUBLIC TBB::tbb)
