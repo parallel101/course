@@ -1,47 +1,33 @@
 #include <iostream>
-#include <tbb/task_group.h>
+#include <tbb/parallel_reduce.h>
+#include <tbb/blocked_range.h>
 #include <vector>
 #include <cmath>
 
 int main() {
     size_t n = 1<<26;
     std::vector<float> a(n);
-    float res = 0;
+    for (size_t i = 0; i < n; i++) {
+        a[i] = 10.f + std::sin(i);
+    }
 
-    size_t maxt = 4;
-    tbb::task_group tg1;
-    std::vector<float> tmp_res(maxt);
-    for (size_t t = 0; t < maxt; t++) {
-        size_t beg = t * n / maxt;
-        size_t end = std::min(n, (t + 1) * n / maxt);
-        tg1.run([&, t, beg, end] {
-            float local_res = 0;
-            for (size_t i = beg; i < end; i++) {
-                local_res += std::sin(i);
-            }
-            tmp_res[t] = local_res;
-        });
+    float serial_avg = 0;
+    for (size_t i = 0; i < n; i++) {
+        serial_avg += a[i];
     }
-    tg1.wait();
-    for (size_t t = 0; t < maxt; t++) {
-        tmp_res[t] += res;
-        res = tmp_res[t];
-    }
-    tbb::task_group tg2;
-    for (size_t t = 1; t < maxt; t++) {
-        size_t beg = t * n / maxt - 1;
-        size_t end = std::min(n, (t + 1) * n / maxt) - 1;
-        tg2.run([&, t, beg, end] {
-            float local_res = tmp_res[t];
-            for (size_t i = beg; i < end; i++) {
-                local_res += std::sin(i);
-                a[i] = local_res;
-            }
-        });
-    }
-    tg2.wait();
+    serial_avg /= n;
+    std::cout << serial_avg << std::endl;
 
-    std::cout << a[n / 2] << std::endl;
-    std::cout << res << std::endl;
+    float parallel_avg = tbb::parallel_reduce(tbb::blocked_range<size_t>(0, n), (float)0,
+    [&] (tbb::blocked_range<size_t> r, float local_avg) {
+        for (size_t i = r.begin(); i < r.end(); i++) {
+            local_avg += a[i];
+        }
+        return local_avg;
+    }, [] (float x, float y) {
+        return x + y;
+    }) / n;
+
+    std::cout << parallel_avg << std::endl;
     return 0;
 }
