@@ -12,3 +12,12 @@ target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX)
 
 #find_package(TBB REQUIRED)
 #target_link_libraries(main PUBLIC TBB::tbb)
+
+find_package(benchmark REQUIRED)
+target_link_libraries(main PUBLIC benchmark::benchmark)
+
+if (MSVC)
+    target_compile_options(main PUBLIC /fp:fast /arch:AVX)
+else()
+    target_compile_options(main PUBLIC -ffast-math -march=native)
+endif()
