@@ -61,6 +61,19 @@ void BM_write_streamed(benchmark::State &bm) {
 }
 BENCHMARK(BM_write_streamed);
 
+void BM_write_stream_then_read(benchmark::State &bm) {
+    for (auto _: bm) {
+#pragma omp parallel for
+        for (size_t i = 0; i < n; i++) {
+            float value = 1;
+            _mm_stream_si32((int *)&a[i], *(int *)&value);
+            benchmark::DoNotOptimize(a[i]);
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_write_stream_then_read);
+
 void BM_write_streamed_ps(benchmark::State &bm) {
     for (auto _: bm) {
 #pragma omp parallel for
