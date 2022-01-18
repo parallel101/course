@@ -16,6 +16,27 @@
 constexpr size_t nx = 1<<13;
 constexpr size_t ny = 1<<13;
 
+void BM_x_blur(benchmark::State &bm) {
+    constexpr int nblur = 8;
+    ndarray<2, float, nblur> a(nx, ny);
+    ndarray<2, float, nblur> b(nx, ny);
+
+    for (auto _: bm) {
+#pragma omp parallel for collapse(2)
+        for (int y = 0; y < ny; y++) {
+            for (int x = 0; x < nx; x++) {
+                float res = 0;
+                for (int t = -nblur; t <= nblur; t++) {
+                    res += a(x + t, y);
+                }
+                b(x, y) = res;
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_x_blur);
+
 void BM_stdvector(benchmark::State &bm) {
     std::vector<float> a(nx * ny);
 

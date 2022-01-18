@@ -5,20 +5,23 @@
 #include <stdexcept>
 #include <type_traits>
 
-template <std::size_t N, class T>
+template <std::size_t N, class T, std::size_t LoBound = 0, std::size_t HiBound = LoBound>
 class ndarray {
-    static_assert(N > 0);
-    static_assert(std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, T>);
+    static_assert(N > 0, "N cannot be 0");
+    static_assert(std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, T>, "T cannot be cvref");
 
-    using Dim = std::array<std::size_t, N>;
+    using Dim = std::array<std::conditional_t<LoBound == 0, std::size_t, std::intptr_t>, N>;
+    using Shape = std::array<std::size_t, N>;
 
     std::vector<T> m_arr;
-    Dim m_shape{};
+    Shape m_shape{};
 
-    constexpr static std::size_t _calc_size(Dim const &dim) noexcept {
-        std::size_t size = dim[0];
-        for (std::size_t i = 1; i < N; i++)
-            size *= dim[i];
+    constexpr static std::size_t _calc_size(Shape const &shape) noexcept
+    {
+        std::size_t size = shape[0];
+        for (std::size_t i = 1; i < N; i++) {
+            size *= shape[i] + (LoBound + HiBound);
+        }
         return size;
     }
 
@@ -30,38 +33,38 @@ public:
     ndarray &operator=(ndarray &&) = default;
     ~ndarray() = default;
 
-    explicit ndarray(Dim const &dim)
-        : m_arr(_calc_size(dim))
-        , m_shape(dim)
+    explicit ndarray(Shape const &shape)
+        : m_arr(_calc_size(shape))
+        , m_shape(shape)
     {
     }
 
-    explicit ndarray(Dim const &dim, T const &t)
-        : m_arr(_calc_size(dim))
-        , m_shape(dim)
+    explicit ndarray(Shape const &shape, T const &value)
+        : m_arr(_calc_size(shape), value)
+        , m_shape(shape)
     {
     }
 
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>
     explicit ndarray(Ts const &...ts)
-        : ndarray(Dim{ts...})
+        : ndarray(Shape{ts...})
     {
     }
 
-    void reshape(Dim const &dim)
+    void reshape(Shape const &shape)
     {
-        std::size_t size = _calc_size(dim);
-        m_shape = dim;
+        std::size_t size = _calc_size(shape);
+        m_shape = shape;
         m_arr.clear();
         m_arr.resize(size);
     }
 
-    void reshape(Dim const &dim, T const &t)
+    void reshape(Shape const &shape, T const &value)
     {
-        std::size_t size = _calc_size(dim);
-        m_shape = dim;
+        std::size_t size = _calc_size(shape);
+        m_shape = shape;
         m_arr.clear();
-        m_arr.resize(size);
+        m_arr.resize(size, value);
     }
 
     void shrink_to_fit()
@@ -72,26 +75,26 @@ public:
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>
     void reshape(Ts const &...ts)
     {
-        this->reshape(Dim{ts...});
+        this->reshape(Shape{ts...});
     }
 
-    constexpr Dim shape() const noexcept
+    constexpr Shape shape() const noexcept
     {
         return m_shape;
     }
 
-    constexpr Dim shape(std::size_t i) const noexcept
+    constexpr std::size_t shape(std::size_t i) const noexcept
     {
         return m_shape[i];
     }
 
     constexpr std::size_t linearize(Dim const &dim) const noexcept
     {
-        std::size_t offset = dim[0];
+        std::size_t offset{dim[0] + LoBound};
         std::size_t term = 1;
         for (std::size_t i = 1; i < N; i++) {
-            term *= m_shape[i - 1];
-            offset += term * dim[i];
+            term *= m_shape[i - 1] + (LoBound + HiBound);
+            offset += term * std::size_t{dim[i] + LoBound};
         }
         return offset;
     }
@@ -99,40 +102,44 @@ public:
     std::size_t safe_linearize(Dim const &dim) const
     {
         for (std::size_t i = 0; i < N; i++) {
-            if (dim[i] > m_shape[i])
+            if constexpr (LoBound != 0) {
+                if (dim[i] < -std::intptr_t{LoBound})
+                    throw std::out_of_range("ndarray::at");
+            }
+            if (dim[i] >= m_shape[i] + HiBound)
                 throw std::out_of_range("ndarray::at");
         }
         return linearize(dim);
     }
 
-    T &operator()(Dim const &dim) noexcept
+    constexpr T &operator()(Dim const &dim) noexcept
     {
         return m_arr[linearize(dim)];
     }
 
-    T const &operator()(Dim const &dim) const noexcept
+    constexpr T const &operator()(Dim const &dim) const noexcept
     {
         return m_arr[linearize(dim)];
     }
 
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>
-    T &operator()(Ts const &...ts) noexcept
+    constexpr T &operator()(Ts const &...ts) noexcept
     {
         return operator()(Dim{ts...});
     }
 
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>
-    T const &operator()(Ts const &...ts) const noexcept
+    constexpr T const &operator()(Ts const &...ts) const noexcept
     {
         return operator()(Dim{ts...});
     }
 
-    T &operator[](Dim const &dim) noexcept
+    constexpr T &operator[](Dim const &dim) noexcept
     {
         return operator()(linearize(dim));
     }
 
-    T const &operator[](Dim const &dim) const noexcept
+    constexpr T const &operator[](Dim const &dim) const noexcept
     {
         return operator()(linearize(dim));
     }
