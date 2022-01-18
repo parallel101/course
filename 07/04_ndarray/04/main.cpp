@@ -17,7 +17,7 @@ constexpr size_t nx = 1<<13;
 constexpr size_t ny = 1<<13;
 constexpr int nblur = 8;
 
-ndarray<2, float> a(nx, ny);
+ndarray<2, float, nblur> a(nx, ny);
 ndarray<2, float> b(nx, ny);
 
 void BM_copy(benchmark::State &bm) {
@@ -50,6 +50,44 @@ void BM_x_blur(benchmark::State &bm) {
 }
 BENCHMARK(BM_x_blur);
 
+void BM_x_blur_prefetched(benchmark::State &bm) {
+    for (auto _: bm) {
+#pragma omp parallel for collapse(2)
+        for (int y = 0; y < ny; y++) {
+            for (int x = 0; x < nx; x++) {
+                _mm_prefetch(&a(x + 16, y), _MM_HINT_T0);
+                float res = 0;
+                for (int t = -nblur; t <= nblur; t++) {
+                    res += a(x + t, y);
+                }
+                b(x, y) = res;
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_x_blur_prefetched);
+
+void BM_x_blur_tiled_prefetched(benchmark::State &bm) {
+    for (auto _: bm) {
+#pragma omp parallel for collapse(2)
+        for (int y = 0; y < ny; y++) {
+            for (int xBase = 0; xBase < nx; xBase += 16) {
+                _mm_prefetch(&a(xBase + 16, y), _MM_HINT_T0);
+                for (int x = xBase; x < xBase + 16; x++) {
+                    float res = 0;
+                    for (int t = -nblur; t <= nblur; t++) {
+                        res += a(x + t, y);
+                    }
+                    b(x, y) = res;
+                }
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_x_blur_tiled_prefetched);
+
 void BM_y_blur(benchmark::State &bm) {
     for (auto _: bm) {
 #pragma omp parallel for collapse(2)
@@ -65,6 +103,6 @@ void BM_y_blur(benchmark::State &bm) {
         benchmark::DoNotOptimize(a);
     }
 }
-BENCHMARK(BM_y_blur);
+//BENCHMARK(BM_y_blur);
 
 BENCHMARK_MAIN();

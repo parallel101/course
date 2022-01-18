@@ -10,7 +10,7 @@ class ndarray {
     static_assert(N > 0, "N cannot be 0");
     static_assert(std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, T>, "T cannot be cvref");
 
-    using Dim = std::array<std::conditional_t<LoBound == 0, std::size_t, std::intptr_t>, N>;
+    using Dim = std::array<std::intptr_t, N>;
     using Shape = std::array<std::size_t, N>;
 
     std::vector<T> m_arr;
@@ -18,7 +18,7 @@ class ndarray {
 
     constexpr static std::size_t _calc_size(Shape const &shape) noexcept
     {
-        std::size_t size = shape[0];
+        std::size_t size = shape[0] + (LoBound + HiBound);
         for (std::size_t i = 1; i < N; i++) {
             size *= shape[i] + (LoBound + HiBound);
         }
@@ -102,11 +102,7 @@ public:
     std::size_t safe_linearize(Dim const &dim) const
     {
         for (std::size_t i = 0; i < N; i++) {
-            if constexpr (LoBound != 0) {
-                if (dim[i] < -std::intptr_t{LoBound})
-                    throw std::out_of_range("ndarray::at");
-            }
-            if (dim[i] >= m_shape[i] + HiBound)
+            if (dim[i] < -std::intptr_t{LoBound} || dim[i] >= m_shape[i] + HiBound)
                 throw std::out_of_range("ndarray::at");
         }
         return linearize(dim);

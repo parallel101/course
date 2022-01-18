@@ -19,7 +19,7 @@ constexpr size_t ny = 1<<13;
 void BM_x_blur(benchmark::State &bm) {
     constexpr int nblur = 8;
     ndarray<2, float, nblur> a(nx, ny);
-    ndarray<2, float, nblur> b(nx, ny);
+    ndarray<2, float> b(nx, ny);
 
     for (auto _: bm) {
 #pragma omp parallel for collapse(2)

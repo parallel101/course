@@ -5,12 +5,12 @@
 #include <stdexcept>
 #include <type_traits>
 
-template <std::size_t N, class T, std::size_t LoBound = 0, std::size_t HiBound = 0>
+template <std::size_t N, class T, std::size_t LoBound = 0, std::size_t HiBound = LoBound>
 class ndarray {
     static_assert(N > 0, "N cannot be 0");
     static_assert(std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, T>, "T cannot be cvref");
 
-    using Dim = std::array<std::conditional_t<LoBound == 0, std::size_t, std::intptr_t>, N>;
+    using Dim = std::array<std::intptr_t, N>;
     using Shape = std::array<std::size_t, N>;
 
     std::vector<T> m_arr;
@@ -18,9 +18,9 @@ class ndarray {
 
     constexpr static std::size_t _calc_size(Shape const &shape) noexcept
     {
-        std::size_t size = shape[0];
+        std::size_t size = shape[0] + (LoBound + HiBound);
         for (std::size_t i = 1; i < N; i++) {
-            size *= shape[i] + LoBound + HiBound;
+            size *= shape[i] + (LoBound + HiBound);
         }
         return size;
     }
@@ -47,7 +47,7 @@ public:
 
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>
     explicit ndarray(Ts const &...ts)
-        : ndarray(Dim{ts...})
+        : ndarray(Shape{ts...})
     {
     }
 
@@ -75,7 +75,7 @@ public:
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>
     void reshape(Ts const &...ts)
     {
-        this->reshape(Dim{ts...});
+        this->reshape(Shape{ts...});
     }
 
     constexpr Shape shape() const noexcept
@@ -90,11 +90,11 @@ public:
 
     constexpr std::size_t linearize(Dim const &dim) const noexcept
     {
-        std::size_t offset = dim[0] + LoBound;
+        std::size_t offset{dim[0] + LoBound};
         std::size_t term = 1;
         for (std::size_t i = 1; i < N; i++) {
-            term *= m_shape[i - 1] + LoBound + HiBound;
-            offset += term * (dim[i] + LoBound);
+            term *= m_shape[i - 1] + (LoBound + HiBound);
+            offset += term * std::size_t{dim[i] + LoBound};
         }
         return offset;
     }
@@ -102,7 +102,7 @@ public:
     std::size_t safe_linearize(Dim const &dim) const
     {
         for (std::size_t i = 0; i < N; i++) {
-            if (dim[i] < LoBound || dim[i] >= m_shape[i] + HiBound)
+            if (dim[i] < -std::intptr_t{LoBound} || dim[i] >= m_shape[i] + HiBound)
                 throw std::out_of_range("ndarray::at");
         }
         return linearize(dim);
