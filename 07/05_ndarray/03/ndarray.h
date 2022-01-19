@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-template <std::size_t N, class T, std::size_t LoBound = 0, std::size_t HiBound = LoBound>
+template <std::size_t N, class T, std::size_t Alignment = sizeof(T), std::size_t LoBound = 0, std::size_t HiBound = LoBound>
 class ndarray {
     static_assert(N > 0, "N cannot be 0");
     static_assert(std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, T>, "T cannot be cvref");
@@ -13,7 +13,11 @@ class ndarray {
     using Dim = std::array<std::intptr_t, N>;
     using Shape = std::array<std::size_t, N>;
 
-    std::vector<T> m_arr;
+    struct alignas(Alignment) _AlignedT {
+        alignas(Alignment) T m_value;
+    };
+
+    std::vector<_AlignedT> m_arr;
     Shape m_shape{};
 
     constexpr static std::size_t _calc_size(Shape const &shape) noexcept
@@ -110,12 +114,12 @@ public:
 
     constexpr T &operator()(Dim const &dim) noexcept
     {
-        return m_arr[linearize(dim)];
+        return m_arr[linearize(dim)].m_value;
     }
 
     constexpr T const &operator()(Dim const &dim) const noexcept
     {
-        return m_arr[linearize(dim)];
+        return m_arr[linearize(dim)].m_value;
     }
 
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>
@@ -142,12 +146,12 @@ public:
 
     T &at(Dim const &dim)
     {
-        return m_arr[safe_linearize(dim)];
+        return m_arr[safe_linearize(dim)].m_value;
     }
 
     T const &at(Dim const &dim) const
     {
-        return m_arr[safe_linearize(dim)];
+        return m_arr[safe_linearize(dim)].m_value;
     }
 
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>

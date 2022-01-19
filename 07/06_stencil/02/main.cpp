@@ -87,7 +87,7 @@ void BM_y_blur_tiled(benchmark::State &bm) {
         benchmark::DoNotOptimize(a);
     }
 }
-BENCHMARK(BM_y_blur_tiled);
+//BENCHMARK(BM_y_blur_tiled);
 
 void BM_y_blur_tiled_only_x(benchmark::State &bm) {
     for (auto _: bm) {
@@ -107,31 +107,32 @@ void BM_y_blur_tiled_only_x(benchmark::State &bm) {
         benchmark::DoNotOptimize(a);
     }
 }
-BENCHMARK(BM_y_blur_tiled_only_x);
+//BENCHMARK(BM_y_blur_tiled_only_x);
 
-void BM_y_blur_tiled_only_x_prefetched(benchmark::State &bm) {
+void BM_y_blur_tiled_only_x_prefetched_streamed(benchmark::State &bm) {
     for (auto _: bm) {
         constexpr int blockSize = 1024;
 #pragma omp parallel for collapse(2)
         for (int xBase = 0; xBase < nx; xBase += blockSize) {
             for (int y = 0; y < ny; y++) {
-                for (int xTmp = xBase; xTmp < xBase + blockSize; xTmp += 16) {
-                    _mm_prefetch(&a(xTmp, y + nblur * 2), _MM_HINT_T0);
-#pragma GCC unroll 4
-                    for (int x = xTmp; x < xTmp + 16; x += 4) {
-                        __m128 res = _mm_setzero_ps();
-#pragma GCC unroll 32
-                        for (int t = -nblur; t <= nblur; t++) {
-                            res = _mm_add_ps(res, _mm_loadu_ps(&a(x, y + t)));
-                        }
-                        _mm_stream_ps(&b(x, y), res);
+                for (int x = xBase; x < xBase + blockSize; x += 16) {
+                    _mm_prefetch(&a(x, y + nblur), _MM_HINT_T0);
+                    __m256 res0 = _mm256_setzero_ps();
+                    __m256 res1 = _mm256_setzero_ps();
+                    for (int t = -nblur; t <= nblur; t++) {
+                        res0 = _mm256_add_ps(res0, _mm256_loadu_ps(&a(x + 0, y + t)));
+                        res1 = _mm256_add_ps(res1, _mm256_loadu_ps(&a(x + 8, y + t)));
                     }
+                    _mm_stream_ps(&b(x + 0, y), _mm256_castps256_ps128(res0));
+                    _mm_stream_ps(&b(x + 4, y), _mm256_castps256_ps128(_mm256_unpackhi_ps(res0, res0)));
+                    _mm_stream_ps(&b(x + 8, y), _mm256_castps256_ps128(res1));
+                    _mm_stream_ps(&b(x + 16, y), _mm256_castps256_ps128(_mm256_unpackhi_ps(res1, res1)));
                 }
             }
         }
         benchmark::DoNotOptimize(a);
     }
 }
-BENCHMARK(BM_y_blur_tiled_only_x_prefetched);
+BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed);
 
 BENCHMARK_MAIN();
