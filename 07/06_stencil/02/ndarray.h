@@ -9,16 +9,15 @@ template <std::size_t N, class T, std::size_t LoBound = 0, std::size_t HiBound =
 class ndarray {
     static_assert(N > 0, "N cannot be 0");
     static_assert(std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, T>, "T cannot be cvref");
+    static_assert(Alignment == 0 || (std::is_trivially_move_constructible_v<T> && std::is_trivially_move_assignable_v<T>
+                                  && std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T>
+                                  && std::is_trivially_destructible_v<T> && std::is_trivially_default_constructible_v<T>),
+                  "T cannot have custom copy/move/default ctor/assign/dtor when Alignment specified");
 
     using Dim = std::array<std::intptr_t, N>;
     using Shape = std::array<std::size_t, N>;
 
-    struct alignas(Alignment != 0 ? (sizeof(T) << Alignment) : 1) _AlignedContainer {
-        using Ty = std::conditional_t<Alignment != 0, T, std::nullptr_t>;
-        Ty m_value[Alignment != 0 ? (1 << Alignment) : 1];
-    };
-
-    std::vector<std::conditional_t<Alignment != 0, _AlignedContainer, T>> m_arr;
+    std::vector<std::conditional_t<Alignment != 0, std::aligned_storage_t<Alignment, Alignment>, T>> m_arr;
     Shape m_shape{};
 
     constexpr static std::size_t _calc_size(Shape const &shape) noexcept
@@ -28,8 +27,9 @@ class ndarray {
             size *= shape[i] + (LoBound + HiBound);
         }
         if constexpr (Alignment != 0) {
-            size += (1 << Alignment) - 1;
-            size >>= Alignment;
+            size *= sizeof(T);
+            size += Alignment - 1;
+            size /= Alignment;
         }
         return size;
     }
