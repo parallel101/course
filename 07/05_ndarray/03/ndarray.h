@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-template <std::size_t N, class T, std::size_t Alignment = sizeof(T), std::size_t LoBound = 0, std::size_t HiBound = LoBound>
+template <std::size_t N, class T, std::size_t LoBound = 0, std::size_t HiBound = LoBound, std::size_t Alignment = 0>
 class ndarray {
     static_assert(N > 0, "N cannot be 0");
     static_assert(std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, T>, "T cannot be cvref");
@@ -13,11 +13,12 @@ class ndarray {
     using Dim = std::array<std::intptr_t, N>;
     using Shape = std::array<std::size_t, N>;
 
-    struct alignas(Alignment) _AlignedT {
-        alignas(Alignment) T m_value;
+    struct alignas(Alignment != 0 ? (sizeof(T) << Alignment) : 1) _AlignedContainer {
+        using Ty = std::conditional_t<Alignment != 0, T, std::nullptr_t>;
+        Ty m_value[Alignment != 0 ? (1 << Alignment) : 1];
     };
 
-    std::vector<_AlignedT> m_arr;
+    std::vector<std::conditional_t<Alignment != 0, _AlignedContainer, T>> m_arr;
     Shape m_shape{};
 
     constexpr static std::size_t _calc_size(Shape const &shape) noexcept
@@ -25,6 +26,10 @@ class ndarray {
         std::size_t size = shape[0] + (LoBound + HiBound);
         for (std::size_t i = 1; i < N; i++) {
             size *= shape[i] + (LoBound + HiBound);
+        }
+        if constexpr (Alignment != 0) {
+            size += (1 << Alignment) - 1;
+            size >>= Alignment;
         }
         return size;
     }
@@ -112,14 +117,32 @@ public:
         return linearize(dim);
     }
 
+    constexpr T *data() noexcept
+    {
+        if constexpr (Alignment != 0) {
+            return reinterpret_cast<T *>(m_arr.data());
+        } else {
+            return m_arr.data();
+        }
+    }
+
+    constexpr T const *data() const noexcept
+    {
+        if constexpr (Alignment != 0) {
+            return reinterpret_cast<T const *>(m_arr.data());
+        } else {
+            return m_arr.data();
+        }
+    }
+
     constexpr T &operator()(Dim const &dim) noexcept
     {
-        return m_arr[linearize(dim)].m_value;
+        return data()[linearize(dim)];
     }
 
     constexpr T const &operator()(Dim const &dim) const noexcept
     {
-        return m_arr[linearize(dim)].m_value;
+        return data()[linearize(dim)];
     }
 
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>
@@ -146,12 +169,12 @@ public:
 
     T &at(Dim const &dim)
     {
-        return m_arr[safe_linearize(dim)].m_value;
+        return data()[safe_linearize(dim)];
     }
 
     T const &at(Dim const &dim) const
     {
-        return m_arr[safe_linearize(dim)].m_value;
+        return data()[safe_linearize(dim)];
     }
 
     template <class ...Ts, std::enable_if_t<sizeof...(Ts) == N && (std::is_integral_v<Ts> && ...), int> = 0>

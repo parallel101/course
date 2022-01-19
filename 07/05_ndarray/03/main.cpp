@@ -67,4 +67,19 @@ void BM_ndarray(benchmark::State &bm) {
 }
 BENCHMARK(BM_ndarray);
 
+void BM_ndarray_aligned(benchmark::State &bm) {
+    ndarray<2, float, 0, 0, 5> a(nx, ny);
+
+    for (auto _: bm) {
+#pragma omp parallel for collapse(2)
+        for (int y = 0; y < ny; y++) {
+            for (int x = 0; x < nx; x += 8) {
+                _mm256_stream_ps(&a(x, y), _mm256_set1_ps(1));
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_ndarray_aligned);
+
 BENCHMARK_MAIN();
