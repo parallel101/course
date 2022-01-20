@@ -109,29 +109,44 @@ void BM_y_blur_tiled_only_x(benchmark::State &bm) {
 }
 BENCHMARK(BM_y_blur_tiled_only_x);
 
-void BM_y_blur_tiled_only_x_prefetched_streamed(benchmark::State &bm) {
+void BM_y_blur_tiled_only_x_prefetched(benchmark::State &bm) {
     for (auto _: bm) {
-        constexpr int blockSize = 1024;
+        constexpr int blockSize = 32;
 #pragma omp parallel for collapse(2)
         for (int xBase = 0; xBase < nx; xBase += blockSize) {
             for (int y = 0; y < ny; y++) {
-                for (int x = xBase; x < xBase + blockSize; x += 32) {
-                    _mm_prefetch(&a(x + 0, y + nblur), _MM_HINT_T0);
-                    _mm_prefetch(&a(x + 16, y + nblur), _MM_HINT_T0);
-                    __m256 res0 = _mm256_setzero_ps();
-                    __m256 res1 = _mm256_setzero_ps();
-                    __m256 res2 = _mm256_setzero_ps();
-                    __m256 res3 = _mm256_setzero_ps();
-                    for (int t = -nblur; t <= nblur; t++) {
-                        res0 = _mm256_add_ps(res0, _mm256_load_ps(&a(x + 0, y + t)));
-                        res1 = _mm256_add_ps(res1, _mm256_load_ps(&a(x + 8, y + t)));
-                        res2 = _mm256_add_ps(res2, _mm256_load_ps(&a(x + 16, y + t)));
-                        res3 = _mm256_add_ps(res3, _mm256_load_ps(&a(x + 24, y + t)));
+                for (int xTmp = xBase; xTmp < xBase + blockSize; xTmp += 16) {
+                    _mm_prefetch(&a(xTmp, y + nblur), _MM_HINT_T0);
+                    for (int x = xTmp; x < xTmp + 16; x++) {
+                        float res = 0;
+                        for (int t = -nblur; t <= nblur; t++) {
+                            res += a(x, y + t);
+                        }
+                        b(x, y) = res;
                     }
-                    _mm256_stream_ps(&b(x + 0, y), res0);
-                    _mm256_stream_ps(&b(x + 8, y), res1);
-                    _mm256_stream_ps(&b(x + 16, y), res2);
-                    _mm256_stream_ps(&b(x + 24, y), res3);
+                }
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_y_blur_tiled_only_x_prefetched);
+
+void BM_y_blur_tiled_only_x_prefetched_streamed(benchmark::State &bm) {
+    for (auto _: bm) {
+        constexpr int blockSize = 32;
+#pragma omp parallel for collapse(2)
+        for (int xBase = 0; xBase < nx; xBase += blockSize) {
+            for (int y = 0; y < ny; y++) {
+                for (int xTmp = xBase; xTmp < xBase + blockSize; xTmp += 16) {
+                    _mm_prefetch(&a(xTmp, y + nblur), _MM_HINT_T0);
+                    for (int x = xTmp; x < xTmp + 16; x++) {
+                        float res = 0;
+                        for (int t = -nblur; t <= nblur; t++) {
+                            res += a(x, y + t);
+                        }
+                        _mm_stream_si32((int *)&b(x, y), (int &)res);
+                    }
                 }
             }
         }
@@ -140,43 +155,148 @@ void BM_y_blur_tiled_only_x_prefetched_streamed(benchmark::State &bm) {
 }
 BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed);
 
-void BM_y_blur_tiled_only_x_prefetched_streamed_demangled(benchmark::State &bm) {
+void BM_y_blur_tiled_only_x_prefetched_streamed_merged(benchmark::State &bm) {
     for (auto _: bm) {
-        constexpr int blockSize = 1024;
+        constexpr int blockSize = 32;
 #pragma omp parallel for collapse(2)
         for (int xBase = 0; xBase < nx; xBase += blockSize) {
             for (int y = 0; y < ny; y++) {
-                for (int x = xBase; x < xBase + blockSize; x += 32) {
-                    _mm_prefetch(&a(x + 0, y + nblur), _MM_HINT_T0);
-                    _mm_prefetch(&a(x + 16, y + nblur), _MM_HINT_T0);
-                    __m256 res0 = _mm256_load_ps(&a(x + 0, y - nblur));
-                    __m256 res1 = _mm256_load_ps(&a(x + 8, y - nblur));
-                    __m256 res2 = _mm256_load_ps(&a(x + 16, y - nblur));
-                    __m256 res3 = _mm256_load_ps(&a(x + 24, y - nblur));
-                    for (int t = -nblur + 1; t <= nblur; t += 2) {
-                        res0 = _mm256_add_ps(res0, _mm256_add_ps(
-                                _mm256_load_ps(&a(x + 0, y + t)),
-                                _mm256_load_ps(&a(x + 0, y + t + 1))));
-                        res1 = _mm256_add_ps(res1, _mm256_add_ps(
-                                _mm256_load_ps(&a(x + 8, y + t)),
-                                _mm256_load_ps(&a(x + 8, y + t + 1))));
-                        res2 = _mm256_add_ps(res2, _mm256_add_ps(
-                                _mm256_load_ps(&a(x + 16, y + t)),
-                                _mm256_load_ps(&a(x + 16, y + t + 1))));
-                        res3 = _mm256_add_ps(res3, _mm256_add_ps(
-                                _mm256_load_ps(&a(x + 24, y + t)),
-                                _mm256_load_ps(&a(x + 24, y + t + 1))));
+                for (int x = xBase; x < xBase + blockSize; x += 16) {
+                    _mm_prefetch(&a(x, y + nblur), _MM_HINT_T0);
+                    float res[16];
+                    for (int offset = 0; offset < 16; offset++) {
+                        res[offset] = 0;
+                        for (int t = -nblur; t <= nblur; t++) {
+                            res[offset] += a(x + offset, y + t);
+                        }
                     }
-                    _mm256_stream_ps(&b(x + 0, y), res0);
-                    _mm256_stream_ps(&b(x + 8, y), res1);
-                    _mm256_stream_ps(&b(x + 16, y), res2);
-                    _mm256_stream_ps(&b(x + 24, y), res3);
+                    for (int offset = 0; offset < 16; offset++) {
+                        _mm_stream_si32((int *)&b(x + offset, y), (int &)res);
+                    }
                 }
             }
         }
         benchmark::DoNotOptimize(a);
     }
 }
-BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed_demangled);
+BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed_merged);
+
+void BM_y_blur_tiled_only_x_prefetched_streamed_merged_vectorized(benchmark::State &bm) {
+    for (auto _: bm) {
+        constexpr int blockSize = 32;
+#pragma omp parallel for collapse(2)
+        for (int xBase = 0; xBase < nx; xBase += blockSize) {
+            for (int y = 0; y < ny; y++) {
+                for (int x = xBase; x < xBase + blockSize; x += 16) {
+                    _mm_prefetch(&a(x, y + nblur), _MM_HINT_T0);
+                    __m128 res[4];
+                    for (int offset = 0; offset < 4; offset++) {
+                        res[offset] = _mm_setzero_ps();
+                        for (int t = -nblur; t <= nblur; t++) {
+                            res[offset] = _mm_add_ps(res[offset],
+                                _mm_load_ps(&a(x + offset * 4, y + t)));
+                        }
+                    }
+                    for (int offset = 0; offset < 4; offset++) {
+                        _mm_stream_ps(&b(x + offset * 4, y), res[offset]);
+                    }
+                }
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed_merged_vectorized);
+
+void BM_y_blur_tiled_only_x_prefetched_streamed_merged_vectorized_interchanged(benchmark::State &bm) {
+    for (auto _: bm) {
+        constexpr int blockSize = 32;
+#pragma omp parallel for collapse(2)
+        for (int xBase = 0; xBase < nx; xBase += blockSize) {
+            for (int y = 0; y < ny; y++) {
+                for (int x = xBase; x < xBase + blockSize; x += 16) {
+                    _mm_prefetch(&a(x, y + nblur), _MM_HINT_T0);
+                    __m128 res[4];
+                    for (int offset = 0; offset < 4; offset++) {
+                        res[offset] = _mm_setzero_ps();
+                    }
+                    for (int t = -nblur; t <= nblur; t++) {
+                        for (int offset = 0; offset < 4; offset++) {
+                            res[offset] = _mm_add_ps(res[offset],
+                                _mm_load_ps(&a(x + offset * 4, y + t)));
+                        }
+                    }
+                    for (int offset = 0; offset < 4; offset++) {
+                        _mm_stream_ps(&b(x + offset * 4, y), res[offset]);
+                    }
+                }
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed_merged_vectorized_interchanged);
+
+void BM_y_blur_tiled_only_x_prefetched_streamed_merged_vectorized_interchanged_unrolled(benchmark::State &bm) {
+    for (auto _: bm) {
+        constexpr int blockSize = 32;
+#pragma omp parallel for collapse(2)
+        for (int xBase = 0; xBase < nx; xBase += blockSize) {
+            for (int y = 0; y < ny; y++) {
+                for (int x = xBase; x < xBase + blockSize; x += 16) {
+                    _mm_prefetch(&a(x, y + nblur), _MM_HINT_T0);
+                    __m128 res[4];
+#pragma GCC unroll 4
+                    for (int offset = 0; offset < 4; offset++) {
+                        res[offset] = _mm_setzero_ps();
+                    }
+                    for (int t = -nblur; t <= nblur; t++) {
+#pragma GCC unroll 4
+                        for (int offset = 0; offset < 4; offset++) {
+                            res[offset] = _mm_add_ps(res[offset],
+                                _mm_load_ps(&a(x + offset * 4, y + t)));
+                        }
+                    }
+#pragma GCC unroll 4
+                    for (int offset = 0; offset < 4; offset++) {
+                        _mm_stream_ps(&b(x + offset * 4, y), res[offset]);
+                    }
+                }
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed_merged_vectorized_interchanged_unrolled);
+
+void BM_y_blur_tiled_only_x_prefetched_streamed_merged_vectorized_interchanged_unrolled_avx(benchmark::State &bm) {
+    for (auto _: bm) {
+#pragma omp parallel for collapse(2)
+        for (int x = 0; x < nx; x += 32) {
+            for (int y = 0; y < ny; y++) {
+                _mm_prefetch(&a(x, y + nblur), _MM_HINT_T0);
+                _mm_prefetch(&a(x + 16, y + nblur), _MM_HINT_T0);
+                __m256 res[4];
+#pragma GCC unroll 4
+                for (int offset = 0; offset < 4; offset++) {
+                    res[offset] = _mm256_setzero_ps();
+                }
+                for (int t = -nblur; t <= nblur; t++) {
+#pragma GCC unroll 4
+                    for (int offset = 0; offset < 4; offset++) {
+                        res[offset] = _mm256_add_ps(res[offset],
+                            _mm256_load_ps(&a(x + offset * 8, y + t)));
+                    }
+                }
+#pragma GCC unroll 4
+                for (int offset = 0; offset < 4; offset++) {
+                    _mm256_stream_ps(&b(x + offset * 8, y), res[offset]);
+                }
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed_merged_vectorized_interchanged_unrolled_avx);
 
 BENCHMARK_MAIN();
