@@ -140,4 +140,43 @@ void BM_y_blur_tiled_only_x_prefetched_streamed(benchmark::State &bm) {
 }
 BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed);
 
+void BM_y_blur_tiled_only_x_prefetched_streamed_demangled(benchmark::State &bm) {
+    for (auto _: bm) {
+        constexpr int blockSize = 1024;
+#pragma omp parallel for collapse(2)
+        for (int xBase = 0; xBase < nx; xBase += blockSize) {
+            for (int y = 0; y < ny; y++) {
+                for (int x = xBase; x < xBase + blockSize; x += 32) {
+                    _mm_prefetch(&a(x + 0, y + nblur), _MM_HINT_T0);
+                    _mm_prefetch(&a(x + 16, y + nblur), _MM_HINT_T0);
+                    __m256 res0 = _mm256_load_ps(&a(x + 0, y - nblur));
+                    __m256 res1 = _mm256_load_ps(&a(x + 8, y - nblur));
+                    __m256 res2 = _mm256_load_ps(&a(x + 16, y - nblur));
+                    __m256 res3 = _mm256_load_ps(&a(x + 24, y - nblur));
+                    for (int t = -nblur + 1; t <= nblur; t += 2) {
+                        res0 = _mm256_add_ps(res0, _mm256_add_ps(
+                                _mm256_load_ps(&a(x + 0, y + t)),
+                                _mm256_load_ps(&a(x + 0, y + t + 1))));
+                        res1 = _mm256_add_ps(res1, _mm256_add_ps(
+                                _mm256_load_ps(&a(x + 8, y + t)),
+                                _mm256_load_ps(&a(x + 8, y + t + 1))));
+                        res2 = _mm256_add_ps(res2, _mm256_add_ps(
+                                _mm256_load_ps(&a(x + 16, y + t)),
+                                _mm256_load_ps(&a(x + 16, y + t + 1))));
+                        res3 = _mm256_add_ps(res3, _mm256_add_ps(
+                                _mm256_load_ps(&a(x + 24, y + t)),
+                                _mm256_load_ps(&a(x + 24, y + t + 1))));
+                    }
+                    _mm256_stream_ps(&b(x + 0, y), res0);
+                    _mm256_stream_ps(&b(x + 8, y), res1);
+                    _mm256_stream_ps(&b(x + 16, y), res2);
+                    _mm256_stream_ps(&b(x + 24, y), res3);
+                }
+            }
+        }
+        benchmark::DoNotOptimize(a);
+    }
+}
+BENCHMARK(BM_y_blur_tiled_only_x_prefetched_streamed_demangled);
+
 BENCHMARK_MAIN();
