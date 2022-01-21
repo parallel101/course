@@ -72,4 +72,26 @@ void BM_aosoa(benchmark::State &bm) {
 }
 BENCHMARK(BM_aosoa);
 
+void BM_aosoa_16(benchmark::State &bm) {
+    struct MyClass {
+        float x[16];
+        float y[16];
+        float z[16];
+    };
+
+    std::vector<MyClass> mc(n / 16);
+
+    for (auto _: bm) {
+#pragma omp parallel for
+        for (size_t i = 0; i < n / 16; i++) {
+#pragma omp simd
+            for (size_t j = 0; j < 16; j++) {
+                mc[i].x[j] = mc[i].x[j] + mc[i].y[j];
+            }
+        }
+        benchmark::DoNotOptimize(mc);
+    }
+}
+BENCHMARK(BM_aosoa_16);
+
 BENCHMARK_MAIN();

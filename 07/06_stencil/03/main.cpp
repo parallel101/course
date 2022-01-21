@@ -11,6 +11,10 @@ int main() {
     read_image(a, "original.jpg");
     TOCK(read);
 
+    //TICK(boxblur);
+    //boxblur(a, 32, 32);
+    //TOCK(boxblur);
+
     TICK(gaussblur);
     gaussblur(a, 32, 12);
     TOCK(gaussblur);

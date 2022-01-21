@@ -17,7 +17,7 @@ constexpr size_t nx = 1<<13;
 constexpr size_t ny = 1<<13;
 constexpr int nblur = 8;
 
-ndarray<2, float, nblur> a(nx, ny);
+ndarray<2, float, 16> a(nx, ny);
 ndarray<2, float> b(nx, ny);
 
 void BM_copy(benchmark::State &bm) {
