@@ -35,7 +35,7 @@ void BM_copy(benchmark::State &bm) {
         benchmark::DoNotOptimize(b);
     }
 }
-//BENCHMARK(BM_copy);
+BENCHMARK(BM_copy);
 
 void BM_copy_streamed(benchmark::State &bm) {
     for (auto _: bm) {
@@ -48,7 +48,7 @@ void BM_copy_streamed(benchmark::State &bm) {
         benchmark::DoNotOptimize(b);
     }
 }
-//BENCHMARK(BM_copy_streamed);
+BENCHMARK(BM_copy_streamed);
 
 void BM_transpose(benchmark::State &bm) {
     for (auto _: bm) {
@@ -61,7 +61,7 @@ void BM_transpose(benchmark::State &bm) {
         benchmark::DoNotOptimize(b);
     }
 }
-//BENCHMARK(BM_transpose);
+BENCHMARK(BM_transpose);
 
 void BM_transpose_tiled(benchmark::State &bm) {
     for (auto _: bm) {
@@ -100,25 +100,6 @@ void BM_transpose_morton_tiled(benchmark::State &bm) {
 }
 BENCHMARK(BM_transpose_morton_tiled);
 
-void BM_transpose_morton_tiled_reversed(benchmark::State &bm) {
-    for (auto _: bm) {
-        constexpr int blockSize = 64;  // 16KB
-#pragma omp parallel for
-        for (int mortonCode = 0; mortonCode < (ny / blockSize) * (nx / blockSize); mortonCode++) {
-            auto [yBase, xBase] = morton2d::decode(mortonCode);
-            xBase *= blockSize;
-            yBase *= blockSize;
-            for (int y = yBase; y < yBase + blockSize; y++) {
-                for (int x = xBase; x < xBase + blockSize; x++) {
-                    b(x, y) = a(y, x);
-                }
-            }
-        }
-        benchmark::DoNotOptimize(b);
-    }
-}
-BENCHMARK(BM_transpose_morton_tiled_reversed);
-
 void BM_transpose_morton_tiled_streamed(benchmark::State &bm) {
     for (auto _: bm) {
         constexpr int blockSize = 64;  // 16KB
@@ -129,7 +110,7 @@ void BM_transpose_morton_tiled_streamed(benchmark::State &bm) {
             yBase *= blockSize;
             for (int y = yBase; y < yBase + blockSize; y++) {
                 for (int x = xBase; x < xBase + blockSize; x += 4) {
-                    _mm_stream_ps(&b(x, y), _mm_loadu_ps(&a(y, x)));
+                    _mm_stream_si32((int *)&b(x, y), (int &)a(y, x));
                 }
             }
         }
@@ -148,7 +129,7 @@ void BM_transpose_morton_tiled_streamed_reversed(benchmark::State &bm) {
             yBase *= blockSize;
             for (int y = yBase; y < yBase + blockSize; y++) {
                 for (int x = xBase; x < xBase + blockSize; x += 4) {
-                    _mm_stream_ps(&b(x, y), _mm_loadu_ps(&a(y, x)));
+                    _mm_stream_si32((int *)&b(x, y), (int &)a(y, x));
                 }
             }
         }
