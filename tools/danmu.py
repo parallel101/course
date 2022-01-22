@@ -19,4 +19,4 @@ while True:
             f.write(f'{user}: {text}\n')
             res += f'\033[31;1m{user}\033[0m: \033[32;1m{text}\033[0m\n'
         print(res, end='')
-    time.sleep(1)
+    time.sleep(10)
