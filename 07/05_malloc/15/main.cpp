@@ -5,26 +5,25 @@
 #include "ticktock.h"
 
 float func(int n) {
-    static thread_local std::vector<float> tmp;
+    std::vector<float> tmp;
     for (int i = 0; i < n; i++) {
-        tmp.push_back(i / 15 * 2.718f);
+        tmp.push_back(i / 15 * 2.71828f);
     }
     std::reverse(tmp.begin(), tmp.end());
     float ret = tmp[32];
-    tmp.clear();
     return ret;
 }
 
 int main() {
     constexpr int n = 1<<25;
 
-    TICK(first_alloc);
+    TICK(first_call);
     std::cout << func(n) << std::endl;
-    TOCK(first_alloc);
+    TOCK(first_call);
 
-    TICK(second_alloc);
+    TICK(second_call);
     std::cout << func(n - 1) << std::endl;
-    TOCK(second_alloc);
+    TOCK(second_call);
 
     return 0;
 }

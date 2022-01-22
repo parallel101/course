@@ -68,7 +68,7 @@ void BM_ndarray(benchmark::State &bm) {
 BENCHMARK(BM_ndarray);
 
 void BM_ndarray_aligned(benchmark::State &bm) {
-    ndarray<2, float, 0, 0, 32> a(nx, ny);
+    ndarray<2, float> a(nx, ny);
 
     for (auto _: bm) {
 #pragma omp parallel for collapse(2)

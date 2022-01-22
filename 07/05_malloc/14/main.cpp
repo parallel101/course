@@ -1,29 +1,21 @@
 #include <iostream>
 #include <vector>
-#include <cmath>
-#include <algorithm>
 #include "ticktock.h"
+#include "alignalloc.h"
 
-float func(int n) {
-    std::vector<float> tmp;
-    for (int i = 0; i < n; i++) {
-        tmp.push_back(i / 15 * 2.71828f);
-    }
-    std::reverse(tmp.begin(), tmp.end());
-    float ret = tmp[32];
-    return ret;
-}
+constexpr size_t n = 1<<20;
 
 int main() {
-    constexpr int n = 1<<25;
-
-    TICK(first_call);
-    std::cout << func(n) << std::endl;
-    TOCK(first_call);
-
-    TICK(second_call);
-    std::cout << func(n - 1) << std::endl;
-    TOCK(second_call);
-
+    std::cout << std::boolalpha;
+    for (int i = 0; i < 5; i++) {
+        std::vector<int, AlignedAllocator<int>> arr(n);
+        bool is_aligned = (uintptr_t)arr.data() % 64 == 0;
+        std::cout << "64: " << is_aligned << std::endl;
+    }
+    for (int i = 0; i < 5; i++) {
+        std::vector<int, AlignedAllocator<int, 4096>> arr(n);
+        bool is_aligned = (uintptr_t)arr.data() % 4096 == 0;
+        std::cout << "4096: " << is_aligned << std::endl;
+    }
     return 0;
 }

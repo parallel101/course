@@ -4,20 +4,17 @@
 #include <vector>
 #include <stdexcept>
 #include <type_traits>
+#include "alignalloc.h"
 
-template <std::size_t N, class T, std::size_t LoBound = 0, std::size_t HiBound = LoBound, std::size_t Alignment = 0>
+template <std::size_t N, class T, std::size_t LoBound = 0, std::size_t HiBound = LoBound, class AllocatorT = AlignedAllocator<T>>
 class ndarray {
     static_assert(N > 0, "N cannot be 0");
     static_assert(std::is_same_v<std::remove_reference_t<std::remove_cv_t<T>>, T>, "T cannot be cvref");
-    static_assert(Alignment == 0 || (std::is_trivially_move_constructible_v<T> && std::is_trivially_move_assignable_v<T>
-                                  && std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T>
-                                  && std::is_trivially_destructible_v<T> && std::is_trivially_default_constructible_v<T>),
-                  "T cannot have custom copy/move/default ctor/assign/dtor when Alignment specified");
 
     using Dim = std::array<std::intptr_t, N>;
     using Shape = std::array<std::size_t, N>;
 
-    std::vector<std::conditional_t<Alignment != 0, std::aligned_storage_t<Alignment, Alignment>, T>> m_arr;
+    std::vector<T, AllocatorT> m_arr;
     Shape m_shape{};
 
     constexpr static std::size_t _calc_size(Shape const &shape) noexcept
@@ -25,11 +22,6 @@ class ndarray {
         std::size_t size = shape[0] + (LoBound + HiBound);
         for (std::size_t i = 1; i < N; i++) {
             size *= shape[i] + (LoBound + HiBound);
-        }
-        if constexpr (Alignment != 0) {
-            size *= sizeof(T);
-            size += Alignment - 1;
-            size /= Alignment;
         }
         return size;
     }
@@ -119,20 +111,12 @@ public:
 
     constexpr T *data() noexcept
     {
-        if constexpr (Alignment != 0) {
-            return reinterpret_cast<T *>(m_arr.data());
-        } else {
-            return m_arr.data();
-        }
+        return m_arr.data();
     }
 
     constexpr T const *data() const noexcept
     {
-        if constexpr (Alignment != 0) {
-            return reinterpret_cast<T const *>(m_arr.data());
-        } else {
-            return m_arr.data();
-        }
+        return m_arr.data();
     }
 
     constexpr T &operator()(Dim const &dim) noexcept
