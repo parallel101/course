@@ -6,23 +6,25 @@
 #include "ticktock.h"
 
 __global__ void parallel_sum(int *sum, int const *arr, int n) {
+    int local_sum = 0;
     for (int i = blockDim.x * blockIdx.x + threadIdx.x;
          i < n; i += blockDim.x * gridDim.x) {
-        atomicAdd(&sum[0], arr[i]);
+        local_sum += arr[i];
     }
+    atomicAdd(&sum[0], local_sum);
 }
 
 int main() {
     int n = 1<<24;
     std::vector<int, CudaAllocator<int>> arr(n);
-    std::vector<int, CudaAllocator<int>> sum(1);
+    std::vector<int, CudaAllocator<int>> sum(1024);
 
     for (int i = 0; i < n; i++) {
         arr[i] = std::rand() % 4;
     }
 
     TICK(parallel_sum);
-    parallel_sum<<<n / 128, 128>>>(sum.data(), arr.data(), n);
+    parallel_sum<<<n / 4096, 512>>>(sum.data(), arr.data(), n);
     checkCudaErrors(cudaDeviceSynchronize());
     TOCK(parallel_sum);
 
