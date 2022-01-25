@@ -8,10 +8,13 @@ __global__ void kernel(int *pret) {
 
 int main() {
     int *pret;
-    checkCudaErrors(cudaMallocManaged(&pret, sizeof(int)));
+    checkCudaErrors(cudaMalloc(&pret, sizeof(int)));
     kernel<<<1, 1>>>(pret);
-    checkCudaErrors(cudaDeviceSynchronize());
-    printf("result: %d\n", *pret);
+
+    int ret;
+    checkCudaErrors(cudaMemcpy(&ret, pret, sizeof(int), cudaMemcpyDeviceToHost));
+    printf("result: %d\n", ret);
+
     cudaFree(pret);
     return 0;
 }
