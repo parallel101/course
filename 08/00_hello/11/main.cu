@@ -2,7 +2,11 @@
 #include <cuda_runtime.h>
 
 __host__ __device__ void say_hello() {
-    printf("Hello, world!\n");
+#ifdef __CUDA_ARCH__
+    printf("Hello, world from GPU architecture %d!\n", __CUDA_ARCH__);
+#else
+    printf("Hello, world from CPU!\n");
+#endif
 }
 
 __global__ void kernel() {

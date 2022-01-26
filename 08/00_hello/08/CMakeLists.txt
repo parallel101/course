@@ -6,3 +6,4 @@ set(CMAKE_BUILD_TYPE Release)
 project(hellocuda LANGUAGES CXX CUDA)
 
 add_executable(main main.cu)
+target_compile_options(main PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>)

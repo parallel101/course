@@ -3,7 +3,7 @@
 
 __host__ __device__ void say_hello() {
 #ifdef __CUDA_ARCH__
-    printf("Hello, world from GPU architecture %d!\n", __CUDA_ARCH__);
+    printf("Hello, world from GPU!\n");
 #else
     printf("Hello, world from CPU!\n");
 #endif

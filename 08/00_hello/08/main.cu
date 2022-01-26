@@ -1,21 +1,17 @@
 #include <cstdio>
 #include <cuda_runtime.h>
 
-__host__ __device__ void say_hello() {
-#ifdef __CUDA_ARCH__
-    printf("Hello, world from GPU!\n");
-#else
-    printf("Hello, world from CPU!\n");
-#endif
+constexpr const char *cuthead(const char *p) {
+    return p + 1;
 }
 
 __global__ void kernel() {
-    say_hello();
+    printf(cuthead("Gello, world!\n"));
 }
 
 int main() {
     kernel<<<1, 1>>>();
     cudaDeviceSynchronize();
-    say_hello();
+    printf(cuthead("Cello, world!\n"));
     return 0;
 }

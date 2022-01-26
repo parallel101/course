@@ -5,7 +5,7 @@ __device__ void say_hello() {
     printf("Hello, world from GPU!\n");
 }
 
-void say_hello_host() {
+__host__ void say_hello_host() {
     printf("Hello, world from CPU!\n");
 }
 
