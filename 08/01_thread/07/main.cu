@@ -2,13 +2,15 @@
 #include <cuda_runtime.h>
 
 __global__ void kernel() {
-    unsigned int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    unsigned int tnum = blockDim.x * gridDim.x;
-    printf("Flattened Thread %d of %d\n", tid, tnum);
+    printf("Block (%d,%d,%d) of (%d,%d,%d), Thread (%d,%d,%d) of (%d,%d,%d)\n",
+           blockIdx.x, blockIdx.y, blockIdx.z,
+           gridDim.x, gridDim.y, gridDim.z,
+           threadIdx.x, threadIdx.y, threadIdx.z,
+           blockDim.x, blockDim.y, blockDim.z);
 }
 
 int main() {
-    kernel<<<2, 3>>>();
+    kernel<<<dim3(2, 1, 1), dim3(2, 2, 2)>>>();
     cudaDeviceSynchronize();
     return 0;
 }
