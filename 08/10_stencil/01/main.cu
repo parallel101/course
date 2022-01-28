@@ -70,10 +70,10 @@ int main() {
     std::vector<float, CudaAllocator<float>> out;
 
     auto [nx, ny, _] = read_image(in, "original.jpg");
-    out.resize(nx * ny);
+    out.resize(in.size());
 
     TICK(parallel_xblur);
-    parallel_xblur<32, 32><<<dim3(nx / 32, ny / 32, 1), dim3(32, 32, 1)>>>
+    parallel_xblur<32, 32><<<dim3((nx + 31) / 32, (ny + 31) / 32, 1), dim3(32, 32, 1)>>>
         (out.data(), in.data(), nx, ny);
     checkCudaErrors(cudaDeviceSynchronize());
     TOCK(parallel_xblur);

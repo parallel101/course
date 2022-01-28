@@ -76,8 +76,8 @@ int main() {
 
     TICK(parallel_jacobi);
 
-    for (int step = 0; step < 256; step++) {
-        parallel_jacobi<32><<<dim3(nx / 32, ny / 32, 1), dim3(32, 32, 1)>>>
+    for (int step = 0; step < 1024; step++) {
+        parallel_jacobi<32><<<dim3((nx + 31) / 32, (ny + 31) / 32, 1), dim3(32, 32, 1)>>>
             (out.data(), in.data(), nx, ny);
         std::swap(out, in);
     }

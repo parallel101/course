@@ -54,18 +54,6 @@ void write_image(A const &a, int nx, int ny, int comp, const char *path) {
 }
 
 template <int nblur, int blockSize>
-__global__ void parallel_xblur(float *out, float const *in, int nx, int ny) {
-    int x = blockIdx.x * blockSize + threadIdx.x;
-    int y = blockIdx.y * blockSize + threadIdx.y;
-    if (x >= nx || y >= ny) return;
-    float sum = 0;
-    for (int i = 0; i < nblur; i++) {
-        sum += in[y * nx + std::min(x + i, nx - 1)];
-    }
-    out[y * nx + x] = sum / nblur;
-}
-
-template <int nblur, int blockSize>
 __global__ void parallel_yblur(float *out, float const *in, int nx, int ny) {
     int x = blockIdx.x * blockSize + threadIdx.x;
     int y = blockIdx.y * blockSize + threadIdx.y;
@@ -85,7 +73,7 @@ int main() {
     out.resize(in.size());
 
     TICK(parallel_yblur);
-    parallel_yblur<32, 32><<<dim3(nx / 32, ny / 32, 1), dim3(32, 32, 1)>>>
+    parallel_yblur<32, 32><<<dim3((nx + 31) / 32, (ny + 31) / 32, 1), dim3(32, 32, 1)>>>
         (out.data(), in.data(), nx, ny);
     checkCudaErrors(cudaDeviceSynchronize());
     TOCK(parallel_yblur);

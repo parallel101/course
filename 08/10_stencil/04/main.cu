@@ -54,37 +54,62 @@ void write_image(A const &a, int nx, int ny, int comp, const char *path) {
 }
 
 template <int iters, int blockSize>
-__global__ void parallel_jacobi(float *out, float const *in, int nx, int ny) {
+__global__ void parallel_jacobi_kernel(float *out, float const *in, int nx, int ny) {
     int blockX = blockIdx.x;
-    int blockY = blockIdx.x;
+    int blockY = blockIdx.y;
     int threadX = threadIdx.x;
-    int threadY = threadIdx.x;
-    int globalX = blockX * blockSize + threadX;
-    int globalY = blockY * blockSize + threadY;
+    int threadY = threadIdx.y;
+    constexpr int chunkSize = blockSize - iters * 2;
+    int globalX = blockX * chunkSize - iters + threadX;
+    int globalY = blockY * chunkSize - iters + threadY;
 
-    auto at = [in, nx, ny] (int x, int y) -> float & {
-        return in[std::min(std::max(x, 0), nx - 1) + nx * std::min(std::max(y, 0), ny - 1)];
-    };
+    __shared__ float mem[2][blockSize + 2][blockSize + 2];
+    int clampedX = std::min(std::max(globalX, 0), nx - 1);
+    int clampedY = std::min(std::max(globalY, 0), ny - 1);
+    mem[0][1 + threadY][1 + threadX] = in[nx * clampedY + clampedX]; 
 
-    __shared__ mem[2][blockSize + 2 * iters][blockSize + 2 * iters];
-    mem[iters + threadY][iters + threadX] = at(globalX, globalY); 
-
-    if (threadX < iters) {
-        mem[0][iters + threadY][threadX] = at(blockX * blockSize - iters + threadX, blockY * blockSize + threadY);  // X-
-        mem[0][threadX][iters + threadY] = at(blockX * blockSize + threadY, blockY * blockSize - iters + threadX);  // Y-
-        mem[0][iters + threadY][iters + blockSize + threadX] = at(blockX * blockSize + iters + blockSize + threadX, blockY * blockSize + threadY);  // X+
-        mem[0][iters + blockSize + threadX][iters + threadY] = at(blockX * blockSize + threadY, blockY * blockSize + iters + blockSize + threadX);  // Y+
+    if (threadY == 0) {
+        int clampedYn = std::min(std::max(blockY * chunkSize - iters - 1, 0), ny - 1);
+        mem[0][0][1 + threadX] = in[nx * clampedYn + clampedX]; 
+        int clampedYp = std::min(std::max(blockY * chunkSize - iters + blockSize, 0), ny - 1);
+        mem[0][1 + blockSize][1 + threadX] = in[nx * clampedYp + clampedX]; 
     }
 
-    mem[!phase][y][x] =
-        ( mem[phase][iters + y + 1][iters + x]
-        + mem[phase][iters + y - 1][iters + x]
-        + mem[phase][iters + y][iters + x + 1]
-        + mem[phase][iters + y][iters + x - 1]
-        ) / 4;
+    if (threadX == 0) {
+        int clampedXn = std::min(std::max(blockX * chunkSize - iters - 1, 0), nx - 1);
+        mem[0][1 + threadY][0] = in[nx * clampedY + clampedXn]; 
+        int clampedXp = std::min(std::max(blockX * chunkSize - iters + blockSize, 0), nx - 1);
+        mem[0][1 + threadY][1 + blockSize] = in[nx * clampedY + clampedXp]; 
+    }
 
-    if (globalX >= nx || globalY >= ny)
-        out[globalY * nx + globalX] = res;
+    __syncthreads();
+
+    for (int stage = 0; stage < iters; stage += 2) {
+#pragma unroll
+        for (int phase = 0; phase < 2; phase++) {
+            mem[1 - phase][1 + threadY][1 + threadX] =
+                ( mem[phase][1 + threadY + 1][1 + threadX]
+                + mem[phase][1 + threadY - 1][1 + threadX]
+                + mem[phase][1 + threadY][1 + threadX + 1]
+                + mem[phase][1 + threadY][1 + threadX - 1]
+                ) / 4;
+            __syncthreads();
+        }
+    }
+
+    if (threadX >= iters && threadX < blockSize - iters)
+        if (threadY >= iters && threadY < blockSize - iters)
+            if (globalX < nx && globalY < ny)
+                out[globalY * nx + globalX] = mem[0][1 + threadY][1 + threadX];
+}
+
+template <int iters, int blockSize>
+void parallel_jacobi(float *out, float const *in, int nx, int ny) {
+    constexpr int chunkSize = blockSize - iters * 2;
+    static_assert(chunkSize > 0 && iters % 2 == 0);
+    parallel_jacobi_kernel<iters, blockSize>
+        <<<dim3((nx + chunkSize - 1) / chunkSize, (ny + chunkSize - 1) / chunkSize, 1), 
+        dim3(blockSize, blockSize, 1)>>>(out, in, nx, ny);
 }
 
 int main() {
@@ -97,9 +122,8 @@ int main() {
     TICK(parallel_jacobi);
 
     constexpr int iters = 4;
-    for (int step = 0; step < 256; step += iters) {
-        parallel_jacobi<iters, 32><<<dim3(nx / 32, ny / 32, 1), dim3(32, 32, 1)>>>
-            (out.data(), in.data(), nx, ny);
+    for (int step = 0; step < 1024; step += iters) {
+        parallel_jacobi<iters, 32>(out.data(), in.data(), nx, ny);
         std::swap(out, in);
     }
 
