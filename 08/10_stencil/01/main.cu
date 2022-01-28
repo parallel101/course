@@ -4,45 +4,81 @@
 #include <vector>
 #include "CudaAllocator.h"
 #include "ticktock.h"
+#include "stb_image.h"
+#include "stb_image_write.h"
 
-template <int blockSize, class T>
-__global__ void parallel_transpose(T *out, T const *in, int nx, int ny) {
-    int x = blockIdx.x * blockSize + threadIdx.x;
-    int y = blockIdx.y * blockSize + threadIdx.y;
-    if (x >= nx || y >= ny) return;
-    __shared__ T tmp[(blockSize + 1) * blockSize];
-    int rx = blockIdx.y * blockSize + threadIdx.x;
-    int ry = blockIdx.x * blockSize + threadIdx.y;
-    tmp[threadIdx.y * (blockSize + 1) + threadIdx.x] = in[ry * nx + rx];
-    __syncthreads();
-    out[y * nx + x] = tmp[threadIdx.x * (blockSize + 1) + threadIdx.y];
-}
-
-int main() {
-    int nx = 1<<14, ny = 1<<14;
-    std::vector<int, CudaAllocator<int>> in(nx * ny);
-    std::vector<int, CudaAllocator<int>> out(nx * ny);
-
-    for (int i = 0; i < nx * ny; i++) {
-        in[i] = i;
+template <class A>
+std::tuple<int, int, int> read_image(A &a, const char *path) {
+    int nx = 0, ny = 0, comp = 0;
+    unsigned char *p = stbi_load(path, &nx, &ny, &comp, 0);
+    if (!p) {
+        perror(path);
+        exit(-1);
     }
-
-    TICK(parallel_transpose);
-    parallel_transpose<32><<<dim3(nx / 32, ny / 32, 1), dim3(32, 32, 1)>>>
-        (out.data(), in.data(), nx, ny);
-    checkCudaErrors(cudaDeviceSynchronize());
-    TOCK(parallel_transpose);
-
-    for (int y = 0; y < ny; y++) {
-        for (int x = 0; x < nx; x++) {
-            if (out[y * nx + x] != in[x * nx + y]) {
-                printf("Wrong At x=%d,y=%d: %d != %d\n", x, y,
-                       out[y * nx + x], in[x * nx + y]);
-                return -1;
+    a.resize(nx * ny * comp);
+    for (int c = 0; c < comp; c++) {
+        for (int y = 0; y < ny; y++) {
+            for (int x = 0; x < nx; x++) {
+                a[c * nx * ny + y * nx + x] = (1.f / 255.f) * p[(y * nx + x) * comp + c];
             }
         }
     }
+    stbi_image_free(p);
+    return {nx, ny, comp};
+}
 
-    printf("All Correct!\n");
+template <class A>
+void write_image(A const &a, int nx, int ny, int comp, const char *path) {
+    auto p = (unsigned char *)malloc(nx * ny * comp);
+    for (int c = 0; c < comp; c++) {
+        for (int y = 0; y < ny; y++) {
+            for (int x = 0; x < nx; x++) {
+                p[(y * nx + x) * comp + c] = std::max(0.f, std::min(255.f, a[c * nx * ny + y * nx + x] * 255.f));
+            }
+        }
+    }
+    int ret = 0;
+    auto pt = strrchr(path, '.');
+    if (pt && !strcmp(pt, ".png")) {
+        ret = stbi_write_png(path, nx, ny, comp, p, 0);
+    } else if (pt && !strcmp(pt, ".jpg")) {
+        ret = stbi_write_jpg(path, nx, ny, comp, p, 0);
+    } else {
+        ret = stbi_write_bmp(path, nx, ny, comp, p);
+    }
+    free(p);
+    if (!ret) {
+        perror(path);
+        exit(-1);
+    }
+}
+
+template <int nblur, int blockSize>
+__global__ void parallel_xblur(float *out, float const *in, int nx, int ny) {
+    int x = blockIdx.x * blockSize + threadIdx.x;
+    int y = blockIdx.y * blockSize + threadIdx.y;
+    if (x >= nx || y >= ny) return;
+    float sum = 0;
+    for (int i = 0; i < nblur; i++) {
+        sum += in[y * nx + std::min(x + i, nx - 1)];
+    }
+    out[y * nx + x] = sum / nblur;
+}
+
+int main() {
+    std::vector<float, CudaAllocator<float>> in;
+    std::vector<float, CudaAllocator<float>> out;
+
+    auto [nx, ny, _] = read_image(in, "original.jpg");
+    out.resize(nx * ny);
+
+    TICK(parallel_xblur);
+    parallel_xblur<32, 32><<<dim3(nx / 32, ny / 32, 1), dim3(32, 32, 1)>>>
+        (out.data(), in.data(), nx, ny);
+    checkCudaErrors(cudaDeviceSynchronize());
+    TOCK(parallel_xblur);
+
+    write_image(out, nx, ny, 1, "/tmp/out.png");
+    system("display /tmp/out.png &");
     return 0;
 }

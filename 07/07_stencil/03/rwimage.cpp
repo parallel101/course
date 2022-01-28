@@ -44,6 +44,7 @@ void write_image(Image const &a, const char *path) {
     } else {
         ret = stbi_write_bmp(path, nx, ny, comp, p);
     }
+    free(p);
     if (!ret) {
         perror(path);
         exit(-1);
