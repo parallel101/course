@@ -72,7 +72,6 @@ int parallel_sum(T const *arr, int n) {
 int main() {
     int n = 1<<24;
     std::vector<int, CudaAllocator<int>> arr(n);
-    std::vector<int, CudaAllocator<int>> sum(n / 4096);
 
     for (int i = 0; i < n; i++) {
         arr[i] = std::rand() % 4;
