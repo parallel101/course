@@ -6,14 +6,29 @@
 #include "helper_cuda.h"
 
 
+struct ctor_t {
+};
+
+static constexpr ctor_t ctor;
+
+struct nocopy_t {
+    nocopy_t() = default;
+    nocopy_t(nocopy_t const &) = delete;
+    nocopy_t &operator=(nocopy_t const &) = delete;
+    nocopy_t(nocopy_t &&) = delete;
+    nocopy_t &operator=(nocopy_t &&) = delete;
+};
+
+
 template <class T>
-class CudaArray {
+struct CudaArray {
     struct BuildArgs {
         std::array<unsigned int, 3> const dim{};
         cudaChannelFormatDesc desc{cudaCreateChannelDesc<T>()};  // or cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsigned)
         int flags{cudaArraySurfaceLoadStore}; // or 0
     };
 
+protected:
     struct Impl {
         cudaArray *m_cuArray{};
         std::array<unsigned int, 3> m_dim{};
@@ -46,30 +61,29 @@ class CudaArray {
         }
     };
 
-    std::shared_ptr<Impl> impl;
+    std::shared_ptr<Impl> m_impl;
 
 public:
-    static CudaArray make(BuildArgs const &_args) {
-        CudaArray that;
-        that.impl = std::make_shared<Impl>(_args);
-        return that;
+    CudaArray(ctor_t, BuildArgs const &_args)
+        : m_impl(std::make_shared<Impl>(_args)) {
     }
 
     void copyIn(T const *_data) const {
-        impl->copyIn(_data);
+        m_impl->copyIn(_data);
     }
 
     void copyOut(T *_data) const {
-        impl->copyOut(_data);
+        m_impl->copyOut(_data);
     }
 
     operator cudaArray *() const {
-        return impl->m_cuArray;
+        return m_impl->m_cuArray;
     }
 };
 
 template <class T>
-class CudaSurface {
+struct CudaSurface {
+protected:
     struct Impl {
         cudaSurfaceObject_t m_cuSuf{};
         CudaArray<T> m_cuarr;
@@ -88,24 +102,22 @@ class CudaSurface {
         }
     };
 
-    std::shared_ptr<Impl> impl;
+    std::shared_ptr<Impl> m_impl;
 
 public:
-    static CudaSurface make(CudaArray<T> const &_cuarr) {
-        CudaSurface that;
-        that.impl = std::make_shared<Impl>(_cuarr);
-        return that;
+    CudaSurface(ctor_t, CudaArray<T> const &_cuarr)
+        : m_impl(std::make_shared<Impl>(_cuarr)) {
     }
 
     CudaArray<T> getArray() const {
-        return impl->m_cuarr;
+        return m_impl->m_cuarr;
     }
 
     cudaSurfaceObject_t get() const {
-        return impl->m_cuSuf;
+        return m_impl->m_cuSuf;
     }
 
-    class Accessor {
+    struct Accessor {
         cudaSurfaceObject_t m_cuSuf;
 
         template <cudaSurfaceBoundaryMode mode = cudaBoundaryModeTrap>  // or cudaBoundaryModeZero, cudaBoundaryModeClamp
@@ -120,12 +132,12 @@ public:
     };
 
     Accessor access() const {
-        return impl->m_cuSuf;
+        return {m_impl->m_cuSuf};
     }
 };
 
 template <class T>
-class CudaTexture {
+struct CudaTexture {
     struct BuildArgs {
         cudaTextureAddressMode addressMode{cudaAddressModeClamp};  // or cudaAddressModeWrap
         cudaTextureFilterMode filterMode{cudaFilterModeLinear};   // or cudaFilterModePoint
@@ -133,6 +145,7 @@ class CudaTexture {
         bool normalizedCoords{false};
     };
 
+protected:
     struct Impl {
         cudaTextureObject_t m_cuTex{};
         CudaArray<T> m_cuarr;
@@ -159,24 +172,22 @@ class CudaTexture {
         }
     };
 
-    std::shared_ptr<Impl> impl;
+    std::shared_ptr<Impl> m_impl;
 
 public:
-    static CudaTexture make(CudaArray<T> const &_cuarr, BuildArgs const &_args = {}) {
-        CudaTexture that;
-        that.impl = std::make_shared<Impl>(_cuarr, _args);
-        return that;
+    CudaTexture(ctor_t, CudaArray<T> const &_cuarr, BuildArgs const &_args = {})
+        : m_impl(std::make_shared<Impl>(_cuarr, _args)) {
     }
 
     CudaArray<T> getArray() const {
-        return impl->m_cuarr;
+        return m_impl->m_cuarr;
     }
 
     cudaTextureObject_t get() const {
-        return impl->m_cuTex;
+        return m_impl->m_cuTex;
     }
 
-    class Accessor {
+    struct Accessor {
         cudaTextureObject_t m_cuTex;
 
         __device__ __forceinline__ T sample(float x, float y, float z) const {
@@ -185,6 +196,6 @@ public:
     };
 
     Accessor access() const {
-        return impl->m_cuTex;
+        return {m_impl->m_cuTex};
     }
 };
