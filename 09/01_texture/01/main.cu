@@ -3,12 +3,11 @@
 #include <cuda_runtime.h>
 #include "helper_cuda.h"
 #include "helper_math.h"
-#include "CudaAllocator.cuh"
 #include "CudaArray.cuh"
 #include "ticktock.h"
 #include "writevdb.h"
 
-__global__ void kernel(cudaTextureObject_t texVel, cudaSurfaceObject_t sufLoc, unsigned int n) {
+__global__ void advect_kernel(cudaTextureObject_t texVel, cudaSurfaceObject_t sufLoc, unsigned int n) {
     unsigned int x = threadIdx.x + blockDim.x * blockIdx.x;
     unsigned int y = threadIdx.y + blockDim.y * blockIdx.y;
     unsigned int z = threadIdx.z + blockDim.z * blockIdx.z;
@@ -37,7 +36,7 @@ int main() {
     }
     arrVel.copyIn(cpuVel.data());
 
-    kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(texVel.get(), sufLoc.get(), n);
+    advect_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(texVel.get(), sufLoc.get(), n);
 
     std::vector<float4> cpuLoc(n * n * n);
     arrLoc.copyOut(cpuLoc.data());
