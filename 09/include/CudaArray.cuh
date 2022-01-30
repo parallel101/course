@@ -11,7 +11,7 @@ class CudaArray {
     struct BuildArgs {
         std::array<unsigned int, 3> const dim{};
         cudaChannelFormatDesc desc{cudaCreateChannelDesc<T>()};  // or cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsigned)
-        int flags{0}; // or cudaArraySurfaceLoadStore
+        int flags{cudaArraySurfaceLoadStore}; // or 0
     };
 
     struct Impl {
@@ -25,7 +25,7 @@ class CudaArray {
 
         void copyIn(T const *_data) {
             cudaMemcpy3DParms copy3DParams{};
-            copy3DParams.srcPtr = make_cudaPitchedPtr((void *)_data, m_dim[0] * sizeof(T), m_dim[1], m_dim[2]);
+            copy3DParams.srcPtr = make_cudaPitchedPtr((void *)_data, m_dim[0] * sizeof(T), m_dim[0], m_dim[1]);
             copy3DParams.dstArray = m_cuArray;
             copy3DParams.extent = make_cudaExtent(m_dim[0], m_dim[1], m_dim[2]);
             copy3DParams.kind = cudaMemcpyHostToDevice;
@@ -35,7 +35,7 @@ class CudaArray {
         void copyOut(T *_data) {
             cudaMemcpy3DParms copy3DParams{};
             copy3DParams.srcArray = m_cuArray;
-            copy3DParams.dstPtr = make_cudaPitchedPtr((void *)_data, m_dim[0] * sizeof(T), m_dim[1], m_dim[2]);
+            copy3DParams.dstPtr = make_cudaPitchedPtr((void *)_data, m_dim[0] * sizeof(T), m_dim[0], m_dim[1]);
             copy3DParams.extent = make_cudaExtent(m_dim[0], m_dim[1], m_dim[2]);
             copy3DParams.kind = cudaMemcpyDeviceToHost;
             checkCudaErrors(cudaMemcpy3D(&copy3DParams));
