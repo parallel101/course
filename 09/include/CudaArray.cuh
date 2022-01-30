@@ -101,7 +101,25 @@ public:
         return impl->m_cuarr;
     }
 
-    operator cudaSurfaceObject_t() const {
+    cudaSurfaceObject_t get() const {
+        return impl->m_cuSuf;
+    }
+
+    class Accessor {
+        cudaSurfaceObject_t m_cuSuf;
+
+        template <cudaSurfaceBoundaryMode mode = cudaBoundaryModeTrap>  // or cudaBoundaryModeZero, cudaBoundaryModeClamp
+        __device__ __forceinline__ T read(int x, int y, int z) const {
+            return surf3Dread<T>(m_cuSuf, x, y, z, mode);
+        }
+
+        template <cudaSurfaceBoundaryMode mode = cudaBoundaryModeTrap>  // or cudaBoundaryModeZero, cudaBoundaryModeClamp
+        __device__ __forceinline__ void write(T val, int x, int y, int z) const {
+            surf3Dwrite<T>(val, m_cuSuf, x, y, z, mode);
+        }
+    };
+
+    Accessor access() const {
         return impl->m_cuSuf;
     }
 };
@@ -154,7 +172,19 @@ public:
         return impl->m_cuarr;
     }
 
-    operator cudaTextureObject_t() const {
+    cudaTextureObject_t get() const {
+        return impl->m_cuTex;
+    }
+
+    class Accessor {
+        cudaTextureObject_t m_cuTex;
+
+        __device__ __forceinline__ T sample(float x, float y, float z) const {
+            return tex3D<T>(m_cuTex, x, y, z);
+        }
+    };
+
+    Accessor access() const {
         return impl->m_cuTex;
     }
 };
