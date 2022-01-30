@@ -10,6 +10,7 @@ template <class T>
 class CudaArray {
     struct BuildArgs {
         std::array<unsigned int, 3> const dim{};
+        cudaChannelFormatDesc desc{cudaCreateChannelDesc<T>()};  // or cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsigned)
         int flags{0}; // or cudaArraySurfaceLoadStore
     };
 
@@ -19,8 +20,7 @@ class CudaArray {
 
         explicit Impl(BuildArgs const &_args)
             : m_dim(_args.dim) {
-            cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<T>();  // or cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsigned)
-            checkCudaErrors(cudaMalloc3DArray(&m_cuArray, &channelDesc, make_cudaExtent(m_dim[0], m_dim[1], m_dim[2]), _args.flags));
+            checkCudaErrors(cudaMalloc3DArray(&m_cuArray, &_args.desc, make_cudaExtent(m_dim[0], m_dim[1], m_dim[2]), _args.flags));
         }
 
         void copyIn(T const *_data) {
