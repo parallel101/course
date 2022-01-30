@@ -15,7 +15,7 @@ __global__ void kernel(cudaTextureObject_t texVel, cudaSurfaceObject_t sufLoc, u
     if (x >= n || y >= n || z >= n) return;
     float4 vel = tex3D<float4>(texVel, x, y, z);
     float4 loc = make_float4(x + 0.5f, y + 0.5f, z + 0.5f, 42.f) - vel;
-    surf3Dwrite<float4>(loc, sufLoc, 1, 1, 1, cudaBoundaryModeTrap);
+    surf3Dwrite<float4>(loc, sufLoc, x * sizeof(float4), y, z, cudaBoundaryModeTrap);
 }
 
 int main() {
@@ -31,7 +31,7 @@ int main() {
     for (unsigned int z = 0; z < n; z++) {
         for (unsigned int y = 0; y < n; y++) {
             for (unsigned int x = 0; x < n; x++) {
-                cpuVel[x + n * (y + n * z)] = make_float4(1.f, 0.f, 0.f, 0.f);
+                cpuVel[x + n * (y + n * z)] = make_float4(0.1f, 0.f, 0.f, 0.f);
             }
         }
     }

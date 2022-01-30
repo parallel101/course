@@ -80,7 +80,7 @@ class CudaSurface {
             resDesc.resType = cudaResourceTypeArray;
 
             resDesc.res.array.array = m_cuarr;
-            cudaCreateSurfaceObject(&m_cuSuf, &resDesc);
+            checkCudaErrors(cudaCreateSurfaceObject(&m_cuSuf, &resDesc));
         }
 
         ~Impl() {
@@ -110,12 +110,12 @@ public:
 
         template <cudaSurfaceBoundaryMode mode = cudaBoundaryModeTrap>  // or cudaBoundaryModeZero, cudaBoundaryModeClamp
         __device__ __forceinline__ T read(int x, int y, int z) const {
-            return surf3Dread<T>(m_cuSuf, x, y, z, mode);
+            return surf3Dread<T>(m_cuSuf, x * sizeof(T), y, z, mode);
         }
 
         template <cudaSurfaceBoundaryMode mode = cudaBoundaryModeTrap>  // or cudaBoundaryModeZero, cudaBoundaryModeClamp
         __device__ __forceinline__ void write(T val, int x, int y, int z) const {
-            surf3Dwrite<T>(val, m_cuSuf, x, y, z, mode);
+            surf3Dwrite<T>(val, m_cuSuf, x * sizeof(T), y, z, mode);
         }
     };
 
