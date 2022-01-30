@@ -8,6 +8,7 @@ struct _impl_writevdb {
     std::string const &path;
     void const *base;
     uint32_t sizex, sizey, sizez;
+    int32_t minx, miny, minz;
     uint32_t pitchx, pitchy, pitchz;
 
     void operator()() const;
@@ -18,7 +19,10 @@ static void writevdb(std::string const &path, void const *base, uint32_t sizex, 
     if (pitchx == 0) pitchx = sizeof(T) * N;
     if (pitchy == 0) pitchy = pitchx * sizex;
     if (pitchz == 0) pitchz = pitchy * sizey;
-    _impl_writevdb<T, N>{path, base, sizex, sizey, sizez, pitchx, pitchy, pitchz}();
+    int32_t minx = -(int32_t)sizex / 2;
+    int32_t miny = -(int32_t)sizey / 2;
+    int32_t minz = -(int32_t)sizez / 2;
+    _impl_writevdb<T, N>{path, base, sizex, sizey, sizez, minx, miny, minz, pitchx, pitchy, pitchz}();
 }
 
 #ifdef WRITEVDB_IMPLEMENTATION
@@ -52,7 +56,7 @@ VecT help_make_vec(T const *ptr, std::index_sequence<Is...>) {
 template <class T, size_t N>
 void _impl_writevdb<T, N>::operator()() const {
     using GridT = typename vdbtraits<T, N>::type;
-    openvdb::tools::Dense<typename GridT::ValueType> dens(openvdb::Coord(sizex, sizey, sizez));
+    openvdb::tools::Dense<typename GridT::ValueType> dens(openvdb::Coord(sizex, sizey, sizez), openvdb::Coord(minx, miny, minz));
     for (uint32_t z = 0; z < sizez; z++) {
         for (uint32_t y = 0; y < sizey; y++) {
             for (uint32_t x = 0; x < sizex; x++) {

@@ -73,34 +73,42 @@ struct SmokeSim {
 };
 
 int main() {
-    unsigned int n = 32;
+    unsigned int n = 64;
 
     SmokeSim sim(n);
 
-    std::vector<float4> cpuVel(n * n * n);
-    for (unsigned int z = 0; z < n; z++) {
-        for (unsigned int y = 0; y < n; y++) {
-            for (unsigned int x = 0; x < n; x++) {
-                cpuVel[x + n * (y + n * z)] = make_float4(0.1f, 0.1f, 0.f, 0.f);
+    {
+        std::vector<float4> cpu(n * n * n);
+        for (unsigned int z = 0; z < n; z++) {
+            for (unsigned int y = 0; y < n; y++) {
+                for (unsigned int x = 0; x < n; x++) {
+                    float den = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 2 ? 1.f : 0.f;
+                    cpu[x + n * (y + n * z)] = make_float4(den, 0.f, 0.f, 0.f);
+                }
             }
         }
+        sim.clr.arr.copyIn(cpu.data());
     }
-    sim.vel.arr.copyIn(cpuVel.data());
 
-    std::vector<float4> cpuLoc(n * n * n);
-    for (int i = 0; i < 1024; i++) {
+    {
+        std::vector<float4> cpu(n * n * n);
+        for (unsigned int z = 0; z < n; z++) {
+            for (unsigned int y = 0; y < n; y++) {
+                for (unsigned int x = 0; x < n; x++) {
+                    cpu[x + n * (y + n * z)] = make_float4(0.1f, 0.f, 0.f, 0.f);
+                }
+            }
+        }
+        sim.vel.arr.copyIn(cpu.data());
+    }
+
+    std::vector<float4> cpu(n * n * n);
+    for (int frame = 1; frame <= 100; frame++) {
+        sim.clr.arr.copyOut(cpu.data());
+        writevdb<float, 1>("/tmp/a" + std::to_string(1000 + frame).substr(1) + ".vdb", cpu.data(), n, n, n, sizeof(float4));
+
+        printf("frame=%d\n", frame);
         sim.advection();
-
-        sim.loc.arr.copyOut(cpuLoc.data());
-        //for (unsigned int z = 0; z < n; z++) {
-            //for (unsigned int y = 0; y < n; y++) {
-                //for (unsigned int x = 0; x < n; x++) {
-                    //float4 val = cpuLoc[x + n * (y + n * z)];
-                    //printf("%u,%u,%u: %f,%f,%f,%f\n", x, y, z, val.x, val.y, val.z, val.w);
-                //}
-            //}
-        //}
-        writevdb<float, 1>("/tmp/a" + std::to_string(1000 + i).substr(1) + ".vdb", cpuLoc.data(), n, n, n, sizeof(float4));
     }
 
     return 0;
