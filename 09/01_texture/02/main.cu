@@ -142,7 +142,7 @@ __global__ void restrict_kernel(CudaSurface<float>::Accessor sufPreNext, CudaSur
     float ioi = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2, z*2+1);
     float oii = sufPre.read<cudaBoundaryModeClamp>(x*2, y*2+1, z*2+1);
     float iii = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2+1, z*2+1);
-    float preNext = (ooo + ioo + oio + iio + ooi + ioi + oii + iii) / 6.f;
+    float preNext = (ooo + ioo + oio + iio + ooi + ioi + oii + iii);
     sufPreNext.write(preNext, x, y, z);
 }
 
@@ -161,7 +161,7 @@ __global__ void prolongate_kernel(CudaSurface<float>::Accessor sufPreNext, CudaS
     unsigned int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
 
-    float preDelta = sufPre.read(x, y, z) * 0.5f;
+    float preDelta = sufPre.read(x, y, z) * (0.5f / 8.f);
 #pragma unroll
     for (unsigned int dz = 0; dz < 2; dz++) {
 #pragma unroll
