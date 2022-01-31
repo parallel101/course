@@ -142,7 +142,7 @@ __global__ void restrict_kernel(CudaSurface<float>::Accessor sufPreNext, CudaSur
     float ioi = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2, z*2+1);
     float oii = sufPre.read<cudaBoundaryModeClamp>(x*2, y*2+1, z*2+1);
     float iii = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2+1, z*2+1);
-    float preNext = (ooo + ioo + oio + iio + ooi + ioi + oii + iii);
+    float preNext = ooo + ioo + oio + iio + ooi + ioi + oii + iii;
     sufPreNext.write(preNext, x, y, z);
 }
 
@@ -161,7 +161,7 @@ __global__ void prolongate_kernel(CudaSurface<float>::Accessor sufPreNext, CudaS
     unsigned int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
 
-    float preDelta = sufPre.read<cudaBoundaryModeClamp>(x, y, z) * 0.5f;
+    float preDelta = sufPre.read(x, y, z) * 0.5f;
 #pragma unroll
     for (unsigned int dz = 0; dz < 2; dz++) {
 #pragma unroll
@@ -285,7 +285,7 @@ int main() {
         for (unsigned int z = 0; z < n; z++) {
             for (unsigned int y = 0; y < n; y++) {
                 for (unsigned int x = 0; x < n; x++) {
-                    float den = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 3 ? 1.f : 0.f;
+                    float den = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 4 ? 1.f : 0.f;
                     cpu[x + n * (y + n * z)] = make_float4(den, 0.f, 0.f, 0.f);
                 }
             }
@@ -298,7 +298,7 @@ int main() {
         for (unsigned int z = 0; z < n; z++) {
             for (unsigned int y = 0; y < n; y++) {
                 for (unsigned int x = 0; x < n; x++) {
-                    float vel = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 3 ? 0.5f : 0.f;
+                    float vel = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 4 ? 0.5f : 0.f;
                     cpu[x + n * (y + n * z)] = make_float4(vel, 0.f, 0.f, 0.f);
                 }
             }
