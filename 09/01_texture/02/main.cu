@@ -142,7 +142,7 @@ __global__ void restrict_kernel(CudaSurface<float>::Accessor sufPreNext, CudaSur
     float ioi = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2, z*2+1);
     float oii = sufPre.read<cudaBoundaryModeClamp>(x*2, y*2+1, z*2+1);
     float iii = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2+1, z*2+1);
-    float preNext = ooo + ioo + oio + iio + ooi + ioi + oii + iii;
+    float preNext = (ooo + ioo + oio + iio + ooi + ioi + oii + iii) / 6.f;
     sufPreNext.write(preNext, x, y, z);
 }
 
@@ -193,6 +193,7 @@ struct SmokeSim {
     std::vector<CudaAS<float>> res2;
     std::vector<CudaAS<float>> err2;
     std::vector<unsigned int> sizes;
+    //std::vector<CudaAS<float>> tmpres2;
 
     SmokeSim(ctor_t, unsigned int _n, unsigned int _n0 = 16)
     : n(_n)
@@ -205,17 +206,21 @@ struct SmokeSim {
     , pre(ctor, {{n, n, n}})
     , preNext(ctor, {{n, n, n}})
     {
-        for (unsigned int tn = n; tn >= _n0; tn /= 2) {
+        unsigned int tn;
+        for (tn = n; tn >= _n0; tn /= 2) {
             res.push_back(CudaAS<float>(ctor, {{tn, tn, tn}}));
             res2.push_back(CudaAS<float>(ctor, {{tn/2, tn/2, tn/2}}));
             err2.push_back(CudaAS<float>(ctor, {{tn/2, tn/2, tn/2}}));
             sizes.push_back(tn);
         }
+        //tmpres2.push_back(CudaAS<float>(ctor, {{tn/2, tn/2, tn/2}}));
     }
 
-    void smooth(CudaSurface<float> &v, CudaSurface<float> &f, unsigned int lev, int times = 4) {
+    void smooth(/*CudaSurface<float> &r, */CudaSurface<float> &v, CudaSurface<float> &f, unsigned int lev, int times = 8) {
         unsigned int tn = sizes[lev];
         for (int step = 0; step < times; step++) {
+            //jacobi_kernel<<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(r.access(), v.access(), f.access(), tn);
+            //jacobi_kernel<<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v.access(), r.access(), f.access(), tn);
             rbgs_kernel<0><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v.access(), f.access(), tn);
             rbgs_kernel<1><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v.access(), f.access(), tn);
         }
@@ -224,24 +229,26 @@ struct SmokeSim {
     void vcycle(unsigned int lev, CudaSurface<float> &v, CudaSurface<float> &f) {
         if (lev >= sizes.size()) {
             unsigned int tn = sizes.back() / 2;
-            smooth(v, f, tn);
+            smooth(v, f, lev);
             return;
         }
         auto &r = res[lev].suf;
         auto &r2 = res2[lev].suf;
         auto &e2 = err2[lev].suf;
         unsigned int tn = sizes[lev];
-        smooth(v, f, tn);
+        smooth(v, f, lev);
         residual_kernel<<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(r.access(), v.access(), f.access(), tn);
         restrict_kernel<<<dim3((tn/2 + 7) / 8, (tn/2 + 7) / 8, (tn/2 + 7) / 8), dim3(8, 8, 8)>>>(r2.access(), r.access(), tn/2);
         fillzero_kernel<<<dim3((tn/2 + 7) / 8, (tn/2 + 7) / 8, (tn/2 + 7) / 8), dim3(8, 8, 8)>>>(e2.access(), tn/2);
         vcycle(lev + 1, e2, r2);
         prolongate_kernel<<<dim3((tn/2 + 7) / 8, (tn/2 + 7) / 8, (tn/2 + 7) / 8), dim3(8, 8, 8)>>>(v.access(), e2.access(), tn/2);
-        smooth(v, f, tn);
+        smooth(v, f, lev);
     }
 
     void projection() {
+        divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel.suf.access(), div.suf.access(), n);
         vcycle(0, pre.suf, div.suf);
+        subgradient_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(pre.suf.access(), vel.suf.access(), n);
     }
 
     void advection() {
@@ -299,7 +306,7 @@ int main() {
             for (unsigned int y = 0; y < n; y++) {
                 for (unsigned int x = 0; x < n; x++) {
                     float vel = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 4 ? 0.5f : 0.f;
-                    cpu[x + n * (y + n * z)] = make_float4(vel, 0.f, 0.f, 0.f);
+                    cpu[x + n * (y + n * z)] = make_float4(0.f, 0.f, vel, 0.f);
                 }
             }
         }
