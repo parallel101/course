@@ -185,15 +185,13 @@ struct SmokeSim {
     CudaAST<float4> velNext;
     CudaAST<float4> clr;
     CudaAST<float4> clrNext;
+
     CudaAS<float> div;
     CudaAS<float> pre;
-    CudaAS<float> preNext;
-
     std::vector<CudaAS<float>> res;
     std::vector<CudaAS<float>> res2;
     std::vector<CudaAS<float>> err2;
     std::vector<unsigned int> sizes;
-    //std::vector<CudaAS<float>> tmpres2;
 
     SmokeSim(ctor_t, unsigned int _n, unsigned int _n0 = 16)
     : n(_n)
@@ -204,7 +202,6 @@ struct SmokeSim {
     , clrNext(ctor, {{n, n, n}})
     , div(ctor, {{n, n, n}})
     , pre(ctor, {{n, n, n}})
-    , preNext(ctor, {{n, n, n}})
     {
         unsigned int tn;
         for (tn = n; tn >= _n0; tn /= 2) {
@@ -213,14 +210,11 @@ struct SmokeSim {
             err2.push_back(CudaAS<float>(ctor, {{tn/2, tn/2, tn/2}}));
             sizes.push_back(tn);
         }
-        //tmpres2.push_back(CudaAS<float>(ctor, {{tn/2, tn/2, tn/2}}));
     }
 
-    void smooth(/*CudaSurface<float> &r, */CudaSurface<float> &v, CudaSurface<float> &f, unsigned int lev, int times = 8) {
+    void smooth(CudaSurface<float> &v, CudaSurface<float> &f, unsigned int lev, int times = 4) {
         unsigned int tn = sizes[lev];
         for (int step = 0; step < times; step++) {
-            //jacobi_kernel<<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(r.access(), v.access(), f.access(), tn);
-            //jacobi_kernel<<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v.access(), r.access(), f.access(), tn);
             rbgs_kernel<0><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v.access(), f.access(), tn);
             rbgs_kernel<1><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v.access(), f.access(), tn);
         }
@@ -260,7 +254,14 @@ struct SmokeSim {
         std::swap(clr, clrNext);
     }
 
-    void naive_projection(int times = 400) {
+    void step(int times = 12) {
+        for (int step = 0; step < times; step++) {
+            advection();
+            projection();
+        }
+    }
+
+    /*void projection(int times = 400) {
         divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel.suf.access(), div.suf.access(), n);
 
         for (int step = 0; step < times; step++) {
@@ -269,7 +270,7 @@ struct SmokeSim {
         }
 
         subgradient_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(pre.suf.access(), vel.suf.access(), n);
-    }
+    }*/
 
     float calc_loss() {
         divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel.suf.access(), div.suf.access(), n);
@@ -284,7 +285,7 @@ struct SmokeSim {
 };
 
 int main() {
-    unsigned int n = 64;
+    unsigned int n = 128;
     SmokeSim sim(ctor, n);
 
     {
@@ -292,7 +293,7 @@ int main() {
         for (unsigned int z = 0; z < n; z++) {
             for (unsigned int y = 0; y < n; y++) {
                 for (unsigned int x = 0; x < n; x++) {
-                    float den = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 4 ? 1.f : 0.f;
+                    float den = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 6 ? 1.f : 0.f;
                     cpu[x + n * (y + n * z)] = make_float4(den, 0.f, 0.f, 0.f);
                 }
             }
@@ -305,7 +306,7 @@ int main() {
         for (unsigned int z = 0; z < n; z++) {
             for (unsigned int y = 0; y < n; y++) {
                 for (unsigned int x = 0; x < n; x++) {
-                    float vel = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 4 ? 0.5f : 0.f;
+                    float vel = std::hypot((int)x - (int)n / 2, (int)y - (int)n / 2, (int)z - (int)n / 2) < n / 6 ? 0.5f : 0.f;
                     cpu[x + n * (y + n * z)] = make_float4(0.f, 0.f, vel, 0.f);
                 }
             }
@@ -319,8 +320,7 @@ int main() {
         writevdb<float, 1>("/tmp/a" + std::to_string(1000 + frame).substr(1) + ".vdb", cpu.data(), n, n, n, sizeof(float4));
 
         printf("frame=%d, loss=%f\n", frame, sim.calc_loss());
-        sim.advection();
-        sim.projection();
+        sim.step();
     }
 
     return 0;
