@@ -199,3 +199,17 @@ public:
         return {m_impl->m_cuTex};
     }
 };
+
+template <class T>
+struct CudaAST {
+    CudaArray<T> arr;
+    CudaSurface<T> suf;
+    CudaTexture<T> tex;
+
+    CudaAST(ctor_t, typename CudaArray<T>::BuildArgs const &_arrArgs, typename CudaTexture<T>::BuildArgs const &_texArgs = {})
+        : arr(ctor, _arrArgs)
+        , suf(ctor, arr)
+        , tex(ctor, arr, _texArgs)
+    {
+    }
+};
