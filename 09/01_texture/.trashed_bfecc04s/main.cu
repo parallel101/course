@@ -4,11 +4,11 @@
 #include "helper_cuda.h"
 #include "helper_math.h"
 #include "CudaArray.cuh"
-#include "CudaStream.cuh"
 #include "ticktock.h"
 #include "writevdb.h"
 #include <thread>
 
+template <bool backward>
 __global__ void advect_kernel(CudaTexture<float4>::Accessor texVel, CudaSurface<float4>::Accessor sufLoc, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -16,8 +16,12 @@ __global__ void advect_kernel(CudaTexture<float4>::Accessor texVel, CudaSurface<
     if (x >= n || y >= n || z >= n) return;
 
     auto sample = [] (CudaTexture<float4>::Accessor tex, float3 loc) -> float3 {
-        float4 vel = tex.sample(loc.x, loc.y, loc.z);
-        return make_float3(vel.x, vel.y, vel.z);
+        float4 val = tex.sample(loc.x, loc.y, loc.z);
+        float3 vel = make_float3(val.x, val.y, val.z);
+        if constexpr (backward)
+            return -vel;
+        else
+            return vel;
     };
 
     float3 loc = make_float3(x + 0.5f, y + 0.5f, z + 0.5f);
@@ -37,6 +41,21 @@ __global__ void resample_kernel(CudaSurface<float4>::Accessor sufLoc, CudaTextur
     float4 loc = sufLoc.read(x, y, z);
     float4 clr = texClr.sample(loc.x, loc.y, loc.z);
     sufClrNext.write(clr, x, y, z);
+}
+
+__global__ void bfecc_kernel(CudaSurface<float4>::Accessor sufLoc, CudaSurface<float4>::Accessor sufLocBack, CudaSurface<float4>::Accessor sufClr, CudaTexture<float4>::Accessor texClrMid, CudaSurface<float4>::Accessor sufClrNext, unsigned int n) {
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+    int z = threadIdx.z + blockDim.z * blockIdx.z;
+    if (x >= n || y >= n || z >= n) return;
+
+    float4 loc = sufLoc.read(x, y, z);          // p_star
+    float4 locBack = sufLocBack.read(x, y, z);  // p_two_star
+    float4 clr = sufClr.read(x, y, z);          // qf
+    float4 clrMid = texClrMid.sample(x + 0.5f, y + 0.5f, z + 0.5f);  // q_star
+    float4 clrBack = texClrMid.sample(locBack.x, locBack.y, locBack.z); // new_qf
+    float4 clrNext = clrMid + 0.5f * (clr - clrBack);
+    sufClrNext.write(clrNext, x, y, z);
 }
 
 __global__ void divergence_kernel(CudaSurface<float4>::Accessor sufVel, CudaSurface<float>::Accessor sufDiv, unsigned int n) {
@@ -195,24 +214,6 @@ __global__ void fillzero_kernel(CudaSurface<float>::Accessor sufPre, unsigned in
     sufPre.write(0.f, x, y, z);
 }
 
-/*
-__global__ void copyneg_kernel(CudaSurface<float>::Accessor sufPre, CudaSurface<float>::Accessor sufDiv, unsigned int n) {
-    int x = threadIdx.x + blockDim.x * blockIdx.x;
-    int y = threadIdx.y + blockDim.y * blockIdx.y;
-    int z = threadIdx.z + blockDim.z * blockIdx.z;
-    if (x >= n || y >= n || z >= n) return;
-
-    float pxp = sufDiv.read<cudaBoundaryModeClamp>(x + 1, y, z);
-    float pxn = sufDiv.read<cudaBoundaryModeClamp>(x - 1, y, z);
-    float pyp = sufDiv.read<cudaBoundaryModeClamp>(x, y + 1, z);
-    float pyn = sufDiv.read<cudaBoundaryModeClamp>(x, y - 1, z);
-    float pzp = sufDiv.read<cudaBoundaryModeClamp>(x, y, z + 1);
-    float pzn = sufDiv.read<cudaBoundaryModeClamp>(x, y, z - 1);
-    float div = sufDiv.read(x, y, z);
-    float pre = (pxp + pxn + pyp + pyn + pzp + pzn + div) * (-1.f / 6.f);
-    sufPre.write(pre, x, y, z);
-}*/
-
 __global__ void prolongate_kernel(CudaSurface<float>::Accessor sufPreNext, CudaSurface<float>::Accessor sufPre, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -239,9 +240,12 @@ struct SmokeSim {
 
     unsigned int n;
     CudaAS<float4> loc;
+    CudaAS<float4> locBack;
     CudaAST<float4> vel;
+    CudaAST<float4> velMid;
     CudaAST<float4> velNext;
     CudaAST<float4> clr;
+    CudaAST<float4> clrMid;
     CudaAST<float4> clrNext;
 
     CudaAS<float> div;
@@ -254,9 +258,12 @@ struct SmokeSim {
     SmokeSim(ctor_t, unsigned int _n, unsigned int _n0 = 16)
     : n(_n)
     , loc(ctor, {{n, n, n}})
+    , locBack(ctor, {{n, n, n}})
     , vel(ctor, {{n, n, n}})
+    , velMid(ctor, {{n, n, n}})
     , velNext(ctor, {{n, n, n}})
     , clr(ctor, {{n, n, n}})
+    , clrMid(ctor, {{n, n, n}})
     , clrNext(ctor, {{n, n, n}})
     , div(ctor, {{n, n, n}})
     , pre(ctor, {{n, n, n}})
@@ -304,9 +311,12 @@ struct SmokeSim {
     }
 
     void advection() {
-        advect_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel.tex.access(), loc.suf.access(), n);
-        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc.suf.access(), clr.tex.access(), clrNext.suf.access(), n);
-        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc.suf.access(), vel.tex.access(), velNext.suf.access(), n);
+        advect_kernel<0><<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel.tex.access(), loc.suf.access(), n);
+        advect_kernel<1><<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel.tex.access(), locBack.suf.access(), n);
+        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc.suf.access(), clr.tex.access(), clrMid.suf.access(), n);
+        bfecc_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc.suf.access(), locBack.suf.access(), clr.suf.access(), clrMid.tex.access(), clrNext.suf.access(), n);
+        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc.suf.access(), vel.tex.access(), velMid.suf.access(), n);
+        bfecc_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc.suf.access(), locBack.suf.access(), vel.suf.access(), velMid.tex.access(), velNext.suf.access(), n);
 
         std::swap(vel, velNext);
         std::swap(clr, clrNext);
@@ -343,7 +353,6 @@ struct SmokeSim {
 };
 
 int main() {
-    // orig: 0.85s
     unsigned int n = 128;
     SmokeSim sim(ctor, n);
 
@@ -365,7 +374,7 @@ int main() {
         for (int z = 0; z < n; z++) {
             for (int y = 0; y < n; y++) {
                 for (int x = 0; x < n; x++) {
-                    float vel = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 2) < n / 6 ? 0.7f : 0.f;
+                    float vel = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 2) < n / 6 ? 0.9f : 0.f;
                     cpu[x + n * (y + n * z)] = make_float4(0.f, 0.f, vel, 0.f);
                 }
             }
@@ -373,22 +382,18 @@ int main() {
         sim.vel.arr.copyIn(cpu.data());
     }
 
-    TICK(sim);
-
     std::vector<std::thread> tpool;
-    for (int frame = 1; frame <= 100; frame++) {
+    for (int frame = 1; frame <= 250; frame++) {
         std::vector<float4> cpu(n * n * n);
         sim.clr.arr.copyOut(cpu.data());
         tpool.push_back(std::thread([cpu = std::move(cpu), frame, n] {
             writevdb<float, 1>("/tmp/a" + std::to_string(1000 + frame).substr(1) + ".vdb", cpu.data(), n, n, n, sizeof(float4));
         }));
 
-        printf("frame=%d\n", frame);
+        printf("frame=%d, loss=%f\n", frame, sim.calc_loss());
         sim.step();
     }
 
     for (auto &t: tpool) t.join();
-
-    TOCK(sim);
     return 0;
 }
