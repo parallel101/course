@@ -33,11 +33,13 @@ public:
         return m_impl ? m_impl->m_stream : 0;
     }
 
-    void sync() const {
+    void synchronize() const {
         checkCudaErrors(cudaStreamSynchronize(get()));
     }
 
     inline CudaEvent event() const;
+
+    inline void wait(CudaEvent const &event) const;
 
     operator cudaStream_t() const {
         return get();
@@ -74,7 +76,7 @@ public:
         return get();
     }
 
-    void sync() const {
+    void synchronize() const {
         checkCudaErrors(cudaEventSynchronize(get()));
     }
 
@@ -86,14 +88,10 @@ public:
         checkCudaErrors(cudaEventRecord(get(), stream.get()));
     }
 
-    float elapsed(CudaEvent const &other) const {
+    float elapsedTime(CudaEvent const &other) const {
         float res;
         checkCudaErrors(cudaEventElapsedTime(&res, get(), other.get()));
         return res;
-    }
-
-    float operator-(CudaEvent const &other) const {
-        return other.elapsed(*this);
     }
 };
 
@@ -101,4 +99,8 @@ CudaEvent CudaStream::event() const {
     CudaEvent e;
     e.record(*this);
     return e;
+}
+
+void CudaStream::wait(CudaEvent const &event) const {
+    checkCudaErrors(cudaStreamWaitEvent(get(), event.get()));
 }

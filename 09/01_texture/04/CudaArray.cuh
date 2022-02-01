@@ -1,214 +1,140 @@
 #pragma once
 
-#include <array>
-#include <memory>
 #include <cuda_runtime.h>
 #include "helper_cuda.h"
 #include "pybutils.h"
 
+struct DisableCopy {
+    DisableCopy() = default;
+    DisableCopy(DisableCopy const &) = delete;
+    DisableCopy &operator=(DisableCopy const &) = delete;
+};
 
 template <class T>
-struct CudaArray {
-    struct BuildArgs {
-        std::array<unsigned int, 3> const dim{};
-        cudaChannelFormatDesc desc{cudaCreateChannelDesc<T>()};  // or cudaCreateChannelDesc(8, 8, 8, 8, cudaChannelFormatKindUnsigned)
-        int flags{cudaArraySurfaceLoadStore}; // or 0
-    };
+struct CudaArray : DisableCopy {
+    cudaArray *m_cuArray{};
+    dim3 m_dim{};
 
-protected:
-    struct Impl {
-        cudaArray *m_cuArray{};
-        std::array<unsigned int, 3> m_dim{};
-
-        explicit Impl(BuildArgs const &_args)
-            : m_dim(_args.dim) {
-            checkCudaErrors(cudaMalloc3DArray(&m_cuArray, &_args.desc, make_cudaExtent(m_dim[0], m_dim[1], m_dim[2]), _args.flags));
-        }
-
-        void copyIn(T const *_data) {
-            cudaMemcpy3DParms copy3DParams{};
-            copy3DParams.srcPtr = make_cudaPitchedPtr((void *)_data, m_dim[0] * sizeof(T), m_dim[0], m_dim[1]);
-            copy3DParams.dstArray = m_cuArray;
-            copy3DParams.extent = make_cudaExtent(m_dim[0], m_dim[1], m_dim[2]);
-            copy3DParams.kind = cudaMemcpyHostToDevice;
-            checkCudaErrors(cudaMemcpy3D(&copy3DParams));
-        }
-
-        void copyOut(T *_data) {
-            cudaMemcpy3DParms copy3DParams{};
-            copy3DParams.srcArray = m_cuArray;
-            copy3DParams.dstPtr = make_cudaPitchedPtr((void *)_data, m_dim[0] * sizeof(T), m_dim[0], m_dim[1]);
-            copy3DParams.extent = make_cudaExtent(m_dim[0], m_dim[1], m_dim[2]);
-            copy3DParams.kind = cudaMemcpyDeviceToHost;
-            checkCudaErrors(cudaMemcpy3D(&copy3DParams));
-        }
-
-        ~Impl() {
-            checkCudaErrors(cudaFreeArray(m_cuArray));
-        }
-    };
-
-    std::shared_ptr<Impl> m_impl;
-
-public:
-    CudaArray(ctor_t, BuildArgs const &_args)
-        : m_impl(std::make_shared<Impl>(_args)) {
+    explicit CudaArray(dim3 const &_dim)
+        : m_dim(_dim) {
+        cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<T>();
+        checkCudaErrors(cudaMalloc3DArray(&m_cuArray, &channelDesc, make_cudaExtent(m_dim.x, m_dim.y, m_dim.z), cudaArraySurfaceLoadStore));
     }
 
-    void copyIn(T const *_data) const {
-        m_impl->copyIn(_data);
+    void copyIn(T const *_data) {
+        cudaMemcpy3DParms copy3DParams{};
+        copy3DParams.srcPtr = make_cudaPitchedPtr((void *)_data, m_dim.x * sizeof(T), m_dim.x, m_dim.y);
+        copy3DParams.dstArray = m_cuArray;
+        copy3DParams.extent = make_cudaExtent(m_dim.x, m_dim.y, m_dim.z);
+        copy3DParams.kind = cudaMemcpyHostToDevice;
+        checkCudaErrors(cudaMemcpy3D(&copy3DParams));
     }
 
-    void copyOut(T *_data) const {
-        m_impl->copyOut(_data);
+    void copyOut(T *_data) {
+        cudaMemcpy3DParms copy3DParams{};
+        copy3DParams.srcArray = m_cuArray;
+        copy3DParams.dstPtr = make_cudaPitchedPtr((void *)_data, m_dim.x * sizeof(T), m_dim.x, m_dim.y);
+        copy3DParams.extent = make_cudaExtent(m_dim.x, m_dim.y, m_dim.z);
+        copy3DParams.kind = cudaMemcpyDeviceToHost;
+        checkCudaErrors(cudaMemcpy3D(&copy3DParams));
     }
 
-    operator cudaArray *() const {
-        return m_impl->m_cuArray;
+    cudaArray *getArray() const {
+        return m_cuArray;
+    }
+
+    ~CudaArray() {
+        checkCudaErrors(cudaFreeArray(m_cuArray));
     }
 };
 
 template <class T>
-struct CudaSurface {
-protected:
-    struct Impl {
-        cudaSurfaceObject_t m_cuSuf{};
-        CudaArray<T> m_cuarr;
+struct CudaSurfaceAccessor {
+    cudaSurfaceObject_t m_cuSuf;
 
-        explicit Impl(CudaArray<T> const &_cuarr)
-            : m_cuarr(_cuarr) {
-            cudaResourceDesc resDesc{};
-            resDesc.resType = cudaResourceTypeArray;
-
-            resDesc.res.array.array = m_cuarr;
-            checkCudaErrors(cudaCreateSurfaceObject(&m_cuSuf, &resDesc));
-        }
-
-        ~Impl() {
-            checkCudaErrors(cudaDestroySurfaceObject(m_cuSuf));
-        }
-    };
-
-    std::shared_ptr<Impl> m_impl;
-
-public:
-    CudaSurface(ctor_t, CudaArray<T> const &_cuarr)
-        : m_impl(std::make_shared<Impl>(_cuarr)) {
+    template <cudaSurfaceBoundaryMode mode = cudaBoundaryModeTrap>  // or cudaBoundaryModeZero, cudaBoundaryModeClamp
+    __device__ __forceinline__ T read(int x, int y, int z) const {
+        return surf3Dread<T>(m_cuSuf, x * sizeof(T), y, z, mode);
     }
 
-    CudaArray<T> getArray() const {
-        return m_impl->m_cuarr;
-    }
-
-    cudaSurfaceObject_t get() const {
-        return m_impl->m_cuSuf;
-    }
-
-    struct Accessor {
-        cudaSurfaceObject_t m_cuSuf;
-
-        template <cudaSurfaceBoundaryMode mode = cudaBoundaryModeTrap>  // or cudaBoundaryModeZero, cudaBoundaryModeClamp
-        __device__ __forceinline__ T read(int x, int y, int z) const {
-            return surf3Dread<T>(m_cuSuf, x * sizeof(T), y, z, mode);
-        }
-
-        template <cudaSurfaceBoundaryMode mode = cudaBoundaryModeTrap>  // or cudaBoundaryModeZero, cudaBoundaryModeClamp
-        __device__ __forceinline__ void write(T val, int x, int y, int z) const {
-            surf3Dwrite<T>(val, m_cuSuf, x * sizeof(T), y, z, mode);
-        }
-    };
-
-    Accessor access() const {
-        return {m_impl->m_cuSuf};
+    template <cudaSurfaceBoundaryMode mode = cudaBoundaryModeTrap>  // or cudaBoundaryModeZero, cudaBoundaryModeClamp
+    __device__ __forceinline__ void write(T val, int x, int y, int z) const {
+        surf3Dwrite<T>(val, m_cuSuf, x * sizeof(T), y, z, mode);
     }
 };
 
 template <class T>
-struct CudaTexture {
-    struct BuildArgs {
+struct CudaSurface : CudaArray<T> {
+    cudaSurfaceObject_t m_cuSuf{};
+
+    explicit CudaSurface(dim3 const &_dim)
+        : CudaArray<T>(_dim) {
+        cudaResourceDesc resDesc{};
+        resDesc.resType = cudaResourceTypeArray;
+
+        resDesc.res.array.array = CudaArray<T>::getArray();
+        checkCudaErrors(cudaCreateSurfaceObject(&m_cuSuf, &resDesc));
+    }
+
+    cudaSurfaceObject_t getSurface() const {
+        return m_cuSuf;
+    }
+
+    CudaSurfaceAccessor<T> accessSurface() const {
+        return {m_cuSuf};
+    }
+
+    ~CudaSurface() {
+        checkCudaErrors(cudaDestroySurfaceObject(m_cuSuf));
+    }
+};
+
+template <class T>
+struct CudaTextureAccessor {
+    cudaTextureObject_t m_cuTex;
+
+    __device__ __forceinline__ T sample(float x, float y, float z) const {
+        return tex3D<T>(m_cuTex, x, y, z);
+    }
+};
+
+template <class T>
+struct CudaTexture : CudaSurface<T> {
+    struct Parameters {
         cudaTextureAddressMode addressMode{cudaAddressModeClamp};  // or cudaAddressModeWrap
         cudaTextureFilterMode filterMode{cudaFilterModeLinear};   // or cudaFilterModePoint
         cudaTextureReadMode readMode{cudaReadModeElementType};  // or cudaReadModeNormalizedFloat
-        bool normalizedCoords{false};
+        bool normalizedCoords{false};  // or true
     };
 
-protected:
-    struct Impl {
-        cudaTextureObject_t m_cuTex{};
-        CudaArray<T> m_cuarr;
+    cudaTextureObject_t m_cuTex{};
 
-        explicit Impl(CudaArray<T> const &_cuarr, BuildArgs const &_args)
-            : m_cuarr(_cuarr) {
-            cudaResourceDesc resDesc{};
-            resDesc.resType = cudaResourceTypeArray;
-            resDesc.res.array.array = m_cuarr;
+    explicit CudaTexture(dim3 const &_dim, Parameters const &_args = {})
+        : CudaSurface<T>(_dim) {
+        cudaResourceDesc resDesc{};
+        resDesc.resType = cudaResourceTypeArray;
+        resDesc.res.array.array = CudaSurface<T>::getArray();
 
-            cudaTextureDesc texDesc{};
-            texDesc.addressMode[0] = _args.addressMode;
-            texDesc.addressMode[1] = _args.addressMode;
-            texDesc.addressMode[2] = _args.addressMode;
-            texDesc.filterMode = _args.filterMode;
-            texDesc.readMode = _args.readMode;
-            texDesc.normalizedCoords = _args.normalizedCoords;
+        cudaTextureDesc texDesc{};
+        texDesc.addressMode[0] = _args.addressMode;
+        texDesc.addressMode[1] = _args.addressMode;
+        texDesc.addressMode[2] = _args.addressMode;
+        texDesc.filterMode = _args.filterMode;
+        texDesc.readMode = _args.readMode;
+        texDesc.normalizedCoords = _args.normalizedCoords;
 
-            checkCudaErrors(cudaCreateTextureObject(&m_cuTex, &resDesc, &texDesc, NULL));
-        }
-
-        ~Impl() {
-            checkCudaErrors(cudaDestroyTextureObject(m_cuTex));
-        }
-    };
-
-    std::shared_ptr<Impl> m_impl;
-
-public:
-    CudaTexture(ctor_t, CudaArray<T> const &_cuarr, BuildArgs const &_args = {})
-        : m_impl(std::make_shared<Impl>(_cuarr, _args)) {
+        checkCudaErrors(cudaCreateTextureObject(&m_cuTex, &resDesc, &texDesc, NULL));
     }
 
-    CudaArray<T> getArray() const {
-        return m_impl->m_cuarr;
+    cudaTextureObject_t getTexture() const {
+        return m_cuTex;
     }
 
-    cudaTextureObject_t get() const {
-        return m_impl->m_cuTex;
+    CudaTextureAccessor<T> accessTexture() const {
+        return {m_cuTex};
     }
 
-    struct Accessor {
-        cudaTextureObject_t m_cuTex;
-
-        __device__ __forceinline__ T sample(float x, float y, float z) const {
-            return tex3D<T>(m_cuTex, x, y, z);
-        }
-    };
-
-    Accessor access() const {
-        return {m_impl->m_cuTex};
-    }
-};
-
-template <class T>
-struct CudaAST {
-    CudaArray<T> arr;
-    CudaSurface<T> suf;
-    CudaTexture<T> tex;
-
-    CudaAST(ctor_t, typename CudaArray<T>::BuildArgs const &_arrArgs, typename CudaTexture<T>::BuildArgs const &_texArgs = {})
-        : arr(ctor, _arrArgs)
-        , suf(ctor, arr)
-        , tex(ctor, arr, _texArgs)
-    {
-    }
-};
-
-template <class T>
-struct CudaAS {
-    CudaArray<T> arr;
-    CudaSurface<T> suf;
-
-    CudaAS(ctor_t, typename CudaArray<T>::BuildArgs const &_arrArgs)
-        : arr(ctor, _arrArgs)
-        , suf(ctor, arr)
-    {
+    ~CudaTexture() {
+        checkCudaErrors(cudaDestroyTextureObject(m_cuTex));
     }
 };
