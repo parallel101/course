@@ -422,11 +422,13 @@ int main() {
     }
 
     std::vector<std::thread> tpool;
-    for (int frame = 1; frame <= 100; frame++) {
+    for (int frame = 1; frame <= 250; frame++) {
         std::vector<float4> cpu(n * n * n);
         sim.clr->copyOut(cpu.data());
         tpool.push_back(std::thread([cpu = std::move(cpu), frame, n] {
-            writevdb<float, 1>("/tmp/a" + std::to_string(1000 + frame).substr(1) + ".vdb", cpu.data(), n, n, n, sizeof(float4));
+            VDBWriter writer;
+            writer.addGrid<float, 1>("density", cpu.data(), n, n, n, sizeof(float4));
+            writer.write("/tmp/a" + std::to_string(1000 + frame).substr(1) + ".vdb");
         }));
 
         printf("frame=%d, loss=%f\n", frame, sim.calc_loss());
