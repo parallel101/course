@@ -44,11 +44,13 @@ __global__ void divergence_kernel(CudaSurfaceAccessor<float4> sufVel, CudaSurfac
     int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
 
-    float4 vel = sufVel.read(x, y, z);
+    float vxp = sufVel.read<cudaBoundaryModeZero>(x + 1, y, z).x;
+    float vyp = sufVel.read<cudaBoundaryModeZero>(x, y + 1, z).y;
+    float vzp = sufVel.read<cudaBoundaryModeZero>(x, y, z + 1).z;
     float vxn = sufVel.read<cudaBoundaryModeZero>(x - 1, y, z).x;
     float vyn = sufVel.read<cudaBoundaryModeZero>(x, y - 1, z).y;
     float vzn = sufVel.read<cudaBoundaryModeZero>(x, y, z - 1).z;
-    float div = (vel.x - vxn + vel.y - vyn + vel.z - vzn);
+    float div = (vxp - vxn + vyp - vyn + vzp - vzn) * 0.5f;
     sufDiv.write(div, x, y, z);
 }
 
@@ -120,14 +122,16 @@ __global__ void subgradient_kernel(CudaSurfaceAccessor<float> sufPre, CudaSurfac
     if (x >= n || y >= n || z >= n) return;
     if (sufBound.read(x, y, z) < 0) return;
 
-    float pre = sufPre.read(x, y, z);
+    float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
+    float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
+    float pzn = sufPre.read<cudaBoundaryModeClamp>(x, y, z - 1);
     float pxp = sufPre.read<cudaBoundaryModeClamp>(x + 1, y, z);
     float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
     float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
     float4 vel = sufVel.read(x, y, z);
-    vel.x -= (pxp - pre);
-    vel.y -= (pyp - pre);
-    vel.z -= (pzp - pre);
+    vel.x -= (pxp - pxn) * 0.5f;
+    vel.y -= (pyp - pyn) * 0.5f;
+    vel.z -= (pzp - pzn) * 0.5f;
     sufVel.write(vel, x, y, z);
 }
 
