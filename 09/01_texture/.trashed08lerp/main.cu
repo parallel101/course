@@ -339,7 +339,8 @@ int main() {
                     float sdf1 = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) - n / 12;
                     float sdf2 = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n * 3 / 4) - n / 6;
                     float sdf = std::min(sdf1, sdf2);
-                    cpu[x + n * (y + n * z)] = std::max(0.f, std::min(1.f, -sdf));
+                    float bound = std::max(0.f, std::min(1.f, -sdf));
+                    cpu[x + n * (y + n * z)] = bound;
                 }
             }
         }
@@ -351,8 +352,9 @@ int main() {
         for (int z = 0; z < n; z++) {
             for (int y = 0; y < n; y++) {
                 for (int x = 0; x < n; x++) {
-                    float den = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) < n / 12 ? 1.f : 0.f;
-                    cpu[x + n * (y + n * z)] = make_float4(den, 0.f, 0.f, 0.f);
+                    float sdf = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) - n / 12;
+                    float bound = std::max(0.f, std::min(1.f, -sdf));
+                    cpu[x + n * (y + n * z)] = make_float4(bound, 0.f, 0.f, 0.f);
                 }
             }
         }
@@ -364,8 +366,9 @@ int main() {
         for (int z = 0; z < n; z++) {
             for (int y = 0; y < n; y++) {
                 for (int x = 0; x < n; x++) {
-                    float vel = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) < n / 12 ? 0.9f : 0.f;
-                    cpu[x + n * (y + n * z)] = make_float4(0.f, 0.f, vel, 0.f);
+                    float sdf = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) - n / 12;
+                    float bound = std::max(0.f, std::min(1.f, -sdf));
+                    cpu[x + n * (y + n * z)] = make_float4(0.f, 0.f, bound * 0.9f, 0.f);
                 }
             }
         }
