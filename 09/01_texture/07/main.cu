@@ -40,6 +40,25 @@ __global__ void resample_kernel(CudaSurfaceAccessor<float4> sufLoc, CudaTextureA
     sufClrNext.write(clr, x, y, z);
 }
 
+__global__ void decay_kernel(CudaSurfaceAccessor<float4> sufClr, CudaSurfaceAccessor<float4> sufClrNext, CudaSurfaceAccessor<char> sufBound, float4 decayRate, unsigned int n) {
+    int x = threadIdx.x + blockDim.x * blockIdx.x;
+    int y = threadIdx.y + blockDim.y * blockIdx.y;
+    int z = threadIdx.z + blockDim.z * blockIdx.z;
+    if (x >= n || y >= n || z >= n) return;
+    if (sufBound.read(x, y, z) < 0) return;
+
+    float4 cxp = sufClr.read<cudaBoundaryModeClamp>(x + 1, y, z);
+    float4 cyp = sufClr.read<cudaBoundaryModeClamp>(x, y + 1, z);
+    float4 czp = sufClr.read<cudaBoundaryModeClamp>(x, y, z + 1);
+    float4 cxn = sufClr.read<cudaBoundaryModeClamp>(x - 1, y, z);
+    float4 cyn = sufClr.read<cudaBoundaryModeClamp>(x, y - 1, z);
+    float4 czn = sufClr.read<cudaBoundaryModeClamp>(x, y, z - 1);
+    float4 clrAvg = (cxp + cyp + czp + cxn + cyn + czn) * (1 / 6.f);
+    float4 clrNext = sufClr.read(x, y, z);
+    clrNext = clrNext * decayRate + clrAvg * (make_float4(1.f) - decayRate);
+    sufClrNext.write(clrNext, x, y, z);
+}
+
 __global__ void divergence_kernel(CudaSurfaceAccessor<float4> sufVel, CudaSurfaceAccessor<float> sufDiv, CudaSurfaceAccessor<char> sufBound, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -268,10 +287,14 @@ struct SmokeSim : DisableCopy {
 
     void advection() {
         advect_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessTexture(), loc->accessSurface(), bound->accessSurface(), n);
+
         resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), clr->accessTexture(), clrNext->accessSurface(), n);
         resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), vel->accessTexture(), velNext->accessSurface(), n);
-
         std::swap(vel, velNext);
+        std::swap(clr, clrNext);
+
+        float4 rate = make_float4(1.f, std::exp(-0.4f), 1.f, 1.f);
+        decay_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(clr->accessSurface(), clrNext->accessSurface(), bound->accessSurface(), rate, n);
         std::swap(clr, clrNext);
     }
 
@@ -330,7 +353,7 @@ int main() {
             for (int y = 0; y < n; y++) {
                 for (int x = 0; x < n; x++) {
                     float den = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) < n / 12 ? 1.f : 0.f;
-                    cpu[x + n * (y + n * z)] = make_float4(den, 0.f, 0.f, 0.f);
+                    cpu[x + n * (y + n * z)] = make_float4(den, den, 0.f, 0.f);
                 }
             }
         }
@@ -356,7 +379,8 @@ int main() {
         sim.clr->copyOut(cpu.data());
         tpool.push_back(std::thread([cpu = std::move(cpu), frame, n] {
             VDBWriter writer;
-            writer.addGrid<float, 1>("density", cpu.data(), n, n, n, sizeof(float4));
+            writer.addGrid<float, 1>("density", (float *)cpu.data() + 0, n, n, n, sizeof(float4));
+            writer.addGrid<float, 1>("temperature", (float *)cpu.data() + 1, n, n, n, sizeof(float4));
             writer.write("/tmp/a" + std::to_string(1000 + frame).substr(1) + ".vdb");
         }));
 
