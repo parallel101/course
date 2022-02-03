@@ -19,7 +19,7 @@
     sufClr.write(clr, x, y, z);
 }*/
 
-__global__ void advect_kernel(CudaTextureAccessor<float4> texVel, CudaSurfaceAccessor<float4> sufLoc, CudaSurfaceAccessor<float> sufBound, unsigned int n) {
+__global__ void advect_kernel(CudaTextureAccessor<float4> texVel, CudaSurfaceAccessor<float4> sufLoc, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int z = threadIdx.z + blockDim.z * blockIdx.z;
@@ -31,27 +31,35 @@ __global__ void advect_kernel(CudaTextureAccessor<float4> texVel, CudaSurfaceAcc
     };
 
     float3 loc = make_float3(x + 0.5f, y + 0.5f, z + 0.5f);
-    if (sufBound.read(x, y, z) >= 0) {
-        float3 vel1 = sample(texVel, loc);
-        float3 vel2 = sample(texVel, loc - 0.5f * vel1);
-        float3 vel3 = sample(texVel, loc - 0.75f * vel2);
-        loc -= (2.f / 9.f) * vel1 + (1.f / 3.f) * vel2 + (4.f / 9.f) * vel3;
-    }
+    float3 vel1 = sample(texVel, loc);
+    float3 vel2 = sample(texVel, loc - 0.5f * vel1);
+    float3 vel3 = sample(texVel, loc - 0.75f * vel2);
+    loc -= (2.f / 9.f) * vel1 + (1.f / 3.f) * vel2 + (4.f / 9.f) * vel3;
     sufLoc.write(make_float4(loc.x, loc.y, loc.z, 0.f), x, y, z);
 }
 
-__global__ void resample_kernel(CudaSurfaceAccessor<float4> sufLoc, CudaTextureAccessor<float4> texClr, CudaSurfaceAccessor<float4> sufClrNext, unsigned int n) {
+__global__ void resample_kernel(CudaSurfaceAccessor<float4> sufLoc, CudaTextureAccessor<float4> texClr, CudaSurfaceAccessor<float4> sufClrNext, CudaSurfaceAccessor<float> sufBound, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
 
     float4 loc = sufLoc.read(x, y, z);
-    float4 clr = texClr.sample(loc.x, loc.y, loc.z);
+
+    float bound = sufBound.read(x, y, z);
+    float4 clr;
+    if (bound <= 0) {
+        clr = texClr.sample(loc.x, loc.y, loc.z);
+    } else if (bound >= 1) {
+        clr = texClr.sample(x + 0.5f, y + 0.5f, z + 0.5f);
+    } else {
+        clr = texClr.sample(x + 0.5f, y + 0.5f, z + 0.5f) * (1 - bound) + bound * texClr.sample(loc.x, loc.y, loc.z);
+    }
+
     sufClrNext.write(clr, x, y, z);
 }
 
-__global__ void divergence_kernel(CudaSurfaceAccessor<float4> sufVel, CudaSurfaceAccessor<float> sufDiv, unsigned int n) {
+__global__ void divergence_kernel(CudaSurfaceAccessor<float4> sufVel, CudaSurfaceAccessor<float> sufDiv, CudaSurfaceAccessor<float> sufBound, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int z = threadIdx.z + blockDim.z * blockIdx.z;
@@ -64,6 +72,10 @@ __global__ void divergence_kernel(CudaSurfaceAccessor<float4> sufVel, CudaSurfac
     float vyn = sufVel.read<cudaBoundaryModeClamp>(x, y - 1, z).y;
     float vzn = sufVel.read<cudaBoundaryModeClamp>(x, y, z - 1).z;
     float div = (vxp - vxn + vyp - vyn + vzp - vzn) * 0.5f;
+
+    float bound = sufBound.read(x, y, z);
+    div *= 1 - bound;
+
     sufDiv.write(div, x, y, z);
 }
 
@@ -100,7 +112,9 @@ __global__ void subgradient_kernel(CudaSurfaceAccessor<float> sufPre, CudaSurfac
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
-    if (sufBound.read(x, y, z) < 0) return;
+
+    float bound = sufBound.read(x, y, z);
+    float fac = 0.5f * (1 - bound);
 
     float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
     float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
@@ -109,9 +123,9 @@ __global__ void subgradient_kernel(CudaSurfaceAccessor<float> sufPre, CudaSurfac
     float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
     float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
     float4 vel = sufVel.read(x, y, z);
-    vel.x -= (pxp - pxn) * 0.5f;
-    vel.y -= (pyp - pyn) * 0.5f;
-    vel.z -= (pzp - pzn) * 0.5f;
+    vel.x -= (pxp - pxn) * fac;
+    vel.y -= (pyp - pyn) * fac;
+    vel.z -= (pzp - pzn) * fac;
     sufVel.write(vel, x, y, z);
 }
 
@@ -132,45 +146,6 @@ __global__ void rbgs_kernel(CudaSurfaceAccessor<float> sufPre, CudaSurfaceAccess
     float div = sufDiv.read(x, y, z);
     float preNext = (pxp + pxn + pyp + pyn + pzp + pzn - div) * (1.f / 6.f);
     sufPre.write(preNext, x, y, z);
-}
-
-template <int phase>
-__global__ void boundrbgs_kernel(CudaSurfaceAccessor<float> sufPre, CudaSurfaceAccessor<float> sufDiv, CudaSurfaceAccessor<float> sufBound, unsigned int n) {
-    int x = threadIdx.x + blockDim.x * blockIdx.x;
-    int y = threadIdx.y + blockDim.y * blockIdx.y;
-    int z = threadIdx.z + blockDim.z * blockIdx.z;
-    if (x >= n || y >= n || z >= n) return;
-    if ((x + y + z) % 2 != phase) return;
-
-    float pxp = sufPre.read<cudaBoundaryModeClamp>(x + 1, y, z);
-    float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
-    float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
-    float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
-    float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
-    float pzn = sufPre.read<cudaBoundaryModeClamp>(x, y, z - 1);
-    float div = sufDiv.read(x, y, z);
-    float preNext = (pxp + pxn + pyp + pyn + pzp + pzn - div) * (1.f / 6.f);
-    if (sufBound.read(x, y, z) < 0) preNext += div * (1.f / 6.f);
-    sufPre.write(preNext, x, y, z);
-}
-
-__global__ void boundres_kernel(CudaSurfaceAccessor<float> sufRes, CudaSurfaceAccessor<float> sufPre, CudaSurfaceAccessor<float> sufDiv, CudaSurfaceAccessor<float> sufBound, unsigned int n) {
-    int x = threadIdx.x + blockDim.x * blockIdx.x;
-    int y = threadIdx.y + blockDim.y * blockIdx.y;
-    int z = threadIdx.z + blockDim.z * blockIdx.z;
-    if (x >= n || y >= n || z >= n) return;
-
-    float pxp = sufPre.read<cudaBoundaryModeClamp>(x + 1, y, z);
-    float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
-    float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
-    float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
-    float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
-    float pzn = sufPre.read<cudaBoundaryModeClamp>(x, y, z - 1);
-    float pre = sufPre.read(x, y, z);
-    float div = sufDiv.read(x, y, z);
-    float res = pxp + pxn + pyp + pyn + pzp + pzn - 6.f * pre - div;
-    if (sufBound.read(x, y, z) < 0) res += div;
-    sufRes.write(res, x, y, z);
 }
 
 __global__ void residual_kernel(CudaSurfaceAccessor<float> sufRes, CudaSurfaceAccessor<float> sufPre, CudaSurfaceAccessor<float> sufDiv, unsigned int n) {
@@ -282,13 +257,8 @@ struct SmokeSim : DisableCopy {
     void smooth(CudaSurface<float> *v, CudaSurface<float> *f, unsigned int lev, int times = 4) {
         unsigned int tn = sizes[lev];
         for (int step = 0; step < times; step++) {
-            if (lev == 0) {
-                boundrbgs_kernel<0><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v->accessSurface(), f->accessSurface(), bound->accessSurface(), tn);
-                boundrbgs_kernel<1><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v->accessSurface(), f->accessSurface(), bound->accessSurface(), tn);
-            } else {
-                rbgs_kernel<0><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v->accessSurface(), f->accessSurface(), tn);
-                rbgs_kernel<1><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v->accessSurface(), f->accessSurface(), tn);
-            }
+            rbgs_kernel<0><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v->accessSurface(), f->accessSurface(), tn);
+            rbgs_kernel<1><<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(v->accessSurface(), f->accessSurface(), tn);
         }
     }
 
@@ -303,11 +273,7 @@ struct SmokeSim : DisableCopy {
         auto *e2 = err2[lev].get();
         unsigned int tn = sizes[lev];
         smooth(v, f, lev);
-        if (lev == 0) {
-            boundres_kernel<<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(r->accessSurface(), v->accessSurface(), f->accessSurface(), bound->accessSurface(), tn);
-        } else {
-            residual_kernel<<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(r->accessSurface(), v->accessSurface(), f->accessSurface(), tn);
-        }
+        residual_kernel<<<dim3((tn + 7) / 8, (tn + 7) / 8, (tn + 7) / 8), dim3(8, 8, 8)>>>(r->accessSurface(), v->accessSurface(), f->accessSurface(), tn);
         restrict_kernel<<<dim3((tn/2 + 7) / 8, (tn/2 + 7) / 8, (tn/2 + 7) / 8), dim3(8, 8, 8)>>>(r2->accessSurface(), r->accessSurface(), tn/2);
         fillzero_kernel<<<dim3((tn/2 + 7) / 8, (tn/2 + 7) / 8, (tn/2 + 7) / 8), dim3(8, 8, 8)>>>(e2->accessSurface(), tn/2);
         vcycle(lev + 1, e2, r2);
@@ -316,15 +282,15 @@ struct SmokeSim : DisableCopy {
     }
 
     void projection() {
-        divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), div->accessSurface(), n);
+        divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), div->accessSurface(), bound->accessSurface(), n);
         vcycle(0, pre.get(), div.get());
         subgradient_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(pre->accessSurface(), vel->accessSurface(), bound->accessSurface(), n);
     }
 
     void advection() {
-        advect_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessTexture(), loc->accessSurface(), bound->accessSurface(), n);
-        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), clr->accessTexture(), clrNext->accessSurface(), n);
-        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), vel->accessTexture(), velNext->accessSurface(), n);
+        advect_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessTexture(), loc->accessSurface(), n);
+        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), clr->accessTexture(), clrNext->accessSurface(), bound->accessSurface(), n);
+        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), vel->accessTexture(), velNext->accessSurface(), bound->accessSurface(), n);
 
         std::swap(vel, velNext);
         std::swap(clr, clrNext);
@@ -339,7 +305,7 @@ struct SmokeSim : DisableCopy {
     }
 
     /*void old_projection(int times = 50) {
-        divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), div->accessSurface(), n);
+        divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), div->accessSurface(), bound->accessSurface(), n);
 
         for (int step = 0; step < times; step++) {
             jacobi_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(div->accessSurface(), pre->accessSurface(), preNext->accessSurface(), bound->accessSurface(), n);
@@ -350,7 +316,7 @@ struct SmokeSim : DisableCopy {
     }*/
 
     float calc_loss() {
-        divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), div->accessSurface(), n);
+        divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), div->accessSurface(), bound->accessSurface(), n);
         float *sum;
         checkCudaErrors(cudaMalloc(&sum, sizeof(float)));
         sumloss_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(div->accessSurface(), sum, n);
@@ -372,7 +338,8 @@ int main() {
                 for (int x = 0; x < n; x++) {
                     float sdf1 = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) - n / 12;
                     float sdf2 = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n * 3 / 4) - n / 6;
-                    cpu[x + n * (y + n * z)] = std::min(sdf1, sdf2);
+                    float sdf = std::min(sdf1, sdf2);
+                    cpu[x + n * (y + n * z)] = std::max(0.f, std::min(1.f, -sdf));
                 }
             }
         }
