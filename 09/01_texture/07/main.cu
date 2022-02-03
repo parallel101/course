@@ -29,34 +29,35 @@ __global__ void advect_kernel(CudaTextureAccessor<float4> texVel, CudaSurfaceAcc
     sufLoc.write(make_float4(loc.x, loc.y, loc.z, 0.f), x, y, z);
 }
 
-__global__ void resample_kernel(CudaSurfaceAccessor<float4> sufLoc, CudaTextureAccessor<float4> texClr, CudaSurfaceAccessor<float4> sufClrNext, unsigned int n) {
+template <class T>
+__global__ void resample_kernel(CudaSurfaceAccessor<float4> sufLoc, CudaTextureAccessor<T> texClr, CudaSurfaceAccessor<T> sufClrNext, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
 
     float4 loc = sufLoc.read(x, y, z);
-    float4 clr = texClr.sample(loc.x, loc.y, loc.z);
+    T clr = texClr.sample(loc.x, loc.y, loc.z);
     sufClrNext.write(clr, x, y, z);
 }
 
-__global__ void decay_kernel(CudaSurfaceAccessor<float4> sufClr, CudaSurfaceAccessor<float4> sufClrNext, CudaSurfaceAccessor<char> sufBound, float4 decayRate, unsigned int n) {
+__global__ void decay_kernel(CudaSurfaceAccessor<float> sufTmp, CudaSurfaceAccessor<float> sufTmpNext, CudaSurfaceAccessor<char> sufBound, float decayRate, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
     if (sufBound.read(x, y, z) < 0) return;
 
-    float4 cxp = sufClr.read<cudaBoundaryModeClamp>(x + 1, y, z);
-    float4 cyp = sufClr.read<cudaBoundaryModeClamp>(x, y + 1, z);
-    float4 czp = sufClr.read<cudaBoundaryModeClamp>(x, y, z + 1);
-    float4 cxn = sufClr.read<cudaBoundaryModeClamp>(x - 1, y, z);
-    float4 cyn = sufClr.read<cudaBoundaryModeClamp>(x, y - 1, z);
-    float4 czn = sufClr.read<cudaBoundaryModeClamp>(x, y, z - 1);
-    float4 clrAvg = (cxp + cyp + czp + cxn + cyn + czn) * (1 / 6.f);
-    float4 clrNext = sufClr.read(x, y, z);
-    clrNext = clrNext * decayRate + clrAvg * (make_float4(1.f) - decayRate);
-    sufClrNext.write(clrNext, x, y, z);
+    float txp = sufTmp.read<cudaBoundaryModeClamp>(x + 1, y, z);
+    float typ = sufTmp.read<cudaBoundaryModeClamp>(x, y + 1, z);
+    float tzp = sufTmp.read<cudaBoundaryModeClamp>(x, y, z + 1);
+    float txn = sufTmp.read<cudaBoundaryModeClamp>(x - 1, y, z);
+    float tyn = sufTmp.read<cudaBoundaryModeClamp>(x, y - 1, z);
+    float tzn = sufTmp.read<cudaBoundaryModeClamp>(x, y, z - 1);
+    float tmpAvg = (txp + typ + tzp + txn + tyn + tzn) * (1 / 6.f);
+    float tmpNext = sufTmp.read(x, y, z);
+    tmpNext = tmpNext * decayRate + tmpAvg * (1.f - decayRate);
+    sufTmpNext.write(tmpNext, x, y, z);
 }
 
 __global__ void divergence_kernel(CudaSurfaceAccessor<float4> sufVel, CudaSurfaceAccessor<float> sufDiv, CudaSurfaceAccessor<char> sufBound, unsigned int n) {
@@ -217,8 +218,10 @@ struct SmokeSim : DisableCopy {
     std::unique_ptr<CudaSurface<float4>> loc;
     std::unique_ptr<CudaTexture<float4>> vel;
     std::unique_ptr<CudaTexture<float4>> velNext;
-    std::unique_ptr<CudaTexture<float4>> clr;
-    std::unique_ptr<CudaTexture<float4>> clrNext;
+    std::unique_ptr<CudaTexture<float>> clr;
+    std::unique_ptr<CudaTexture<float>> clrNext;
+    std::unique_ptr<CudaTexture<float>> tmp;
+    std::unique_ptr<CudaTexture<float>> tmpNext;
 
     std::unique_ptr<CudaSurface<char>> bound;
     std::unique_ptr<CudaSurface<float>> div;
@@ -234,8 +237,10 @@ struct SmokeSim : DisableCopy {
     , loc(std::make_unique<CudaSurface<float4>>(uint3{n, n, n}))
     , vel(std::make_unique<CudaTexture<float4>>(uint3{n, n, n}))
     , velNext(std::make_unique<CudaTexture<float4>>(uint3{n, n, n}))
-    , clr(std::make_unique<CudaTexture<float4>>(uint3{n, n, n}))
-    , clrNext(std::make_unique<CudaTexture<float4>>(uint3{n, n, n}))
+    , clr(std::make_unique<CudaTexture<float>>(uint3{n, n, n}))
+    , clrNext(std::make_unique<CudaTexture<float>>(uint3{n, n, n}))
+    , tmp(std::make_unique<CudaTexture<float>>(uint3{n, n, n}))
+    , tmpNext(std::make_unique<CudaTexture<float>>(uint3{n, n, n}))
     , div(std::make_unique<CudaSurface<float>>(uint3{n, n, n}))
     , pre(std::make_unique<CudaSurface<float>>(uint3{n, n, n}))
     //, preNext(std::make_unique<CudaSurface<float>>(uint3{n, n, n}))
@@ -288,14 +293,15 @@ struct SmokeSim : DisableCopy {
     void advection() {
         advect_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessTexture(), loc->accessSurface(), bound->accessSurface(), n);
 
-        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), clr->accessTexture(), clrNext->accessSurface(), n);
         resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), vel->accessTexture(), velNext->accessSurface(), n);
+        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), clr->accessTexture(), clrNext->accessSurface(), n);
+        resample_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(loc->accessSurface(), tmp->accessTexture(), tmpNext->accessSurface(), n);
         std::swap(vel, velNext);
         std::swap(clr, clrNext);
+        std::swap(tmp, tmpNext);
 
-        float4 rate = make_float4(1.f, std::exp(-0.4f), 1.f, 1.f);
-        decay_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(clr->accessSurface(), clrNext->accessSurface(), bound->accessSurface(), rate, n);
-        std::swap(clr, clrNext);
+        decay_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(tmp->accessSurface(), tmpNext->accessSurface(), bound->accessSurface(), std::exp(-0.4f), n);
+        std::swap(tmp, tmpNext);
     }
 
     void step(int times = 16) {
@@ -348,16 +354,29 @@ int main() {
     }
 
     {
-        std::vector<float4> cpu(n * n * n);
+        std::vector<float> cpu(n * n * n);
         for (int z = 0; z < n; z++) {
             for (int y = 0; y < n; y++) {
                 for (int x = 0; x < n; x++) {
                     float den = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) < n / 12 ? 1.f : 0.f;
-                    cpu[x + n * (y + n * z)] = make_float4(den, den, 0.f, 0.f);
+                    cpu[x + n * (y + n * z)] = den;
                 }
             }
         }
         sim.clr->copyIn(cpu.data());
+    }
+
+    {
+        std::vector<float> cpu(n * n * n);
+        for (int z = 0; z < n; z++) {
+            for (int y = 0; y < n; y++) {
+                for (int x = 0; x < n; x++) {
+                    float tmp = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) < n / 12 ? 1.f : 0.f;
+                    cpu[x + n * (y + n * z)] = tmp;
+                }
+            }
+        }
+        sim.tmp->copyIn(cpu.data());
     }
 
     {
@@ -375,12 +394,14 @@ int main() {
 
     std::vector<std::thread> tpool;
     for (int frame = 1; frame <= 100; frame++) {
-        std::vector<float4> cpu(n * n * n);
-        sim.clr->copyOut(cpu.data());
-        tpool.push_back(std::thread([cpu = std::move(cpu), frame, n] {
+        std::vector<float> cpuClr(n * n * n);
+        std::vector<float> cpuTmp(n * n * n);
+        sim.clr->copyOut(cpuClr.data());
+        sim.tmp->copyOut(cpuTmp.data());
+        tpool.push_back(std::thread([cpuClr = std::move(cpuClr), cpuTmp = std::move(cpuTmp), frame, n] {
             VDBWriter writer;
-            writer.addGrid<float, 1>("density", (float *)cpu.data() + 0, n, n, n, sizeof(float4));
-            writer.addGrid<float, 1>("temperature", (float *)cpu.data() + 1, n, n, n, sizeof(float4));
+            writer.addGrid<float, 1>("density", cpuClr.data(), n, n, n);
+            writer.addGrid<float, 1>("temperature", cpuTmp.data(), n, n, n);
             writer.write("/tmp/a" + std::to_string(1000 + frame).substr(1) + ".vdb");
         }));
 
