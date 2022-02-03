@@ -73,12 +73,12 @@ __global__ void jacobi_kernel(CudaSurfaceAccessor<float> sufDiv, CudaSurfaceAcce
     if (x >= n || y >= n || z >= n) return;
     if (sufBound.read(x, y, z) < 0) return;
 
-    float pxp = sufPre.read<cudaBoundaryModeZero>(x + 1, y, z);
-    float pxn = sufPre.read<cudaBoundaryModeZero>(x - 1, y, z);
-    float pyp = sufPre.read<cudaBoundaryModeZero>(x, y + 1, z);
-    float pyn = sufPre.read<cudaBoundaryModeZero>(x, y - 1, z);
-    float pzp = sufPre.read<cudaBoundaryModeZero>(x, y, z + 1);
-    float pzn = sufPre.read<cudaBoundaryModeZero>(x, y, z - 1);
+    float pxp = sufPre.read<cudaBoundaryModeClamp>(x + 1, y, z);
+    float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
+    float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
+    float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
+    float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
+    float pzn = sufPre.read<cudaBoundaryModeClamp>(x, y, z - 1);
     float div = sufDiv.read(x, y, z);
     float preNext = (pxp + pxn + pyp + pyn + pzp + pzn - div) * (1.f / 6.f);
     sufPreNext.write(preNext, x, y, z);
@@ -91,21 +91,17 @@ __global__ void subgradient_kernel(CudaSurfaceAccessor<float> sufPre, CudaSurfac
     if (x >= n || y >= n || z >= n) return;
     if (sufBound.read(x, y, z) < 0) return;
 
-    int old_x = x, old_y = y, old_z = z;
-    x = std::max(1, std::min(x, (int)n - 2));
-    y = std::max(1, std::min(y, (int)n - 2));
-    z = std::max(1, std::min(z, (int)n - 2));
-    float pxn = sufPre.read<cudaBoundaryModeZero>(x - 1, y, z);
-    float pyn = sufPre.read<cudaBoundaryModeZero>(x, y - 1, z);
-    float pzn = sufPre.read<cudaBoundaryModeZero>(x, y, z - 1);
-    float pxp = sufPre.read<cudaBoundaryModeZero>(x + 1, y, z);
-    float pyp = sufPre.read<cudaBoundaryModeZero>(x, y + 1, z);
-    float pzp = sufPre.read<cudaBoundaryModeZero>(x, y, z + 1);
+    float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
+    float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
+    float pzn = sufPre.read<cudaBoundaryModeClamp>(x, y, z - 1);
+    float pxp = sufPre.read<cudaBoundaryModeClamp>(x + 1, y, z);
+    float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
+    float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
     float4 vel = sufVel.read(x, y, z);
     vel.x -= (pxp - pxn) * 0.5f;
     vel.y -= (pyp - pyn) * 0.5f;
     vel.z -= (pzp - pzn) * 0.5f;
-    sufVel.write(vel, old_x, old_y, old_z);
+    sufVel.write(vel, x, y, z);
 }
 
 template <int phase>
@@ -116,12 +112,12 @@ __global__ void rbgs_kernel(CudaSurfaceAccessor<float> sufPre, CudaSurfaceAccess
     if (x >= n || y >= n || z >= n) return;
     if ((x + y + z) % 2 != phase) return;
 
-    float pxp = sufPre.read<cudaBoundaryModeZero>(x + 1, y, z);
-    float pxn = sufPre.read<cudaBoundaryModeZero>(x - 1, y, z);
-    float pyp = sufPre.read<cudaBoundaryModeZero>(x, y + 1, z);
-    float pyn = sufPre.read<cudaBoundaryModeZero>(x, y - 1, z);
-    float pzp = sufPre.read<cudaBoundaryModeZero>(x, y, z + 1);
-    float pzn = sufPre.read<cudaBoundaryModeZero>(x, y, z - 1);
+    float pxp = sufPre.read<cudaBoundaryModeClamp>(x + 1, y, z);
+    float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
+    float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
+    float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
+    float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
+    float pzn = sufPre.read<cudaBoundaryModeClamp>(x, y, z - 1);
     float div = sufDiv.read(x, y, z);
     float preNext = (pxp + pxn + pyp + pyn + pzp + pzn - div) * (1.f / 6.f);
     sufPre.write(preNext, x, y, z);
@@ -135,12 +131,12 @@ __global__ void boundrbgs_kernel(CudaSurfaceAccessor<float> sufPre, CudaSurfaceA
     if (x >= n || y >= n || z >= n) return;
     if ((x + y + z) % 2 != phase) return;
 
-    float pxp = sufPre.read<cudaBoundaryModeZero>(x + 1, y, z);
-    float pxn = sufPre.read<cudaBoundaryModeZero>(x - 1, y, z);
-    float pyp = sufPre.read<cudaBoundaryModeZero>(x, y + 1, z);
-    float pyn = sufPre.read<cudaBoundaryModeZero>(x, y - 1, z);
-    float pzp = sufPre.read<cudaBoundaryModeZero>(x, y, z + 1);
-    float pzn = sufPre.read<cudaBoundaryModeZero>(x, y, z - 1);
+    float pxp = sufPre.read<cudaBoundaryModeClamp>(x + 1, y, z);
+    float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
+    float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
+    float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
+    float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
+    float pzn = sufPre.read<cudaBoundaryModeClamp>(x, y, z - 1);
     float div = sufDiv.read(x, y, z);
     float preNext = (pxp + pxn + pyp + pyn + pzp + pzn - div) * (1.f / 6.f);
     if (sufBound.read(x, y, z) < 0) preNext += div * (1.f / 6.f);
@@ -153,12 +149,12 @@ __global__ void boundres_kernel(CudaSurfaceAccessor<float> sufRes, CudaSurfaceAc
     int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
 
-    float pxp = sufPre.read<cudaBoundaryModeZero>(x + 1, y, z);
-    float pxn = sufPre.read<cudaBoundaryModeZero>(x - 1, y, z);
-    float pyp = sufPre.read<cudaBoundaryModeZero>(x, y + 1, z);
-    float pyn = sufPre.read<cudaBoundaryModeZero>(x, y - 1, z);
-    float pzp = sufPre.read<cudaBoundaryModeZero>(x, y, z + 1);
-    float pzn = sufPre.read<cudaBoundaryModeZero>(x, y, z - 1);
+    float pxp = sufPre.read<cudaBoundaryModeClamp>(x + 1, y, z);
+    float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
+    float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
+    float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
+    float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
+    float pzn = sufPre.read<cudaBoundaryModeClamp>(x, y, z - 1);
     float pre = sufPre.read(x, y, z);
     float div = sufDiv.read(x, y, z);
     float res = pxp + pxn + pyp + pyn + pzp + pzn - 6.f * pre - div;
@@ -172,12 +168,12 @@ __global__ void residual_kernel(CudaSurfaceAccessor<float> sufRes, CudaSurfaceAc
     int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
 
-    float pxp = sufPre.read<cudaBoundaryModeZero>(x + 1, y, z);
-    float pxn = sufPre.read<cudaBoundaryModeZero>(x - 1, y, z);
-    float pyp = sufPre.read<cudaBoundaryModeZero>(x, y + 1, z);
-    float pyn = sufPre.read<cudaBoundaryModeZero>(x, y - 1, z);
-    float pzp = sufPre.read<cudaBoundaryModeZero>(x, y, z + 1);
-    float pzn = sufPre.read<cudaBoundaryModeZero>(x, y, z - 1);
+    float pxp = sufPre.read<cudaBoundaryModeClamp>(x + 1, y, z);
+    float pxn = sufPre.read<cudaBoundaryModeClamp>(x - 1, y, z);
+    float pyp = sufPre.read<cudaBoundaryModeClamp>(x, y + 1, z);
+    float pyn = sufPre.read<cudaBoundaryModeClamp>(x, y - 1, z);
+    float pzp = sufPre.read<cudaBoundaryModeClamp>(x, y, z + 1);
+    float pzn = sufPre.read<cudaBoundaryModeClamp>(x, y, z - 1);
     float pre = sufPre.read(x, y, z);
     float div = sufDiv.read(x, y, z);
     float res = pxp + pxn + pyp + pyn + pzp + pzn - 6.f * pre - div;
@@ -190,14 +186,14 @@ __global__ void restrict_kernel(CudaSurfaceAccessor<float> sufPreNext, CudaSurfa
     int z = threadIdx.z + blockDim.z * blockIdx.z;
     if (x >= n || y >= n || z >= n) return;
 
-    float ooo = sufPre.read<cudaBoundaryModeZero>(x*2, y*2, z*2);
-    float ioo = sufPre.read<cudaBoundaryModeZero>(x*2+1, y*2, z*2);
-    float oio = sufPre.read<cudaBoundaryModeZero>(x*2, y*2+1, z*2);
-    float iio = sufPre.read<cudaBoundaryModeZero>(x*2+1, y*2+1, z*2);
-    float ooi = sufPre.read<cudaBoundaryModeZero>(x*2, y*2, z*2+1);
-    float ioi = sufPre.read<cudaBoundaryModeZero>(x*2+1, y*2, z*2+1);
-    float oii = sufPre.read<cudaBoundaryModeZero>(x*2, y*2+1, z*2+1);
-    float iii = sufPre.read<cudaBoundaryModeZero>(x*2+1, y*2+1, z*2+1);
+    float ooo = sufPre.read<cudaBoundaryModeClamp>(x*2, y*2, z*2);
+    float ioo = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2, z*2);
+    float oio = sufPre.read<cudaBoundaryModeClamp>(x*2, y*2+1, z*2);
+    float iio = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2+1, z*2);
+    float ooi = sufPre.read<cudaBoundaryModeClamp>(x*2, y*2, z*2+1);
+    float ioi = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2, z*2+1);
+    float oii = sufPre.read<cudaBoundaryModeClamp>(x*2, y*2+1, z*2+1);
+    float iii = sufPre.read<cudaBoundaryModeClamp>(x*2+1, y*2+1, z*2+1);
     float preNext = (ooo + ioo + oio + iio + ooi + ioi + oii + iii);
     sufPreNext.write(preNext, x, y, z);
 }
