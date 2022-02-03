@@ -66,7 +66,7 @@ __global__ void sumloss_kernel(CudaSurfaceAccessor<float> sufDiv, float *sum, un
     atomicAdd(sum, div * div);
 }
 
-__global__ void jacobi_kernel(CudaSurfaceAccessor<float> sufDiv, CudaSurfaceAccessor<float> sufPre, CudaSurfaceAccessor<float> sufPreNext, CudaSurfaceAccessor<char> sufBound, unsigned int n) {
+/*__global__ void jacobi_kernel(CudaSurfaceAccessor<float> sufDiv, CudaSurfaceAccessor<float> sufPre, CudaSurfaceAccessor<float> sufPreNext, CudaSurfaceAccessor<char> sufBound, unsigned int n) {
     unsigned int x = threadIdx.x + blockDim.x * blockIdx.x;
     unsigned int y = threadIdx.y + blockDim.y * blockIdx.y;
     unsigned int z = threadIdx.z + blockDim.z * blockIdx.z;
@@ -82,7 +82,7 @@ __global__ void jacobi_kernel(CudaSurfaceAccessor<float> sufDiv, CudaSurfaceAcce
     float div = sufDiv.read(x, y, z);
     float preNext = (pxp + pxn + pyp + pyn + pzp + pzn - div) * (1.f / 6.f);
     sufPreNext.write(preNext, x, y, z);
-}
+}*/
 
 __global__ void subgradient_kernel(CudaSurfaceAccessor<float> sufPre, CudaSurfaceAccessor<float4> sufVel, CudaSurfaceAccessor<char> sufBound, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
@@ -239,7 +239,7 @@ struct SmokeSim : DisableCopy {
     std::unique_ptr<CudaSurface<char>> bound;
     std::unique_ptr<CudaSurface<float>> div;
     std::unique_ptr<CudaSurface<float>> pre;
-    std::unique_ptr<CudaSurface<float>> preNext;
+    //std::unique_ptr<CudaSurface<float>> preNext;
     std::vector<std::unique_ptr<CudaSurface<float>>> res;
     std::vector<std::unique_ptr<CudaSurface<float>>> res2;
     std::vector<std::unique_ptr<CudaSurface<float>>> err2;
@@ -254,7 +254,7 @@ struct SmokeSim : DisableCopy {
     , clrNext(std::make_unique<CudaTexture<float4>>(uint3{n, n, n}))
     , div(std::make_unique<CudaSurface<float>>(uint3{n, n, n}))
     , pre(std::make_unique<CudaSurface<float>>(uint3{n, n, n}))
-    , preNext(std::make_unique<CudaSurface<float>>(uint3{n, n, n}))
+    //, preNext(std::make_unique<CudaSurface<float>>(uint3{n, n, n}))
     , bound(std::make_unique<CudaSurface<char>>(uint3{n, n, n}))
     {
         fillzero_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(pre->accessSurface(), n);
@@ -327,7 +327,7 @@ struct SmokeSim : DisableCopy {
         }
     }
 
-    void old_projection(int times = 50) {
+    /*void old_projection(int times = 50) {
         divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), div->accessSurface(), n);
 
         for (int step = 0; step < times; step++) {
@@ -336,7 +336,7 @@ struct SmokeSim : DisableCopy {
         }
 
         subgradient_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(pre->accessSurface(), vel->accessSurface(), bound->accessSurface(), n);
-    }
+    }*/
 
     float calc_loss() {
         divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), div->accessSurface(), n);
@@ -359,9 +359,9 @@ int main() {
         for (int z = 0; z < n; z++) {
             for (int y = 0; y < n; y++) {
                 for (int x = 0; x < n; x++) {
-                    //char sdf = 1;
-                    char sdf = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) < n / 12 ? -1 : 1;
-                    cpu[x + n * (y + n * z)] = sdf;
+                    char sdf1 = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n / 4) < n / 12 ? -1 : 1;
+                    char sdf2 = std::hypot(x - (int)n / 2, y - (int)n / 2, z - (int)n * 3 / 4) < n / 6 ? -1 : 1;
+                    cpu[x + n * (y + n * z)] = std::min(sdf1, sdf2);
                 }
             }
         }
