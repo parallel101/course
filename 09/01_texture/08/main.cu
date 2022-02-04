@@ -108,7 +108,7 @@ __global__ void sumloss_kernel(CudaSurfaceAccessor<float> sufDiv, float *sum, un
     sufPreNext.write(preNext, x, y, z);
 }*/
 
-__global__ void heatup_kernel(CudaSurfaceAccessor<float4> sufVel, CudaSurfaceAccessor<float> sufTmp, CudaSurfaceAccessor<float> sufClr, CudaSurfaceAccessor<char> sufBound, float heatRate, float clrRate, unsigned int n) {
+__global__ void heatup_kernel(CudaSurfaceAccessor<float4> sufVel, CudaSurfaceAccessor<float> sufTmp, CudaSurfaceAccessor<float> sufClr, CudaSurfaceAccessor<char> sufBound, float tmpAmbient, float heatRate, float clrRate, unsigned int n) {
     int x = threadIdx.x + blockDim.x * blockIdx.x;
     int y = threadIdx.y + blockDim.y * blockIdx.y;
     int z = threadIdx.z + blockDim.z * blockIdx.z;
@@ -118,7 +118,7 @@ __global__ void heatup_kernel(CudaSurfaceAccessor<float4> sufVel, CudaSurfaceAcc
     float4 vel = sufVel.read(x, y, z);
     float tmp = sufTmp.read(x, y, z);
     float clr = sufClr.read(x, y, z);
-    vel.z += heatRate * tmp;
+    vel.z += heatRate * (tmp - tmpAmbient);
     vel.z -= clrRate * clr;
     sufVel.write(vel, x, y, z);
 }
@@ -300,7 +300,7 @@ struct SmokeSim : DisableCopy {
     }
 
     void projection() {
-        heatup_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), tmp->accessSurface(), clr->accessSurface(), bound->accessSurface(), 0.018f, 0.004f, n);
+        heatup_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), tmp->accessSurface(), clr->accessSurface(), bound->accessSurface(), 0.05f, 0.018f, 0.004f, n);
         divergence_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(vel->accessSurface(), div->accessSurface(), bound->accessSurface(), n);
         vcycle(0, pre.get(), div.get());
         subgradient_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(pre->accessSurface(), vel->accessSurface(), bound->accessSurface(), n);
@@ -316,8 +316,10 @@ struct SmokeSim : DisableCopy {
         std::swap(clr, clrNext);
         std::swap(tmp, tmpNext);
 
-        decay_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(tmp->accessSurface(), tmpNext->accessSurface(), bound->accessSurface(), std::exp(-0.1f), std::exp(-0.01f), n);
+        decay_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(tmp->accessSurface(), tmpNext->accessSurface(), bound->accessSurface(), std::exp(-0.5f), std::exp(-0.0003f), n);
+        decay_kernel<<<dim3((n + 7) / 8, (n + 7) / 8, (n + 7) / 8), dim3(8, 8, 8)>>>(clr->accessSurface(), clrNext->accessSurface(), bound->accessSurface(), std::exp(-0.05f), std::exp(-0.003f), n);
         std::swap(tmp, tmpNext);
+        std::swap(clr, clrNext);
     }
 
     void step(int times = 16) {
