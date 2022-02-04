@@ -354,7 +354,7 @@ struct SmokeSim : DisableCopy {
 };
 
 int main() {
-    unsigned int n = 128;
+    unsigned int n = 256;
     SmokeSim sim(n);
 
     {

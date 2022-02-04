@@ -36,6 +36,7 @@ struct CudaArray : DisableCopy {
         copy3DParams.dstPtr = make_cudaPitchedPtr((void *)_data, m_dim.x * sizeof(T), m_dim.x, m_dim.y);
         copy3DParams.extent = make_cudaExtent(m_dim.x, m_dim.y, m_dim.z);
         copy3DParams.kind = cudaMemcpyDeviceToHost;
+        printf("%p %d %d %d\n", _data, m_dim.x, m_dim.y, m_dim.z);
         checkCudaErrors(cudaMemcpy3D(&copy3DParams));
     }
 
@@ -102,7 +103,7 @@ template <class T>
 struct CudaTexture : CudaSurface<T> {
     struct Parameters {
         cudaTextureAddressMode addressMode{cudaAddressModeBorder};
-        cudaTextureFilterMode filterMode{cudaFilterModeLinear};
+        cudaTextureFilterMode filterMode{cudaFilterModePoint};
         cudaTextureReadMode readMode{cudaReadModeElementType};
         bool normalizedCoords{false};
     };
