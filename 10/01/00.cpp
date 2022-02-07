@@ -1,12 +1,6 @@
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <random>
-#include <cstring>
-#include <cstdlib>
-#include <array>
+#include "bate.h"
 
-#define N 1024
+#define N (1024*1024)
 
 struct Matrix {
     float m_data[N][N];
@@ -25,15 +19,14 @@ struct Vector {
 };
 
 int main() {
+    bate::timing("main");
+
     Matrix *a = new Matrix{};
     Vector *v = new Vector{};
     Vector *w = new Vector{};
 
-    std::mt19937 gen{1};
-    std::uniform_real_distribution<float> unif;
-
     for (int i = 0; i < N; i++) {
-        v->at(i) = unif(gen);
+        v->at(i) = bate::frand();
     }
 
     for (int i = 0; i < N; i++) {
@@ -50,9 +43,14 @@ int main() {
         }
     }
 
-    printf("v = [\n");
-    for (int i = 0; i < N; i++) {
-        printf("%.04f%c", v->at(i), " \n"[i % 32 == 31 && i != N - 1]);
+    for (int i = 1; i < N - 1; i++) {
+        if (std::abs(2 * v->at(i) - v->at(i - 1) - v->at(i + 1) - w->at(i)) > 0.0001f) {
+            printf("wrong at %d\n", i);
+            return 1;
+        }
     }
-    printf("\n]\n");
+    printf("all correct\n");
+
+    bate::timing("main");
+    return 0;
 }
