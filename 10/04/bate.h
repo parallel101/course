@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <memory>
 #include <random>
 #include <cstring>
 #include <cstdlib>
@@ -12,7 +13,6 @@
 #include <chrono>
 #include <map>
 #include <unordered_map>
-#include <memory>
 
 namespace bate {
 
@@ -24,7 +24,7 @@ static float frand() {
 
 static void timing(std::string const &key) {
     static std::map<std::string, std::chrono::steady_clock::time_point> saves;
-    auto it = saves.find(key);
+    auto it = saves.find(key); 
     if (it == saves.end()) {
         saves.emplace(key, std::chrono::steady_clock::now());
     } else {

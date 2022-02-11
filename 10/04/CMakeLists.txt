@@ -23,11 +23,18 @@ endif()
 
 project(main LANGUAGES CXX)
 
-add_executable(main 00.cpp)  # Switch to 01.cpp here, to play different examples
+add_executable(main 05.cpp)  # Switch to 01.cpp here, to play different examples
 
 find_package(OpenMP)
 if (OpenMP_FOUND)
     target_link_libraries(main PUBLIC OpenMP::OpenMP_CXX)
 else()
     message(WARNING "OpenMP not found")
+endif()
+
+find_package(TBB)
+if (TBB_FOUND)
+    target_link_libraries(main PUBLIC TBB::tbb)
+else()
+    message(WARNING "TBB not found")
 endif()

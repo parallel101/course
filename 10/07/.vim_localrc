@@ -1,0 +1,2 @@
+" vim: ft=vim
+"let g:cmake_build_type = 'Debug'

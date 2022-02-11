@@ -59,10 +59,8 @@ int main() {
     float vx = 0.2f, vy = -0.6f;
 
     for (int step = 0; step < N; step++) {
-        px += vx;
-        py += vy;
-        int x = (int)std::floor(px);
-        int y = (int)std::floor(py);
+        int x = (int)std::floor(px + vx * step);
+        int y = (int)std::floor(py + vy * step);
         a->write(x, y, 1);
     }
 
