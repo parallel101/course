@@ -1,62 +1,44 @@
 #include "bate.h"
 
-#define N (1024*1024)
+#define N (512*512)
 
-struct Matrix {
-    float m_data[N][N];
+struct Grid {
+    char m_data[N][N];  // 64GB
 
-    float &at(int x, int y) {
+    char read(int x, int y) const {
         return m_data[x][y];
     }
 
-    template <class Func>
-    void foreach(Func &&func) {
-        for (int x = 0; x < N; x++) {
-            for (int y = 0; y < N; y++) {
-                func(x, y);
-            }
-        }
-    }
-};
-
-struct Vector {
-    float m_data[N];
-
-    float &at(int x) {
-        return m_data[x];
+    void write(int x, int y, char value) {
+        m_data[x][y] = value;
     }
 };
 
 int main() {
     bate::timing("main");
 
-    Matrix *a = new Matrix{};
-    Vector *v = new Vector{};
-    Vector *w = new Vector{};
+    Grid *a = new Grid{};
 
-    for (int i = 0; i < N; i++) {
-        v->at(i) = bate::frand();
+    float px = 0.f, py = 0.f;
+    float vx = 0.2f, vy = 0.6f;
+
+    for (int step = 0; step < N; step++) {
+        px += vx;
+        py += vy;
+        int x = (int)std::floor(px);
+        int y = (int)std::floor(py);
+        a->write(x, y, 1);
     }
 
-    for (int i = 0; i < N; i++) {
-        a->at(i, i) = 2;
-        if (i > 0)
-            a->at(i - 1, i) = -1;
-        if (i < N - 1)
-            a->at(i + 1, i) = -1;
-    }
-
-    a->foreach([&] (int i, int j) {
-        w->at(i) += a->at(i, j) * v->at(j);
-    });
-
-    for (int i = 1; i < N - 1; i++) {
-        if (std::abs(2 * v->at(i) - v->at(i - 1) - v->at(i + 1) - w->at(i)) > 0.0001f) {
-            printf("wrong at %d\n", i);
-            return 1;
+    int count = 0;
+    for (int x = 0; x < N; x++) {
+        for (int y = 0; y < N; y++) {
+            if (a->read(x, y) != 0) {
+                count++;
+            }
         }
     }
-    printf("all correct\n");
+    printf("count: %d\n", count);
 
     bate::timing("main");
     return 0;

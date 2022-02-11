@@ -1,8 +1,8 @@
 #include "bate.h"
 
-#define N (1024*1024)
+#define N (512*512)
 
-struct Matrix {
+struct Grid {
     struct MyHash {
         std::size_t operator()(std::tuple<int, int> const &key) const {
             auto const &[x, y] = key;
@@ -10,67 +10,63 @@ struct Matrix {
         }
     };
 
-    std::unordered_map<std::tuple<int, int>, float, MyHash> m_data;
+    static constexpr int B = 16;
 
-    float read(int x, int y) {
-        auto it = m_data.find(std::make_tuple(x, y));
+    struct Block {
+        char m_block[B][B];
+    };
+
+    std::unordered_map<std::tuple<int, int>, Block, MyHash> m_data;  // ~1MB
+
+    char read(int x, int y) const {
+        auto it = m_data.find(std::make_tuple(x / B, y / B));
         if (it == m_data.end()) {
             return 0;
         }
-        return it->second;
+        return it->second.m_block[x % B][y % B];
     }
 
-    void create(int x, int y, float value) {
-        m_data.emplace(std::make_tuple(x, y), value);
+    void write(int x, int y, char value) {
+        Block &block = m_data[std::make_tuple(x / B, y / B)];
+        block.m_block[x % B][y % B] = value;
     }
 
     template <class Func>
-    void foreach(Func &&func) {
-        for (auto &[key, value]: m_data) {
-            auto &[x, y] = key;
-            func(x, y, value);
+    void foreach(Func const &func) {
+        for (auto &[key, block]: m_data) {
+            auto &[xb, yb] = key;
+            for (int dx = 0; dx < B; dx++) {
+                for (int dy = 0; dy < B; dy++) {
+                    func(xb * B + dx, yb * B + dy, block.m_block[dx][dy]);
+                }
+            }
         }
-    }
-};
-
-struct Vector {
-    float m_data[N];
-
-    float &at(int x) {
-        return m_data[x];
     }
 };
 
 int main() {
     bate::timing("main");
 
-    Matrix *a = new Matrix{};
-    Vector *v = new Vector{};
-    Vector *w = new Vector{};
+    Grid *a = new Grid{};
 
-    for (int i = 0; i < N; i++) {
-        v->at(i) = bate::frand();
+    float px = 0.f, py = 0.f;
+    float vx = 0.2f, vy = 0.6f;
+
+    for (int step = 0; step < N; step++) {
+        px += vx;
+        py += vy;
+        int x = (int)std::floor(px);
+        int y = (int)std::floor(py);
+        a->write(x, y, 1);
     }
 
-    for (int i = 0; i < N; i++) {
-        a->create(i, i, 2);
-        if (i > 0)
-            a->create(i - 1, i, -1);
-        if (i < N - 1)
-            a->create(i + 1, i, -1);
-    }
-
-    a->foreach([&] (int i, int j, float &value) {
-        w->at(i) += value * v->at(j);
-    });
-
-    for (int i = 1; i < N - 1; i++) {
-        if (std::abs(2 * v->at(i) - v->at(i - 1) - v->at(i + 1) - w->at(i)) > 0.0001f) {
-            printf("wrong at %d\n", i);
-            return 1;
+    int count = 0;
+    a->foreach([&] (int x, int y, char &value) {
+        if (value != 0) {
+            count++;
         }
-    }
-    printf("all correct\n");
+    });
+    printf("count: %d\n", count);
 
     bate::timing("main");
     return 0;
