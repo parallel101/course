@@ -23,7 +23,7 @@ endif()
 
 project(main LANGUAGES CXX)
 
-add_executable(main 06.cpp)  # Switch to 01.cpp here, to play different examples
+add_executable(main 07.cpp)  # Switch to 01.cpp here, to play different examples
 
 find_package(OpenMP)
 if (OpenMP_FOUND)
