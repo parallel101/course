@@ -28,14 +28,33 @@ struct Grid {
         return block->m_block[x & Bmask][y & Bmask];
     }
 
-    void write(int x, int y, char value) {
-        auto &block = m_data[(x >> Bshift) & B1mask][(y >> Bshift) & B1mask];
-        if (!block) {
-            std::lock_guard _(m_mtx[(x >> Bshift) & B1mask][(y >> Bshift) & B1mask]);
-            if (!block)
-                block = std::make_unique<Block>();
+    struct WriteAccessor {
+        Grid &that;
+        std::map<std::tuple<int, int>, Block *> m_cached;
+
+        void write(int x, int y, char value) {
+            auto block = [&] {
+                int coorx = (x >> Bshift) & B1mask;
+                int coory = (y >> Bshift) & B1mask;
+                auto it = m_cached.find({coorx, coory});
+                if (it != m_cached.end()) {
+                    return it->second;
+                }
+                auto &block = that.m_data[coorx][coory];
+                if (!block) {
+                    std::lock_guard _(that.m_mtx[coorx][coory]);
+                    if (!block)
+                        block = std::make_unique<Block>();
+                }
+                m_cached.try_emplace({coorx, coory}, block.get());
+                return block.get();
+            }();
+            block->m_block[x & Bmask][y & Bmask] = value;
         }
-        block->m_block[x & Bmask][y & Bmask] = value;
+    };
+
+    WriteAccessor writeAccess() {
+        return {*this};
     }
 
     template <class Func>
@@ -66,11 +85,12 @@ int main() {
     float px = -100.f, py = 100.f;
     float vx = 0.2f, vy = -0.6f;
 
-#pragma omp parallel for
+    auto wa_a = a->writeAccess();
+#pragma omp parallel for firstprivate(wa_a)
     for (int step = 0; step < N; step++) {
         int x = (int)std::floor(px + vx * step);
         int y = (int)std::floor(py + vy * step);
-        a->write(x, y, 1);
+        wa_a.write(x, y, 1);
     }
 
     std::atomic<int> count = 0;
