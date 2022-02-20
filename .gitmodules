@@ -25,3 +25,6 @@
 [submodule "hw08"]
 	path = hw08
 	url = https://github.com/parallel101/hw08.git
+[submodule "hw10"]
+	path = hw10
+	url = https://github.com/parallel101/hw10.git
