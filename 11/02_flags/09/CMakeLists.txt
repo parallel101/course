@@ -1,0 +1,11 @@
+add_executable(main)
+file(GLOB sources CONFIGURE_DEPENDS *.cpp *.h)
+target_sources(main PUBLIC ${sources})
+
+if (MSVC)
+    target_compile_definitions(main PUBLIC MY_NAME="MSVC")
+elseif (CMAKE_COMPILER_IS_GNUCC)
+    target_compile_definitions(main PUBLIC MY_NAME="GCC")
+else()
+    target_compile_definitions(main PUBLIC MY_NAME="Other compiler")
+endif()

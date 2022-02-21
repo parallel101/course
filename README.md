@@ -62,6 +62,7 @@
 - [因特尔 TBB 编程指南](https://www.inf.ed.ac.uk/teaching/courses/ppls/TBBtutorial.pdf)
 - [并行体系结构与编程 (CMU 15-418)](https://www.bilibili.com/video/av48153629/)
 - [深入理解计算机原理 (CSAPP)](http://csapp.cs.cmu.edu/)
+- [Performance Analysis and Tuning on Modern CPUs](http://faculty.cs.niu.edu/~winans/notes/patmc.pdf)
 - [CMake “菜谱”](https://www.bookstack.cn/read/CMake-Cookbook/README.md)
 - [CMake 官方文档](https://cmake.org/cmake/help/latest/)
 - [Git 官方文档](https://git-scm.com/doc)
