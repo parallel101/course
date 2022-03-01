@@ -3,5 +3,5 @@ project(hellocmake LANGUAGES CXX)
 
 add_executable(main main.cpp)
 
-set(myvar "world" CACHE STRING "this is the docstring." FORCE)
+set(myvar "hello" CACHE STRING "this is the docstring.")
 message("myvar is: ${myvar}")
