@@ -54,15 +54,16 @@
 
 # 参考资料
 
-- [热心观众整理的学习资料](https://github.com/jiayaozhang/OpenVDB_and_TBB)
 - [C++ 官方文档](https://en.cppreference.com/w/)
 - [C++ 核心开发规范](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md)
+- [Effective Mordern C++ 中文版](https://github.com/kelthuzadx/EffectiveModernCppChinese/blob/master/4.SmartPointers/item22.md)
+- [热心观众整理的学习资料](https://github.com/jiayaozhang/OpenVDB_and_TBB)
 - [LearnCpp 中文版](https://learncpp-cn.github.io/)
-- [C++ 并发编程实战](https://www.bookstack.cn/read/Cpp_Concurrency_In_Action/README.md)
-- [因特尔 TBB 编程指南](https://www.inf.ed.ac.uk/teaching/courses/ppls/TBBtutorial.pdf)
-- [并行体系结构与编程 (CMU 15-418)](https://www.bilibili.com/video/av48153629/)
-- [深入理解计算机原理 (CSAPP)](http://csapp.cs.cmu.edu/)
 - [Performance Analysis and Tuning on Modern CPUs](http://faculty.cs.niu.edu/~winans/notes/patmc.pdf)
+- [C++ 并发编程实战](https://www.bookstack.cn/read/Cpp_Concurrency_In_Action/README.md)
+- [深入理解计算机原理 (CSAPP)](http://csapp.cs.cmu.edu/)
+- [并行体系结构与编程 (CMU 15-418)](https://www.bilibili.com/video/av48153629/)
+- [因特尔 TBB 编程指南](https://www.inf.ed.ac.uk/teaching/courses/ppls/TBBtutorial.pdf)
 - [CMake “菜谱”](https://www.bookstack.cn/read/CMake-Cookbook/README.md)
 - [CMake 官方文档](https://cmake.org/cmake/help/latest/)
 - [Git 官方文档](https://git-scm.com/doc)
