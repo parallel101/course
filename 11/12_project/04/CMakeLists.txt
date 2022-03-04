@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.99)
+cmake_minimum_required(VERSION 3.15)
 project(hellocmake LANGUAGES CXX)
 
-message("CMAKE_VERSION: ${CMAKE_VERSION}")
-add_executable(main main.cpp)
+add_executable(main main.c)
