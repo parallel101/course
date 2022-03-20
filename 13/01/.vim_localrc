@@ -1,0 +1,2 @@
+" vim: ft=vim
+nnoremap <silent> <F5> :wa<CR>:!./run.sh\|\|(echo -n .;read -n1)<CR><CR>
