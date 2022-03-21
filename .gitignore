@@ -4,3 +4,4 @@ build
 .~*
 GNUmakefile
 r000*/
+.wip/
