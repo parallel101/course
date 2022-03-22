@@ -1,1 +1,0 @@
-std::left std::ws std::size std::data std::dec std::exa std::end
