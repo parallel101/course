@@ -2,9 +2,9 @@
 #include <cstdint>
 
 int main() {
-    int x = 1;
+    int x = 0x12345678;
     int* p = &x;
-    unsigned long address = (unsigned long)p;
-    printf("%lu\n", address);
+    char* pc = (char*)p;
+    printf("%x\n", *pc);
     return 0;
 }

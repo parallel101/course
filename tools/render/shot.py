@@ -11,7 +11,7 @@ import argparse
 ap = argparse.ArgumentParser()
 ap.add_argument('file', type=str)
 ap.add_argument('--lang', type=str, default='auto')
-ap.add_argument('--theme', type=str, default='monokai')
+ap.add_argument('--theme', type=str, default='default')
 ap.add_argument('--show', action='store_true')
 ap.add_argument('--out', type=str, default='')
 ap = ap.parse_args()
@@ -19,28 +19,21 @@ ap = ap.parse_args()
 my_lang = ap.lang
 my_theme = ap.theme
 my_file = ap.file
-if my_file == '-':
-    my_code = sys.stdin.read()
-else:
-    with open(ap.file, 'r') as f:
-        my_code = f.read()
 my_out = ap.out
 
 with tempfile.TemporaryDirectory() as tmpdir:
     font_size = 14
     w, h = 0, 0
-    for line in my_code.splitlines():
-        w = max(w, len(line))
-        h += 1
-    w += 6
+    with open(my_file, 'r') as f:
+        for line in f.readlines():
+            w = max(w, len(line))
+            h += 1
+    w += 4
     h += 4
-    with open(os.path.join(tmpdir, os.path.basename(my_file)), 'w') as f:
-        f.write(my_code)
-        f.write('\n')
     dirpath = os.path.dirname(os.path.abspath(__file__))
     p = subprocess.Popen(['xfce4-terminal', '--disable-server', '--title=term_to_screen_shot',
         '--geometry={}x{}+0+0'.format(w, h), '-x', sys.executable, os.path.join(dirpath, 'render.py'),
-        os.path.join(tmpdir, os.path.basename(my_file)), tmpdir, my_lang, my_theme])
+        my_file, tmpdir, my_lang, my_theme])
     while not os.path.exists(os.path.join(tmpdir, 'done.lock')):
         time.sleep(0.04)
     with open(os.path.join(tmpdir, 'exit.lock'), 'w') as f:
@@ -60,9 +53,10 @@ with tempfile.TemporaryDirectory() as tmpdir:
         return [int(x) for x in bbox]
 
     x, y, w, h = getActiveWindowRect()
-    x += 1 + font_size // 2 * 3
+    x += 1
     y += 1
-    h -= font_size
+    h -= font_size + 1
+    w -= 1
     im = ImageGrab.grab((x, y, w, h))
     p.kill()
 
