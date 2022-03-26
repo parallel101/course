@@ -2,7 +2,6 @@
 #include <cmath>
 
 int main() {
-    int x = -3;
-    printf("%d\n", abs(x));
+    printf("%f\n", 3);
     return 0;
 }
