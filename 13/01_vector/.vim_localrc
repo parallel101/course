@@ -1,0 +1,1 @@
+nnoremap <silent> <F5> :wa<CR>:execute (expand("%:e") == "py" ? "!python ".expand("%") : expand("%:e") == "sh" ? "!bash ".expand("%") : expand("%:e") == "cpp" ? "!g++ -std=c++17 -o /tmp/a.out ".expand("%")." && /tmp/a.out" : expand("%:e") == "cmake" ? "!cmake -P ".expand("%") : "!make")<CR>
