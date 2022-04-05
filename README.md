@@ -6,6 +6,8 @@
 * 每周六14点开播：https://live.bilibili.com/14248205
 * 录播也会上传到：https://space.bilibili.com/263032155
 
+![CC-BY-NC-SA](tools/cc-by-nc-sa.jpg)
+
 # 下载课件
 
 如果你不知道 Git 如何使用，可以点击这里：[一键下载](https://github.com/archibate/course/archive/refs/heads/master.zip)。
