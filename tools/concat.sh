@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 for x in $*; do
     ffmpeg -i $x -vcodec copy -acodec copy -vbsf h264_mp4toannexb /tmp/t_$x.ts
 done
