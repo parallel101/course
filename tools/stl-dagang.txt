@@ -1,0 +1,28 @@
+contigious containers - array, vector, deque
+rb-tree containers - map, set, multimap, multiset
+hash table containers - unordered_map, unordered_set
+container wrappers - stack, queue, priority_queue
+functors - less, greater, equal_to, not_equal, plus, minus, hash
+algorithms - find, count, sort, copy, generate, remove_if, lower_bound
+allocator - new, delete, placement-new, align_val_t, construct_at
+
+traits - iterator_traits, pointer_traits, allocator_traits
+template programming - template, specialization, varadic, fold expression
+meta programming - decltype, decay, is_same, enable_if, is_constructible
+functional programming - auto, lambda, capture expression
+iostream - cin, cout, stringstream, ifstream, ofstream
+haskell - tuple, variant, optional, get, holds_alternative, get_if
+type erasure - any, function
+
+raii pointers - unique_ptr, shared_ptr, weak_ptr
+value utilities - swap, move, exchange, forward
+
+classes - struct, class, public, virtual inherit, static_cast, const_cast
+constructors - brace-initialization, initializer_list, ctad
+rtti - dynamic_cast, dynamic_pointer_cast, typeid
+object oriented - virtual function, interface, pimpl, visitor/acceptor
+symbol linkage - extern, inline, static, template, instancing, singleton
+
+string - string, c_str, regex, find_first_of, compare operators
+multi-threading - chrono, thread, mutex, conditional_variable
+exception - throw, runtime_error, catch, noexcept, exception_ptr
