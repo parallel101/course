@@ -45,6 +45,12 @@ struct Vector {
             return *this;
         }
 
+        Iterator operator++(int) {
+            Iterator tmp = *this;
+            this->operator++();
+            return tmp;
+        }
+
         T &operator*() const {
             return curr->value;
         }
