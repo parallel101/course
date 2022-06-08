@@ -1,5 +1,4 @@
 #include <set>
-#include <string>
 #include "printer.h"
 
 using namespace std;
@@ -10,7 +9,6 @@ int main() {
 
     cout << "set: " << a << endl;
     cout << "multiset: " << b << endl;
-    cout << std::string("1") << endl;
 
     return 0;
 }
