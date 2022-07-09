@@ -1,10 +1,12 @@
 #include <cstdio>
+#include <type_traits>
+
 
 int main() {
-    char a = 'a';
-    for (int i = 0; i < 26; i++) {
-        printf("%c", a + i);
+    if (std::is_signed<char>::value) {
+        printf("你的 char 是有符号的，我猜你是 x86 架构\n");
+    } else {
+        printf("你的 char 是无符号的，我猜你是 arm 架构\n");
     }
-    printf("\n");
     return 0;
 }
