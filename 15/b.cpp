@@ -1,7 +1,8 @@
 #include <cstdio>
+#include <cctype>
 
 int main() {
-    char c = 'a';
+    char c = 'c';
     printf("原字符：%c\n", c);
     c -= 'a';
     c += 'A';

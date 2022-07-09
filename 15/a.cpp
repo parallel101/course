@@ -1,10 +1,10 @@
 #include <cstdio>
 
 int main() {
-    char c = 'a';
-    printf("原字符：%c\n", c);
-    c -= 'a';
-    c += 'A';
-    printf("转大写：%c\n", c);
+    char a = 'a';
+    for (int i = 0; i < 26; i++) {
+        printf("%c", a + i);
+    }
+    printf("\n");
     return 0;
 }
