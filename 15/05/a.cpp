@@ -1,9 +1,9 @@
-#include <iostream>
 #include <string>
+#include <iostream>
+#include <iomanip>
 
 using namespace std;
 
 int main() {
-    cout << string("hello\0cpp") << endl;
-    cout << string("hello\0cpp", 9) << endl;
+    cout << "十六进制：" << hex << 42 << endl;
 }
