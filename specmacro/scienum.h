@@ -34,11 +34,11 @@ namespace scienum
 
 	}
 	template <typename T, int Beg, int End>
-	typename details::my_enable_if<Beg == End>::type get_enum_name(T v){
+	typename details::my_enable_if<(Beg > End)>::type get_enum_name(T v){
 		return "";
 	}
 	template <typename T, int Beg, int End>
-	typename details::my_enable_if<Beg != End>::type get_enum_name(T v){
+	typename details::my_enable_if<(Beg <= End)>::type get_enum_name(T v){
 		if (Beg == v)
 			return details::get_enum_name_static<T, (T)Beg>();
 		return get_enum_name<T, T(Beg + 1), End>(v);
