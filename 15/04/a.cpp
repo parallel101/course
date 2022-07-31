@@ -1,10 +1,13 @@
 #include <string>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 
 using namespace std;
 
 int main() {
-    int n = 42;
-    auto s = to_string(n) + " yuan"s;
-    cout << s << endl;
+    //string s = (stringstream() << setprecision(100) << 3.1415f).str();
+    //stringstream("3.1415926535") >> f;
+    int n = 10011;
+    cout << setprecision(4) << (n * 0.01) << endl;
 }
