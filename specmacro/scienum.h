@@ -34,8 +34,6 @@ typename my_enable_if<Beg != End>::type static_for(F const &func) {
     static_for<Beg + 1, End>(func);
 }
 
-}
-
 template <class T>
 struct get_enum_name_functor {
     int n;
@@ -49,10 +47,12 @@ struct get_enum_name_functor {
     }
 };
 
+}
+
 template <class T, T Beg, T End>
 std::string get_enum_name(T n) {
     std::string s;
-    details::static_for<Beg, End + 1>(get_enum_name_functor<T>(n, s));
+    details::static_for<Beg, End + 1>(details::get_enum_name_functor<T>(n, s));
     if (s.empty())
         return "";
 #if defined(_MSC_VER)
