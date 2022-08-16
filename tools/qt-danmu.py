@@ -52,9 +52,9 @@ class MainWindow(QWidget):
         self.update()
 
     def update(self):
-        threading.Timer(1, self.update).start()
+        threading.Timer(5, self.update).start()
         msgs = get_messages()
-        print('update got:', msgs)
+        # print('update got:', msgs)
         self.slm.setStringList(msgs)
 
 
