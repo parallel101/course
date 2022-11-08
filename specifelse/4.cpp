@@ -7,14 +7,14 @@ static int ifelse_clamp(int x) {
     if (x < 0) {
         return 0;
     } else if (x > 255) {
-        return 1;
+        return 255;
     } else {
         return x;
     }
 }
 
 static int bailan_clamp(int x) {
-    return (x < 0) ? 0 : ((x > 255) ? 1 : x);
+    return (x < 0) ? 0 : ((x > 255) ? 255 : x);
 }
 
 static int addmul_clamp(int x) {
