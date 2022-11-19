@@ -1,0 +1,7 @@
+[+]
+build_type=Release
+build_target=pybmain
+build_dir=build
+build_generator=Ninja
+build_configs=-DENABLE_SOME_FEATURE:BOOL=ON
+run_target="build/pybmain/pybmain"
