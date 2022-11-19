@@ -8,3 +8,6 @@ macro (my_add_target name type)
     endif()
     target_include_directories(${name} PUBLIC include)
 endmacro()
+
+set(SOME_USEFUL_GLOBAL_VAR    ON)
+set(ANOTHER_USEFUL_GLOBAL_VAR OFF)
