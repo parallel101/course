@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 project(MyBench LANGUAGES CXX)
 
-add_executable(MyBench test.cpp)  # your code
+add_subdirectory(benchmark)
 
-add_subdirectory(benchmark)       # google benchmark
-target_link_libraries(MyBench PRIVATE benchmark)
+add_executable(demo1 demo1.cpp)
+target_link_libraries(demo1 PRIVATE benchmark)

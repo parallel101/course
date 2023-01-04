@@ -155,7 +155,7 @@ BENCHMARK_TEMPLATE(testCounter, AtomicPaddedCounter);
 
 BENCHMARK_MAIN();
 
-/* my result:
+/* my result on 12 thread 6 core CPU:
 ---------------------------------------------------------------------------
 Benchmark                                 Time             CPU   Iterations
 ---------------------------------------------------------------------------
