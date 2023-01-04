@@ -1,4 +1,4 @@
 [+]
 build_type=Release
 build_target=demo0
-run_args=--benchmark_out=build/$(VIM:build_target).json
+run_target="$(VIM:build_dir)/$(VIM:build_target)" --benchmark_out="$(VIM:build_dir)/$(VIM:build_target).json"
