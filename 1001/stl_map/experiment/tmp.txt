@@ -1,0 +1,4 @@
+std::string s = "I heard it even works if you don't believe";
+s.replace(0,8,"").replace(s.find("even"),4,"always")
+.replace(s.find("don't believe"),13,"use C++17");
+// it always works if you use C++17

@@ -6,3 +6,4 @@ GNUmakefile
 r000*/
 .wip/
 *.exe
+.cache
