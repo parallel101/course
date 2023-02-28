@@ -1,8 +1,12 @@
+#pragma once
+
 #include <type_traits>
 #include <iostream>
 #include <iomanip>
 #include <string>
 #include <string_view>
+#include <optional>
+#include <variant>
 
 namespace _print_details {
     template <class T, class = void>
@@ -85,6 +89,26 @@ namespace _print_details {
         using type = U;
     };
 
+    template <class T, class U = void, class = void>
+    struct _enable_if_optional {
+        using not_type = U;
+    };
+
+    template <class T, class U>
+    struct _enable_if_optional<std::optional<T>, U, void> {
+        using type = U;
+    };
+
+    template <class T, class U = void, class = void>
+    struct _enable_if_variant {
+        using not_type = U;
+    };
+
+    template <class ...Ts, class U>
+    struct _enable_if_variant<std::variant<Ts...>, U, void> {
+        using type = U;
+    };
+
     template <class T>
     struct _printer<T, typename _enable_if_iterable<T, typename _enable_if_string<T, typename _enable_if_tuple<T, typename _enable_if_map<T>::not_type>::not_type>::not_type>::type> {
         static void print(T const &t) {
@@ -150,6 +174,47 @@ namespace _print_details {
         }
     };
 
+    template <>
+    struct _printer<std::nullptr_t, void> {
+        static void print(std::nullptr_t const &) {
+            std::cout << "nullptr";
+        }
+    };
+
+    template <>
+    struct _printer<std::nullopt_t, void> {
+        static void print(std::nullopt_t const &) {
+            std::cout << "nullopt";
+        }
+    };
+
+    template <>
+    struct _printer<std::monostate, void> {
+        static void print(std::monostate const &) {
+            std::cout << "monostate";
+        }
+    };
+
+    template <class T>
+    struct _printer<T, typename _enable_if_optional<T>::type> {
+        static void print(T const &t) {
+            if (t.has_value()) {
+                _printer<typename T::value_type>::print(*t);
+            } else {
+                _printer<std::nullopt_t>::print(std::nullopt);
+            }
+        }
+    };
+
+    template <class T>
+    struct _printer<T, typename _enable_if_variant<T>::type> {
+        static void print(T const &t) {
+            std::visit([] (auto const &v) {
+                _printer<_rmcvref_t<decltype(v)>>::print(v);
+            });
+        }
+    };
+
     template <class T0, class ...Ts>
     void print(T0 const &t0, Ts const &...ts) {
         _printer<_rmcvref_t<T0>>::print(t0);
@@ -159,3 +224,8 @@ namespace _print_details {
 }
 
 using _print_details::print;
+
+// Usage:
+//
+// map<string, optional<int>> m = {{"hello", 42}, {"world", nullopt}};
+// print(m);  // {"hello": 42, "world": nullopt}
