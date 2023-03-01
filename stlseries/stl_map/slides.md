@@ -15,7 +15,7 @@ transition: none
 css: unocss
 ---
 
-# 小彭老师 STL 课程系列 之 map
+# 小彭老师 深入浅出 STL 课程系列 之 map
 
 让高性能数据结构惠及每一人
 
@@ -25,11 +25,24 @@ css: unocss
 
 😀😀😀
 
-面向学习 C++ 标准库的童鞋。
+面向已经了解一定 C++ 语法，正在学习 C++ 标准库的童鞋。
 
-主要学习 STL 容器。
+C++ 标准库又称 STL，包含了大量程序员常用的算法和数据结构，是 Bjarne Stroustrup 送给所有 C++ 程序员的一把瑞士军刀，然而发现很多童鞋并没有完全用好他，反而还被其复杂性误伤了。
 
-主要基于 C++17 语言标准。
+如果你也对标准库一知半解，需要系统学习的话，那么本课程适合你。小彭老师将运用他特有的幽默答辩比喻，全面介绍各 STL 容器的所有用法。结合一系列实战案例，剖析常见坑点，使用技巧等。对比不同写法的性能与可读性，还会与 Python 语言相互类比方便记忆，科普的部分冷知识可以作为大厂面试加分项。
+
+本系列课程与侯杰老师 STL 课的区别：
+
+- 侯杰老师价值 2650 元，本课程录播上传 B 站免费观看，观众可以自行选择是否一键三连。
+- 课件和案例源码开源，上传在 GitHub，可以自己下载来做修改，然后自己动手实验。
+- 侯杰老师注重理论和底层实现原理，而本课程注重应用，结合实战案例，着重展开重难点。
+- 很多学校里教的，百度上搜的，大多是老版本 C++，已经过时了，而本课程基于较新的 C++17 语言标准。
+
+---
+
+# 本课程受到童鞋一致好评
+
+<center><img src="images/maijiaxiu.jpg" width="300"></center>
 
 ---
 
@@ -58,7 +71,7 @@ css: unocss
 
 ✅✅✅
 
-课件中所示代码实验推荐环境如下：
+课件中所示代码推荐实验环境如下：
 
 | 要求     | ❤❤❤        | 💣💣💣       | 💩💩💩         |
 |----------|------------|--------------|----------------|
@@ -83,13 +96,13 @@ css: unocss
 
 - 运行命令 `npm install` 即可自动安装 Slidev
 - 运行命令 `npm run dev` 即可运行 Slidev 服务
-- 访问 http://localhost:3030 即可看到课件
+- 浏览器访问 http://localhost:3030 即可看到课件
 
-如果报错找不到 `slidev` 命令，试试看 `export PATH="$PWD/node_modules/.bin:$PATH"`。
+如果报错找不到 `slidev` 命令，可以试试 `export PATH="$PWD/node_modules/.bin:$PATH"`。
 
 如果不想自己配置 Node.js 也可以直接以文本文件格式打开 slides.md 浏览课件。
 
-Slidev 服务运行中对 slides.md 的修改会立刻实时显现在浏览器中。
+Slidev 服务运行时对 slides.md 的所有修改会立刻实时显现在浏览器中。
 
 [^1]: https://sli.dev/
 
@@ -105,14 +118,48 @@ CMake 工程位于课件同目录的 `course/stlseries/stl_map/experiment/` 文�
 
 如需测试具体代码，可以把 slides.md 中的案例代码粘贴到 main.cpp 的 main 函数体中进行实验。
 
-附赠的一些实用头文件，同鞋们可以自己的项目里随意运用。
+附赠的一些实用头文件，同鞋们可以下载来在自己的项目里随意运用。
 
 | 文件名 | 功能 |
 |-|-|
 | main.cpp | 把 slides.md 中你想要实验的代码粘贴到 main 函数中 |
 | print.h | 内含 print 函数，支持打印绝大多数 STL 容器，方便调试 |
-| cppdemangle.h | 获得类型的名字，以模板传入，详见该文件中的 Usage 介绍 |
+| cppdemangle.h | 获得类型的名字，以模板参数传入，详见该文件中的注释 |
 | map_get.h | 带默认值的 map 表项查询，稍后课程中会介绍到 |
+
+---
+
+# 课程书写习惯说明
+
+```cpp
+int const &i  // 本课程书写习惯
+const int& i  // 官方文档书写习惯
+```
+
+---
+
+# 本期课程目录
+
+---
+
+为什么需要 map
+
+---
+
+映射表 map
+
+---
+
+特性：
+
+- 有序
+- 不重复
+
+---
+
+```cpp
+using namespace std;
+```
 
 ---
 
@@ -129,6 +176,8 @@ config["timeout"] = 985;
 config["delay"] = 211;
 ```
 
+过于落后，还有更新更专业的写法。
+
 ---
 
 C++11 新特性——花括号初始化列表，允许创建 map 时直接指定初始数据：
@@ -137,7 +186,7 @@ C++11 新特性——花括号初始化列表，允许创建 map 时直接指定
 map<string, int> config = { {"timeout", 985}, {"delay", 211} };
 ```
 
-通常会换行写，一行一个键值对，看起来条理更清晰：
+通常我们会换行写，一行一个键值对，看起来条理更清晰：
 
 ```cpp
 map<string, int> config = {
@@ -165,7 +214,7 @@ map<string, int> config = {
 };
 ```
 
-等号可以省略（这其实就是 map 的构造函数）：
+等号可以省略（这其实就是在调用 map 的构造函数）：
 
 ```cpp
 map<string, int> config{
@@ -185,14 +234,16 @@ auto config = map<string, int>{
 
 都是等价的。
 
+> 关于构造函数、花括号列表的具体语法可以参考我的《高性能并行》系列第二课：https://www.bilibili.com/video/BV1LY411H7Gg
+
 ---
 
 作为函数参数时，可以用花括号初始化列表就地构造一个 map 对象：
 
 ```cpp
-void myfunc(map<string, int> config);
+void myfunc(map<string, int> config);  // 函数声明
 
-myfunc(map<string, int>{
+myfunc(map<string, int>{               // 直接创建一个 map 传入
     {"timeout", 985},
     {"delay", 211},
 });
@@ -212,6 +263,36 @@ myfunc({
 ```cpp
 void myfunc(map<string, int> const &config);
 ```
+
+---
+
+从 vector 中批量导入键值对：
+
+```cpp
+vector<pair<string, int>> kvs = {
+    {"timeout", 985},
+    {"delay", 211},
+};
+map<string, int> config(kvs.begin(), kvs.end());
+```
+
+与刚刚花括号初始化的写法等价，只不过是从现有的 vector 中导入。同样的写法也适用于从 array 导入。
+
+> 如果记不住这个写法，也可以自己手写 for 循环遍历 vector 逐个逐个插入 map，效果是一样的。
+
+冷知识，如果不是 vector 而是想从传统的 C 语言数组中导入：
+
+```cpp
+pair<string, int> kvs[] = {
+    {"timeout", 985},
+    {"delay", 211},
+};
+map<string, int> config(kvs, kvs + 2);                    // C++98
+map<string, int> config(std::begin(kvs), std::end(kvs));  // C++17
+```
+
+> 其中 `std::begin` 和 `std::end` 为 C++17 新增函数，专门用于照顾没法有成员函数 `.begin()` 的 C 语言数组。类似的全局函数还有 `std::size` 和 `std::data` 等……他们都是既兼容 STL 容器也兼容 C 数组的。
+
 
 ---
 
@@ -305,29 +386,124 @@ print(config);
 
 ---
 
-[] 这个成员函数没有 const 修饰，因此当 map 修饰为 const 时编译会不通过[^1]：
+> 在官方文档和各种教学课件中，都会展示一个函数的“原型”来讲解。
+>
+> 原型展现了一个函数的名称，参数类型，返回类型等信息，掌握了函数的原型就等于掌握了函数的调用方法。
+>
+> 本课程后面也会大量使用，现在来教你如何看懂成员函数的原型。
+
+假设要研究的类型为 `map<K, V>`，其中 K 和 V 是模板参数，可以替换成你具体的类型。
+
+例如当我使用 `map<string, int>` 时，就把下面所有的 K 替换成 string，V 替换成 int。
+
+`map<K, V>` 的 [] 和 at 员函数，原型如下：
 
 ```cpp
-const map<string, int> config = {
+V &operator[](K const &k);
+V &at(K const &k);                   // 第一个版本的 at
+V const &at(K const &k) const;       // 第二个版本的 at
+```
+
+可见 operator[] 只有一个版本，at 居然有名字相同的两个！这样不会发生冲突吗？
+
+这是利用了 C++ 的“重载”功能，重载就是同一个函数有多个不同的版本，各个版本的参数类型不同。
+
+---
+
+> 例如小彭老师打电话给 110，假如警察叔叔发现小彭老师报的案子是网络诈骗，那么他们会帮我转接到网警部门；假如发现小彭老师是被绑架了，那么他们可能会出动武警解救小彭老师。这就是 110 函数的两个重载，根据调用者传入的信息类型，决定要转给哪一个子部门。
+
+同理，编译器也是会根据调用时你传入的参数类型，决定要调用重载的哪一个具体版本。
+
+- C 语言没有重载，函数名字相同就会发生冲突，编译器会当场报错。
+- C++ 支持重载，只有当函数名字相同，参数列表也相同时，才会发生冲突。
+- 返回值类型不影响重载，重载只看参数列表。
+
+菜鸟教程上对 C++ 重载的解释[^1]：
+
+> C++ 允许在同一作用域中的某个函数和运算符指定多个定义，分别称为函数重载和运算符重载。
+>
+> 重载声明是指一个与之前已经在该作用域内声明过的函数或方法具有相同名称的声明，但是它们的参数列表和定义（实现）不相同。
+>
+> 当您调用一个重载函数或重载运算符时，编译器通过把您所使用的参数类型与定义中的参数类型进行比较，决定选用最合适的定义。选择最合适的重载函数或重载运算符的过程，称为重载决策。
+>
+> 在同一个作用域内，可以声明几个功能类似的同名函数，但是这些同名函数的形式参数（指参数的个数、类型或者顺序）必须不同。您不能仅通过返回类型的不同来重载函数。
+
+[^1]: https://www.runoob.com/cplusplus/cpp-overloading.html
+
+---
+
+```cpp
+V &at(K const &k);                   // 第一个版本的 at
+V const &at(K const &k) const;       // 第二个版本的 at
+```
+
+但是上面这两个 at 函数的参数类型都是 `K const &`，为什么可以重载呢？
+
+注意看第二个版本最后面多了一个 const 关键字，这种写法是什么意思？小彭老师对其进行祛魅化：
+
+```cpp
+V &at(map<K, V> *this, K const &k);                   // 第一个版本的 at
+V const &at(map<K, V> const *this, K const &k);       // 第二个版本的 at
+```
+
+原来实际上在函数括号后面加的 const，实际上是用于修饰 this 指针的！
+
+> 该写法仅供示意，并非真实语法
+
+所以两个 at 的参数列表不同，不同在于传入 this 指针的类型，所以可以重载，不会冲突。
+
+- 当 map 对象为 const 时，传入的 this 指针为 `map<K, V> const *`，所以只能调用第二个版本的 at。
+- 当 map 对象不为 const 时，传入的 this 指针为 `map<K, V> *`，两个重载都可以调用，但由于第一个重载更加符合，所以会调用第一个版本的 at。
+
+---
+
+刚刚解释了函数重载，那么运算符重载呢？
+
+因为原本 C 语言就有 [] 运算符，不过那只适用于原始指针和原始数组。而 C++ 允许也 [] 运算符支持其他用户自定义类型（比如 std::map），和 C 语言自带的相比就只有参数类型不同（一个是原始数组，一个是 std::map），所以和函数重载很相似，这就是运算符重载。
+
+```cpp
+m["key"];
+```
+
+会被编译器“翻译”成：
+
+```cpp
+m.operator[]("key");
+```
+
+以上代码并非仅供示意，是可以通过编译运行之一。你还可以试试 `string("hel").operator+("lo")`。
+
+> operator[] 虽然看起来很复杂一个关键字加特殊符号，其实无非就是个特殊的函数名，学过 Python 的童鞋可以把他想象成 `__getitem__`
+
+```cpp
+V &operator[](K const &k);
+```
+
+结论：[] 运算符实际上是在调用 operator[] 函数。
+
+---
+
+而 operator[] 这个成员函数没有 const 修饰，因此当 map 修饰为 const 时编译会不通过[^1]：
+
+```cpp
+const map<string, int> config = {  // 此处如果是带 const & 修饰的函数参数也是同理
     {"timeout", 985},
     {"delay", 211},
 };
-print(config["timeout"]);  // 编译出错
+print(config["timeout"]);          // 编译出错
 ```
 
 ```
 /home/bate/Codes/course/stlseries/stl_map/experiment/main.cpp: In function ‘int main()’:
-/home/bate/Codes/course/stlseries/stl_map/experiment/main.cpp:10:23: error: passing ‘const
-std::map<std::__cxx11::basic_string<char>, int>’ as ‘this’ argument discards qualifiers
-[-fpermissive]
+/home/bate/Codes/course/stlseries/stl_map/experiment/main.cpp:10:23: error: passing ‘const std::map<std::__cxx11::basic_string<char>, int>’ as ‘this’ argument discards qualifiers [-fpermissive]
    10 | print(config["timeout"]);
 ```
 
-编译器说 discards qualifiers，意思是 map 有 const 修饰，但是 map::operator[] 没有。
+编译器说 discards qualifiers，意思是 map 有 const 修饰，但是 operator[] 没有。
 
-把有 const 修饰的 map 作为 this 指针传入没有 const 修饰的 map::operator[] 函数，是减少了修饰（discards qualifers）。C++ 规定传参时只能增加修饰不能减少修饰：只能从 map &amp; 转换到 const map &amp; 而不能反之，所以对着一个 const map 调用非 const 的成员函数就出错了。
+这实际上就是在说：`map<K, V> const *` 不能转换成 `map<K, V> *`。
 
-相比之下 at() 就可以在 const 修饰下编译通过，可见 at() 才是读取元素的正道。
+有 const 修饰的 map 作为 this 指针传入没 const 修饰的 operator[] 函数，是减少了修饰（discards qualifers）。C++ 规定传参时只能增加修饰不能减少修饰：只能从 `map *` 转换到 `map const *` 而不能反之，所以对着一个 const map 调用非 const 的成员函数 operator[] 就出错了。相比之下 at() 就可以在 const 修饰下编译通过。
 
 [^1]: https://blog.csdn.net/benobug/article/details/104903314
 
@@ -345,11 +521,9 @@ config["timeout"] = 985;     // 成功创建并写入 985
 
 因为当我们写入一个本不存在的键值的时候，恰恰需要他的“自动创建”这一特性。
 
-总结：读取时应该用 at() 更安全，写入时才需要 []。
+总结：读取时应该用 at() 更安全，写入时才需要用 []。
 
 ---
-
-因此，我的建议是：
 
 - 读取元素时，统一用 at()
 - 写入元素时，统一用 []
@@ -359,18 +533,110 @@ auto val = m.at("key");
 m["key"] = val;
 ```
 
-不要用混了哦！
-
 为什么其他语言比如 Python，只有一个 [] 就行了呢？而 C++ 需要两个？
 
 - 因为 Python 会检测 [] 位于等号左侧还是右侧，根据情况分别调用 `__getitem__` 或者 `__setitem__`。
-- C++ 编译器没有这个特殊检测，C++ 的 [] 只是返回了个引用，并不知道 [] 函数返回以后，你是拿这个引用写入还是读取。为了保险起见他默认你是写入，所以先帮你创建了元素，返回这个元素的引用，让你写入。
+- C++ 编译器没有这个特殊检测，也检测不了，因为 C++ 的 [] 只是返回了个引用，并不知道 [] 函数返回以后，你是拿这个引用写入还是读取。为了保险起见他默认你是写入，所以先帮你创建了元素，返回这个元素的引用，让你写入。
 - 而 Python 的引用是不能用 = 覆盖原值的，那样只会让变量指向新的引用，只能用 .func() 引用成员函数或者 += 才能就地修改原变量，这是 Python 这类脚本语言和 C++ 最本质的不同。
 - 总而言之，我们用 C++ 的 map 读取元素时，需要显式地用 at() 告诉编译器我是打算读取。
 
 ---
 
-[] 也有其他的意义
+at 与 [] 实战演练
+
+我们现在的甲方是一个学校的大老板，他希望让我们管理学生信息，因此需要建立一个映射表，能够快速通过学生名字查询到相应的学生信息。思来想去 C++ 标准库中的 map 容器最合适。决定设计如下：
+
+- 键为学生的名字，string 类型。
+- 值为一个自定义结构体，Student 类型，里面存放各种学生信息。
+
+然后自定义一下 Student 结构体，现在把除了名字以外的学生信息都塞到这个结构体里。
+
+创建 `map<string, Student>` 对象，变量名为 `stus`，这个 map 就是甲方要求的学生表，成功交差。
+
+```cpp
+struct Student {
+    int id;             // 学号
+    int age;            // 年龄
+    string sex;         // 性别
+    int money;          // 存款
+    set<string> skills; // 技能
+};
+
+map<string, Student> stus;
+```
+
+---
+
+现在小彭老师和他的童鞋们要进入这家学校了，让我们用 [] 大法插入他的个人信息：
+
+```cpp
+stus["彭于斌"] = Student{20220301, 22, "自定义", {"C", "C++"}};
+stus["相依"] = Student{20220301, 21, "男", 2000, {"Java", "C"}};
+stus["樱花粉蜜糖"] = Student{20220301, 20, "女", 3000, {"Python", "CUDA"}};
+stus["Sputnik02"] = Student{20220301, 19, "男", 4000, {"C++"}};
+```
+
+由于 C++11 允许省略花括号前的类型不写，所以 Student 可以省略，简写成：
+
+```cpp
+stus["彭于斌"] = {20220301, 22, "自定义", {"C", "C++"}};
+stus["相依"] = {20220301, 21, "男", 2000, {"Java", "C"}};
+stus["樱花粉蜜糖"] = {20220301, 20, "女", 3000, {"Python", "CUDA"}};
+stus["Sputnik02"] = {20220301, 19, "男", 4000, {"C++"}};
+```
+
+又由于 map 支持在初始化时就指定所有元素，我们直接写：
+
+```cpp
+map<string, Student> stus = {
+    {"彭于斌", {20220301, 22, "自定义", 1000, {"C", "C++"}}},
+    {"相依", {20220301, 21, "男", 2000, {"Java", "C"}}},
+    {"樱花粉蜜糖", {20220301, 20, "女", 3000, {"Python", "CUDA"}}},
+    {"Sputnik02", {20220301, 19, "男", 4000, {"C++"}}},
+};
+```
+
+---
+
+现在甲方要求添加一个“培训”函数，用于他们的 C++ 培训课。
+
+培训函数的参数为字符串，表示要消费学生的名字。如果该名字学生不存在，则应该及时报错。
+
+每次培训需要消费 2650 元，消费成功后，往技能 skills 集合中加入 "C++"。
+
+```cpp
+void PeiXunCpp(string stuName) {
+    Student stu = stus.at(stuName);
+    stu.money -= 2650;
+    stu.skills.insert("C++");
+}
+```
+
+然而，这样写是不对的！
+
+`stus.at(stuName)` 返回的是一个引用 `Student &`，但是等号左侧，却不是个引用，而是普通变量。
+
+那么这时会调用 Student 的拷贝构造函数，`Student(Student const &)`，来初始化变量 stu。
+
+结论：普通变量 = 引用，则引用会退化，造成深拷贝！
+
+此时你对这个普通变量的所有修改，都不会同步到 map 中的那个 Student 中去！
+
+---
+
+如果要根据学号进行查找呢？那就以学号为键，然后把学生姓名放到 Student 结构体中。
+
+如果同时有根据学号进行查找和根据姓名查找两种需求呢？
+
+同时高效地根据多个键进行查找，甚至指定各种条件，比如查询所有会 C++ 的学生等，这可不是 map 能搞定的，或者说能搞定但不高效（只能暴力遍历查找，间复杂度太高）。这是个专门的研究领域，称为：关系数据库。
+
+关系数据库的实现有 MySQL，SQLite，MongoDB 等。C++ 等编程语言只需调用他们提供的 API 即可，不必自己手动实现这些复杂的查找和插入算法。
+
+这就是为什么专业的“学生管理系统”都会用关系数据库，而不是自己手动维护一个 map，因为关系数据库的数据结构更复杂，但经过高度封装，提供的功能也更全面，何况 map 在内存中，电脑一关机，学生数据就没了。
+
+---
+
+你知道吗？[] 的妙用
 
 除了写入元素需要用 [] 以外，还有一些案例中合理运用 [] 会非常的方便。
 
@@ -384,7 +650,7 @@ m["key"] = val;
 
 ---
 
-[] 运用举例：出现次数统计
+[] 妙用举例：出现次数统计
 
 ```cpp
 vector<string> input = {"hello", "world", "hello"};
@@ -439,7 +705,7 @@ for (auto const &key: input) {
 
 ---
 
-[] 运用举例：归类
+[] 妙用举例：归类
 
 ```cpp
 vector<string> input = {"happy", "world", "hello", "weak", "strong"};
@@ -580,6 +846,8 @@ m.find(key) 函数，根据指定的键 key 查找元素[^1]。
 
 第二个版本的原型作用是：如果 map 本身有 const 修饰，则返回的也是 const 迭代器。
 
+为的是防止你在一个 const map 里 find 了以后利用迭代器变相修改 map 里的值。
+
 [^1]: https://en.cppreference.com/w/cpp/container/map/find
 
 ---
@@ -718,7 +986,7 @@ std::optional<typename M::mapped_type> map_get
 
 当找不到时就返回 nullopt，找到就返回含有值的 optional。
 
-注：本段代码已附在案例代码库的 "map_get.h" 文件中，等课后可以去 GitHub 下载。
+> 注：本段代码已附在案例代码库的 "map_get.h" 文件中，等课后可以去 GitHub 下载。
 
 ---
 
@@ -1036,7 +1304,7 @@ print(m);
 
 ---
 
-除了刚刚介绍的 `insert(pair<K, V>)` 外，insert 还有一个特殊的版本，用于批量插入一系列元素。
+刚刚介绍的那些 insert 一次只能插入一个元素，insert 还有一个特殊的版本，用于批量插入一系列元素。
 
 ```cpp
 template <class InputIt>
@@ -1047,7 +1315,7 @@ void insert(InputIt beg, InputIt end);
 
 该区间可以是任何其他容器的 begin() 和 end() 迭代器——那会把该容器中所有的元素都插入到本 map 中去。
 
-用法举例：把 vector 中的键值对批量插入 map：
+例如，把 vector 中的键值对批量插入 map：
 
 ```cpp
 vector<pair<string, int>> kvs = {
@@ -1060,6 +1328,125 @@ print(config);  // {"delay": 211, "timeout": 985}
 ```
 
 [^1]: 轶事：在标准库文档里批量插入版 insert 函数的 beg 和 end 这两个参数名为 first 和 last，但与 pair 的 first 并没有任何关系，只是为了防止变量名和 begin() 和 end() 成员函数发生命名冲突。为了防止同学们与 pair 的 first 混淆所以才改成 beg 和 end 做参数名。
+
+---
+
+注：由于 insert 不覆盖的特性，如果 vector 中有重复的键，则会以键第一次出现时的值为准，之后重复出现的键会被忽视。
+
+```cpp
+vector<pair<string, int>> kvs = {
+    {"timeout", 985},
+    {"delay", 211},
+    {"delay", 666},
+    {"delay", 233},
+    {"timeout", 996},
+};
+map<string, int> config;
+config.insert(kvs.begin(), kvs.end());
+print(config);
+```
+
+```
+{"delay": 211, "timeout": 985}
+```
+
+---
+
+批量 insert 运用案例：两个 map 合并
+
+这个批量 insert 输入的迭代器可以是任何容器，甚至可以是另一个 map 容器。
+
+运用这一点可以实现两个 map 的并集操作。
+
+```cpp
+map<string, int> m1 = {  // 第一个 map
+    {"answer", 42},
+    {"timeout", 7},
+};
+map<string, int> m2 = {  // 第二个 map
+    {"timeout", 985},
+    {"delay", 211},
+};
+m1.insert(m2.begin(), m2.end());  // 把 m2 的内容与 m1 合并，结果写回到 m1
+print(m1);
+```
+
+```
+{"answer": 42, "delay": 211, "timeout": 7}
+```
+
+注：还是由于 insert 不覆盖的特性，当遇到重复的键时（例如上面的 "timeout"），会以 m1 中的值为准。
+
+---
+
+使用 `m1.insert(m2.begin(), m2.end())` 后，合并的结果会就地写入 m1。
+
+如果希望合并结果放到一个新的 map 容器中而不是就地修改 m1，请自行生成一份 m1 的深拷贝：
+
+```cpp
+const map<string, int> m1 = {  // 第一个 map，修饰有 const 禁止修改
+    {"answer", 42},
+    {"timeout", 7},
+};
+const map<string, int> m2 = {  // 第二个 map，修饰有 const 禁止修改
+    {"timeout", 985},
+    {"delay", 211},
+};
+auto m12 = m1;  // 生成一份 m1 的深拷贝 m12，避免 insert 就地修改 m1
+m12.insert(m2.begin(), m2.end());
+print(m12);     // m1 和 m2 的合并结果
+```
+
+```
+{"answer": 42, "delay": 211, "timeout": 7}
+```
+
+---
+
+```cpp
+auto m12 = m1;
+m12.insert(m2.begin(), m2.end());
+print(m12);     // m1 和 m2 的合并结果，键冲突时优先取 m1 的值
+```
+
+```
+{"answer": 42, "delay": 211, "timeout": 7}
+```
+
+刚刚写的 m1 和 m2 合并，遇到重复时会优先采取 m1 里的值，如果希望优先采取 m2 的呢？反一反就可以了：
+
+```cpp
+auto m12 = m2;
+m12.insert(m1.begin(), m1.end());
+print(m12);     // m1 和 m2 的合并结果，键冲突时优先取 m2 的值
+```
+
+```
+{"answer": 42, "delay": 211, "timeout": 985}
+```
+
+要是不会反，那手写一个 for 循环遍历 m2，然后 m1.insert_or_assign(k2, v2) 也是可以的，总之要懂得变通。
+
+---
+
+有同学就问了，这个 insert 实现了 map 的并集操作，那交集操作呢？这其实是 set 的常规操作而不是 map 的：
+
+- set_intersection（取集合交集）
+- set_union（取集合并集）
+- set_difference（取集合差集）
+- set_symmetric_difference（取集合对称差集）
+
+非常抱歉在之前的 set 课中完全没有提及，因为我认为那是 `<algorithm>` 头文件里的东西。
+
+不过别担心，之后我们会专门有一节 algorithm 课详解 STL 中这些全局函数——我称之为算法模板，因为他提供了很多常用的算法，对小彭老师这种算法弱鸡而言，实在非常好用，妈妈再也不用担心我的 ACM 奖杯。
+
+在小彭老师制作完 algorithm 课之前，同学们可以自行参考 https://blog.csdn.net/u013095333/article/details/89322501 提前进行学习。
+
+```cpp
+std::set_union(A.begin(), A.end(), B.begin(), B.end(), std::inserter(C, C.begin()));  // C = A U B
+```
+
+> 注：set_union 仅仅要求输入的两个区间有序，可以是 set，也可以是排序过的 vector，通过重载运算符或者指定 compare 函数，可以模拟 map 只对 key 部分排序的效果——参考 thrust::sort_by_key，但很可惜 STL 没有，需要自定义 compare 函数模拟。
 
 ---
 
@@ -1077,7 +1464,7 @@ map<string, int> m = {  // 初始化时就插入两个元素
     {"timeout", 7},
 };
 m.insert({              // 批量再插入两个新元素
-    {"timeout", 985},   // "timeout" 发生键冲突，根据 insert 的尿性，不会覆盖
+    {"timeout", 985},   // "timeout" 发生键冲突，根据 insert 的特性，不会覆盖
     {"delay", 211},
 });
 ```
@@ -1086,7 +1473,7 @@ m.insert({              // 批量再插入两个新元素
 {"answer": 42, "delay": 211, "timeout": 7}
 ```
 
-注意看这里还是和 insert({k, v}) 一样的尿性，重复的键 "timeout" 没有被覆盖，依旧了保留原值。
+注：这里还是和 insert({k, v}) 一样的特性，重复的键 "timeout" 没有被覆盖，依旧了保留原值。
 
 ---
 
@@ -1108,6 +1495,56 @@ m.insert({"delay", 211});
 
 如果需要覆盖原值的批量插入，还是乖乖用 for 循环调用 [] 或 insert_or_assign 吧。
 
+> 问：既然和批量插入没什么区别，那批量 insert 究竟还有什么存在的必要呢？
+>
+> map 又不是 vector 因为一个个分别插入会变成 $O(n^2)$ 复杂度，确实需要提供个批量插入的方法。
+>
+> 答：是为了统一，既然 vector 都有批量 insert，那 set 和 map 也得有才符合完美主义美学，而且用他来合并两个 map 也很方便。
+
+---
+
+类似于批量 insert，还有一个 assign 函数，作用是清空原有内容，直接设为一个全新的 map：
+
+```cpp
+map<string, int> m = {  // 初始化时就插入两个元素
+    {"answer", 42},
+    {"timeout", 7},
+};
+m.assign({              // 原有内容全部清空！重新插入两个新元素
+    {"timeout", 985},
+    {"delay", 211},
+});
+```
+
+```
+{"delay": 211, "timeout": 985}
+```
+
+注意这不是批量版 insert_or_assign，原有的 "answer" 键也被删掉了。所以搞了半天这个 assign 就是和 = 等价：
+```cpp
+m = {   // 等价于 assign
+    {"timeout", 985},
+    {"delay", 211},
+};
+```
+
+---
+
+> 那么 assign 究竟有什么存在的必要呢？是不是 $\beta$ 格稍微高一点？小彭老师也不明白，为什么标准库要发明这么多功能一样的同义词函数。
+
+还是有必要的，虽然接受花括号列表这个版本和 = 没区别，但 assign 还有个接收两个迭代器作为输入区间的版本：
+
+```cpp
+m.assign(v.begin(), v.end());
+```
+
+等于号 = 就做不到接受两个参数，但还是可以用构造函数 + 移动赋值函数的组合拳平替，而且更易读：
+
+```cpp
+m = map<string, int>(v.begin(), v.end());
+```
+
+> 注：在 C++98 中由于没有移动语义，以上写法会调用拷贝赋值函数，造成额外一次不必要的拷贝，当时确实需要 assign 才保证高效。
 
 ---
 
@@ -1127,7 +1564,7 @@ iterator insert(const_iterator pos, pair<K, V> const &kv);
 
 也就是说这玩意还不一定管用，只是提示性质的（和 mmap 函数的 start 参数很像，你可以指定，但只是个提示，指定了不一定有什么软用，具体什么地址还是操作系统说了算，他从返回值里给你的地址才是正确答案）。
 
-估计又是性能强迫症发作了吧，例如已知指向 "key" 的迭代器，想要插入 "kea"，那么指定指向 "key" 的迭代器就会让 find 能更容易定位到 "kea" 要插入的位置？如果你知道准确原因，欢迎在评论区指出。
+估计又是性能强迫症发作了吧，例如已知指向 "key" 的迭代器，想要插入 "kea"，那么指定指向 "key" 的迭代器就会让 find 能更容易定位到 "kea" 要插入的位置？如果你知道准确原因和运用案例，欢迎在评论区指出。
 
 [^1]: https://en.cppreference.com/w/cpp/container/map/insert
 [^2]: http://c.biancheng.net/view/7241.html
@@ -1218,6 +1655,14 @@ print(msg);
 
 map 的迭代器失效问题
 
+- 每当往 map 中插入新元素时，原有的迭代器不会失效。
+- 删除 map 中的其他元素时，也不会失效。
+- **只有当删除的刚好是迭代器指向的那个元素时，才会失效**。
+
+```cpp
+m.insert(m.begin(), m.end());
+```
+
 ---
 
 一边遍历一边删除部分元素（错误示范）
@@ -1292,3 +1737,55 @@ print(msg);
 ```
 
 [^1]: https://www.apiref.com/cpp-zh/cpp/container/map/erase_if.html
+
+---
+
+swap 与 move
+
+---
+
+基于哈希散列的映射表 unordered_map
+
+用法上，unordered_map 基本与 map 相同，这里着重介绍他们的不同点。
+
+---
+
+区别 1：有序性
+
+- map 基于红黑树，元素从小到大顺序排列，遍历时也是从小到大的，键类型需要支持比大小（std::less）。
+- unordered_map 基于哈希散列表，里面元素顺序随机，键类型需要支持哈希值计算（std::hash）。
+
+map 中的元素始终保持有序，unordered_map 里面的元素是随机的。
+
+这也意味着 std::set_union 这类要求输入区间有序的 algorithm 函数无法适用于 unordered_map/set。
+
+---
+
+区别 2：时间复杂度
+
+- map 的查询和插入操作是 $O(\log N)$ 复杂度的。
+- unordered_map 的查询和插入操作是 $O(1)$ 复杂度的。
+
+处理很高的数据量时，unordered_map 更高效。
+
+但 unordered_map 需要频繁地进行 rehash 操作保持高效，否则不如 map。
+
+---
+
+区别 3：迭代器失效条件
+
+- map 和 unordered_map 都是只有当删除的刚好是迭代器指向的那个元素时才会失效，这点相同。
+- 但 unordered_map 的 rehash 操作（需要经常 rehash 以提升性能）会造成所有迭代器失效。
+
+unordered_map 不会自动 rehash，rehash 需要手动调用，因此通常来说不必担心 unordered_map 的迭代器失效。
+
+---
+
+```cpp
+```
+
+基于红黑树的映射表 map
+
+---
+
+自定义比较器 / 哈希函数
