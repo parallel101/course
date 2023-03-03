@@ -20,29 +20,36 @@ css: unocss
 让高性能数据结构惠及每一人
 
 ---
+layout: two-cols
+---
 
 # 课程简介
 
 😀😀😀
 
-面向已经了解一定 C++ 语法，正在学习 C++ 标准库的童鞋。
+面向已经了解一定 C++ 语法，正在学习标准库的童鞋。
 
 C++ 标准库又称 STL，包含了大量程序员常用的算法和数据结构，是 Bjarne Stroustrup 送给所有 C++ 程序员的一把瑞士军刀，然而发现很多童鞋并没有完全用好他，反而还被其复杂性误伤了。
 
 如果你也对标准库一知半解，需要系统学习的话，那么本课程适合你。小彭老师将运用他特有的幽默答辩比喻，全面介绍各 STL 容器的所有用法。结合一系列实战案例，剖析常见坑点，使用技巧等。对比不同写法的性能与可读性，还会与 Python 语言相互类比方便记忆，科普的部分冷知识可以作为大厂面试加分项。
 
-本系列课程与侯杰老师 STL 课的区别：
+::right::
+
+<center><img src="images/maijiaxiu.jpg" width="320" class="opacity-80"><p class="opacity-50">本课程受到童鞋一致好评</p></center>
+
+---
+
+# 课程亮点
+
+👍👍👍
+
+本系列课程与《侯杰老师 STL 课》的区别：
 
 - 侯杰老师价值 2650 元，本课程录播上传 B 站免费观看，观众可以自行选择是否一键三连。
 - 课件和案例源码开源，上传在 GitHub，可以自己下载来做修改，然后自己动手实验。
 - 侯杰老师注重理论和底层实现原理，而本课程注重应用，结合实战案例，着重展开重难点。
-- 很多学校里教的，百度上搜的，大多是老版本 C++，已经过时了，而本课程基于较新的 C++17 语言标准。
-
----
-
-# 本课程受到童鞋一致好评
-
-<center><img src="images/maijiaxiu.jpg" width="300"></center>
+- 很多学校里教的，百度上搜的，大多是老版本 C++，已经过时了，而本课程基于较新的 C++17 和 C++20 语言标准。
+- 有时存在部分 C++ 高级用法过于艰深，不能适合所有同学，本课程采用因材施教思想：对于新手，可以跳过看不懂的部分，看我提供的“保底用法”，不保证高性能和“优雅”，但至少能用；对学有余力的童鞋，则可以搏一搏上限，把高级用法也看懂，提升面试竞争力。总之不论你是哪个阶段的学习者，都能从此课程中获益。
 
 ---
 
@@ -126,6 +133,7 @@ CMake 工程位于课件同目录的 `course/stlseries/stl_map/experiment/` 文�
 | print.h | 内含 print 函数，支持打印绝大多数 STL 容器，方便调试 |
 | cppdemangle.h | 获得类型的名字，以模板参数传入，详见该文件中的注释 |
 | map_get.h | 带默认值的 map 表项查询，稍后课程中会介绍到 |
+| ppforeach.h | 基于宏的编译期 for 循环实现，类似于 BOOST_PP_FOREACH |
 
 ---
 
@@ -146,7 +154,9 @@ const int& i  // 官方文档书写习惯
 
 ---
 
-映射表 map
+标准库中的 map 容器[^1]
+
+[^1]: https://en.cppreference.com/w/cpp/container/map
 
 ---
 
@@ -606,7 +616,7 @@ map<string, Student> stus = {
 
 ```cpp
 void PeiXunCpp(string stuName) {
-    Student stu = stus.at(stuName);
+    auto stu = stus.at(stuName);  // 在栈上拷贝了一份完整的 Student 对象
     stu.money -= 2650;
     stu.skills.insert("C++");
 }
@@ -618,9 +628,152 @@ void PeiXunCpp(string stuName) {
 
 那么这时会调用 Student 的拷贝构造函数，`Student(Student const &)`，来初始化变量 stu。
 
-结论：普通变量 = 引用，则引用会退化，造成深拷贝！
+结论：把引用保存到普通变量中，则引用会退化，造成深拷贝！stu 和 stus.at(stuName) 的已经是两个不同的 Student 对象，对 stu 的修改不会影响到 stus.at(stuName) 指向的那个 Student 对象了。
+
 
 此时你对这个普通变量的所有修改，都不会同步到 map 中的那个 Student 中去！
+
+---
+
+我们现在对相依童鞋进行 C++ 培训：
+
+```cpp
+PeiXunCpp("相依");
+print(stus.at("相依"));
+```
+
+结果发现他的存款一分没少，也没学会 C++：
+
+```
+{id: 20220302, age: 21, sex: "男", money: 2000, skills: {"C", "Java"}}
+```
+
+看来我们的修改没有在 map 中生效？原来是因为我们在 PeiXunCpp 函数里：
+
+```cpp
+auto stu = stus.at(stuName);  // 在栈上拷贝了一份完整的 Student 对象
+```
+
+一不小心就用了“克隆人”技术！从学生表里的“相依1号”，克隆了一份放到栈上的“相依2号”！
+
+然后我们扣了这个临时克隆人“相依2号”的钱，并给他培训 C++ 技术。
+
+然而我们培训的是栈上的临时变量“相依2号”，克隆前的“相依1号”并没有受到培训，也没有扣钱。
+
+然后呢？残忍的事情发生了！在小彭老师一通操作培训完“相依2号”后，我们把他送上断头台——析构了！
+
+而这一切“相依1号”完全不知情，他只知道有人喊他做克隆，然后就回家玩 Java 去了，并没有培训 C++ 的记忆。
+
+---
+
+要防止引用退化成普通变量，需要把变量类型也改成引用！这种是浅拷贝，stu 和 stus.at(stuName) 指向的仍然是同一个 Student 对象。用 `auto` 捕获的话，改成 `auto &` 就行。
+
+```cpp
+void PeiXunCpp(string stuName) {
+    auto &stu = stus.at(stuName);  // 在栈上创建一个指向原 Student 对象的引用
+    stu.money -= 2650;
+    stu.skills.insert("C++");
+}
+```
+
+```
+{id: 20220302, age: 21, sex: "男", money: -650, skills: {"C", "C++", "Java"}}
+```
+
+终于，正版“相依1号”本体鞋废了 C++！
+
+之后如果再从“相依1号”身上克隆，克隆出来的“相依n号”也都会具有培训过 C++ 的记忆了。
+
+引用相当于身份证，我们复印了“相依”的身份证，身份证不仅复印起来比克隆一个大活人容易（拷贝开销）从而提升性能，而且通过身份证可以找到本人，对身份证的修改会被编译器自动改为对本人的修改，例如通过“相依”的身份证在银行开卡等，银行要的是身份证，不是克隆人哦。
+
+---
+
+引用是一个烫手的香香面包，普通变量就像一个臭臭的答辩马桶，把面包放到马桶（auto）里，面包就臭掉，腐烂掉，不能吃了！要让面包转移阵地了以后依然好吃，需要放到保鲜盒（auto &）里。
+
+这就是 C++ 的 decay（中文刚好是“退化”、“变质”的意思）规则。
+
+以下都是香香面包，放进马桶里会变质：
+
+- `T &` 会变质成 `T`（引用变质成普通变量）
+- `T []` 会变质成 `T *`（数组变质成首地址指针）
+- `T ()` 会变质成 `T (*)()`（函数变质成函数指针）
+
+在函数的参数中、函数的返回值中、auto 捕获的变量中，放入这些香香面包都会发生变质！
+
+如何避免变质？那就不要用马桶（普通变量）装面包呗！用保鲜盒（引用）装！
+
+- 避免引用 `T &t` 变质，就得把函数参数类型改成引用，或者用 `auto &`，`auto const &` 捕获才行。
+- 避免原生数组 `T t[N]` 变质，也可以改成引用 `T (&t)[N]`，但比较繁琐，不如直接改用 C++11 封装的安全静态数组 `array<T, N>` 或 C++98 就有的安全动态数组 `vector<T>`。
+- 避免函数 `T f()` 变质，可以 `T (&f)()`，但繁琐，不如直接改用 C++11 的函数对象 `function<T()>`。
+
+---
+
+邪恶的 decay 规则造成空悬指针的案例
+
+```cpp
+typedef double arr_t[10];
+
+auto func(arr_t val) {
+    arr_t ret;
+    memcpy(ret, val, sizeof(arr_t));  // 对 val 做一些运算, 把计算结果保存到 ret
+    return ret;     // double [10] 自动变质成 double *
+}
+
+int main() {
+    arr_t val = {1, 2, 3, 4};
+    auto ret = func(val);             // 此处 auto 会被推导为 double *
+    print(std::span<double>(ret, ret + 10));
+    return 0;
+}
+```
+
+```
+Segmentation fault (core dumped)
+```
+
+---
+
+修复方法：不要用沙雕 C 语言的原生数组，用 C++ 封装好的 array
+
+```cpp
+typedef std::array<double, 10> arr_t;  // 或者 vector 亦可
+
+auto func(arr_t val) {
+    arr_t ret;
+    ret = val;  // 对 val 做一些运算, 把计算结果保存到 ret
+    return ret;
+}
+
+int main() {
+    arr_t val = {1, 2, 3, 4};
+    auto ret = func(val);
+    print(ret);
+    return 0;
+}
+```
+
+```
+{1, 2, 3, 4, 0, 0, 0, 0, 0, 0}
+```
+
+---
+
+当然如果你还是学不会怎么保留香香引用的话，也可以在修改后再次用 [] 写回学生表。这样学生表里不会 C++ 的“相依1号”就会被我们栈上培训过 C++ 的“相依1号”覆盖，现在学生表里的也是有 C++ 技能的相依辣！只不过需要翻来覆去克隆了好几次比较低效而已，至少能用了，建议只有学不懂引用的童鞋再用这种保底写法。
+
+```cpp
+void PeiXunCpp(string stuName) {
+    auto stu = stus.at(stuName);  // 克隆了一份“相依2号”
+    stu.money -= 2650;
+    stu.skills.insert("C++");
+    stus[stuName] = stu;          // “相依2号”夺舍，把“相依1号”给覆盖掉了
+}
+```
+
+学生思考题：上面代码第 5 行也可以改用 at，为什么？小彭老师不是说 “at 用于读取，[] 用于写入” 吗？
+
+我们童鞋要学会变通！小彭老师说 [] 用于写入，是因为有时候我们经常需要写入一个不存在的元素，所以 [] 会自动创建元素而不是出错就很方便；但是现在的情况是我们第 2 行已经访问过 at("相依")，那么就确认过 "相依" 已经存在才对，因此我写入的一定是个已经存在的元素，这时 [] 和 at 已经没区别了，所以用 at 的非 const 那个重载，一样可以写入。
+
+我们童鞋不是去死记硬背《小彭老师语录》，把小彭老师名言当做“两个凡是”圣经。要理解小彭老师会这么说的原因是什么，这样才能根据不同实际情况，实事求是看问题，才是符合小彭老师唯物编程观的。
 
 ---
 
@@ -640,13 +793,15 @@ void PeiXunCpp(string stuName) {
 
 除了写入元素需要用 [] 以外，还有一些案例中合理运用 [] 会非常的方便。
 
-[] 的效果：当所查询的键值不存在时，会调用默认构造函数创建一个元素。
+[] 的效果：当所查询的键值不存在时，会调用默认构造函数创建一个元素[^1]。
 
 - 对于 int, float 等数值类型而言，默认值是 0。
 - 对于指针（包括智能指针）而言，默认值是 nullptr。
 - 对于 string 而言，默认值是空字符串 ""。
 - 对于 vector 而言，默认值是空数组 {}。
-- 对于自定义类而言，调用你写的默认构造函数，如果没有，则每个成员都取默认值。
+- 对于自定义类而言，会调用你写的默认构造函数，如果没有，则每个成员都取默认值。
+
+[^1]: https://en.cppreference.com/w/cpp/language/value_initialization
 
 ---
 
@@ -770,6 +925,50 @@ layout: center
 
 ---
 
+查询 map 中元素的数量
+
+---
+
+应用举例：给每个键一个独一无二的计数
+
+---
+
+判断是否存在：count 函数
+
+```cpp
+size_t count(K const &k) const;
+```
+
+count 返回容器中键和参数 k 相等的元素个数，类型为 size_t（无符号 64 位整数）。
+
+由于 map 中同一个键最多只可能有一个元素，取值只能为 0 或 1。
+
+并且 size_t 可以隐式转换为 bool 类型，0 则 false，1 则 true。
+
+因此可以直接通过 count 的返回值是否为 0 判断一个键在 map 中是否存在：
+
+```cpp
+map<string, string> msg = {
+    {"hello", "world"},
+    {"fuck", "rust"},
+};
+print(msg);
+if (msg.count("fuck")) {
+    print("存在fuck，其值为", msg.at("fuck"));
+} else {
+    print("找不到fuck");
+}
+if (msg.count("suck")) {
+    print("存在suck，其值为", msg.at("suck"));
+} else {
+    print("找不到suck");
+}
+```
+
+C++20 可以改用返回类型为 bool 的 contains 函数，满足你的所有强迫症。
+
+---
+
 STL 容器的元素类型都可以通过成员 `value_type` 查询，常用于泛型编程（又称元编程）。
 
 ```cpp
@@ -831,6 +1030,14 @@ map 和 set 一样也是红黑树，不同在于：map 只有键 K 的部分会�
 所以 map 有可变迭代器，只是在其 value_type 中给 K 加上了 const 修饰：不允许修改 K，但可以修改 V。
 
 如果你确实需要修改键值，那么请先把这个键删了，然后再以同样的 V 重新插入一遍，保证红黑树的有序。
+
+---
+
+map 的遍历：古代 C++98 的迭代器大法
+
+---
+
+map 的遍历：现代 C++17 的花哨语法糖
 
 ---
 
@@ -1018,7 +1225,168 @@ for (int i: std::views::iota(0, 6)
 
 ---
 
-map 的成员 insert 函数原型如下[^1]：
+现在学习删除元素用的 erase 函数，其原型如下[^1]：
+
+```cpp
+size_t erase(K const &key);
+iterator erase(iterator pos);
+iterator erase(iterator beg, iterator end);
+```
+
+[^1]: https://en.cppreference.com/w/cpp/container/map/erase
+
+---
+
+erase 运用举例：删除一个元素
+
+```cpp
+map<string, string> msg = {
+    {"hello", "world"},
+    {"fuck", "rust"},
+};
+print(msg);
+msg.erase("fuck");
+print(msg);
+```
+
+```
+{"fuck": "rust", "hello": "world"}
+{"hello": "world"}
+```
+
+---
+
+erase 的返回值和 count 一样，返回成功删除的元素个数，类型为 size_t（无符号 64 位整数）。
+
+由于 map 中同一个键最多只可能有一个元素，取值只能为 0 或 1。
+
+并且 size_t 可以隐式转换为 bool 类型，0 则 false，1 则 true。
+
+因此可以直接通过 erase 的返回值是否为 0 判断是否删除成功：
+
+```cpp
+map<string, string> msg = {
+    {"hello", "world"},
+    {"fuck", "rust"},
+};
+print(msg);
+if (msg.erase("fuck")) {
+    print("删除fuck成功");
+} else {
+    print("删除fuck失败");
+}
+if (msg.erase("suck")) {
+    print("删除suck成功");
+} else {
+    print("删除suck失败");
+}
+print(msg);
+```
+
+```
+{"fuck": "rust", "hello": "world"}
+"删除fuck成功"
+"删除suck失败"
+{"hello": "world"}
+```
+
+---
+
+一边遍历一边删除部分元素（错误示范）
+
+```cpp
+map<string, string> msg = {
+    {"hello", "world"},
+    {"fucker", "rust"},
+    {"fucking", "java"},
+    {"good", "job"},
+};
+for (auto const &[k, v]: msg) {
+    if (k.find("fuck") == 0) {
+        msg.erase(k);  // 遍历过程中动态删除元素，会导致正在遍历中的迭代器失效，奔溃
+    }
+}
+print(msg);
+```
+
+```
+Segmentation fault (core dumped)
+```
+
+---
+
+引出问题：迭代器失效
+
+- 每当往 map 中插入新元素时，原先保存的迭代器不会失效。
+- 删除 map 中的其他元素时，也不会失效。
+- **只有当删除的刚好是迭代器指向的那个元素时，才会失效**。
+
+```cpp
+map<string, int> m = {
+    {"fuck", 985},
+};
+m.find("fuck");
+m["suck"] = 211;
+
+```
+
+---
+
+一边遍历一边删除部分元素（正解[^1]）
+
+```cpp
+map<string, string> msg = {
+    {"hello", "world"},
+    {"fucker", "rust"},
+    {"fucking", "java"},
+    {"good", "job"},
+};
+for (auto it = m.begin(); it != m.end(); ) {  // 没有 ++it
+    auto const &[k, v] = *it;
+    if (k.find("fuck") == 0) {
+        it = msg.erase(it);
+    } else {
+        ++it;
+    }
+}
+print(msg);
+```
+
+```
+{"good": "job", "hello": "world"}
+```
+
+[^1]: https://stackoverflow.com/questions/8234779/how-to-remove-from-a-map-while-iterating-it
+
+---
+
+批量删除符合条件的元素（C++20[^1]）
+
+```cpp
+map<string, string> msg = {
+    {"hello", "world"},
+    {"fucker", "rust"},
+    {"fucking", "java"},
+    {"good", "job"},
+};
+std::erase_if(msg, [&] (auto const &kv) {
+    auto &[k, v] = kv;
+    return k.starts_with("fuck");
+});
+print(msg);
+```
+
+```
+{"good": "job", "hello": "world"}
+```
+
+[^1]: https://www.apiref.com/cpp-zh/cpp/container/map/erase_if.html
+
+---
+
+---
+
+接下来开始学习如何插入元素，map 的成员 insert 函数原型如下[^1]：
 
 ```cpp
 pair<iterator, bool> insert(pair<const K, V> const &kv);
@@ -1571,44 +1939,126 @@ iterator insert(const_iterator pos, pair<K, V> const &kv);
 
 ---
 
+小彭老师 锐评 分奴
+
+玩游戏的人当中，分奴指的是那些打分看的很重的人，为了上分、胜利，可以不择手段。
+
+而玩编程的人当中，有一种性能强迫症的现象，特点有：
+
+1. 他们把一点鸡毛蒜皮的性能看得很重，为了 1% 的提升他们可以放弃可维护性，可移植性，可读性
+2. 对着不是瓶颈的冷代码一通操作猛如虎，结果性能瓶颈根本不是这儿，反而瓶颈部分的热代码他们看不到
+3. 根本没有进行性能测试（profling）就在那焦虑不存在的性能瓶颈，杞人忧天，妄下结论
+4. 根本不具备优化的经验，对计算机组成原理理解粗浅，缺乏常识，认为“执行的指令数量多少”就决定了性能
+5. 不以性能测试结果为导向，自以为是地心理作用优化，结果性能没有提升，反而优化出一堆 bug
+6. 对于并行的期望过高，以为并行是免费的性能提升，根本不明白并行需要对程序算法进行多少破坏性的改动
+7. 知小礼而无大义，一边执着地问我“如何用OpenMP并行”，一边还在“并行地做strcmp”，相当于金箔擦屁股。
+8. 只看到常数优化的作用，“把 Python 换成 C++ 会不会好一点啊”，然而他们给我一看代码，用了 list.index，复杂度都是 $O(N^2)$ 的，即使换成 C++ 用天河二号跑也无非是从小垃圾变成大垃圾（真实案例）。
+
+我称之为编程界的分奴。
+
+---
+
 insert 的究极分奴版：emplace
+
+```cpp
+template <class Args>
+pair<iterator, bool> emplace(Args &&...args);
+```
+
+虽然变长参数列表 `Args &&...args` 看起来很酷，然而由于 map 的特殊性，其元素类型是 `pair<const K, V>`，而 pair 的构造函数只有两个参数，导致实际上这个看似炫酷的变长参数列表往往只能接受两个参数，因此这个函数的调用方法实际上只能是：
+
+```cpp
+pair<iterator, bool> emplace(K k, V v);
+```
+
+写法：
+
+```cpp
+m.emplace(key, val);
+```
+
+等价于：
+
+```cpp
+m.insert({key, val});
+```
+
+我的评价是：emplace 对于 set，如果元素类型是 `array<int, 100>` 这样比较大的类型，确实能起到减少移动构造函数的作用，但是这个 map 他的元素类型不是直接的 V 而是一个 pair，他分的是 pair 的构造函数，没有用，V 部分还是会造成一次额外的移动开销，所以这玩意除了妨碍安全性，可读性以外，没有任何收益的，不建议 map 使用 emplace（set 和 vector 可以用 emplace）。
+
+返回值还是 `pair<iterator, bool>`，其意义和 insert 一样，不再赘述。
+
+---
 
 insert 的宇宙无敌分奴版：emplace_hint
 
+```cpp
+template <class Args>
+pair<iterator, bool> emplace_hint(const_iterator pos, Args &&...args);
+```
+
+写法：
+
+```cpp
+m.emplace_hint(pos, key, val);
+```
+
+等价于：
+
+```cpp
+m.insert(pos, {key, val});
+```
+
+之所以要分两个函数名 emplace 和 emplace_hint 而不是利用重载区分，是因为直接传入 pos 会被 emplace 当做 pair 的构造参数，而不是插入位置提示。
+
+- emplace 对应于普通的 `insert(pair<const K, V>)` 这一重载。
+- emplace_hint 对应于带插入位置提示的 `insert(const_iterator, pair<const K, V>)` 这一重载。
+
+由于带提示的 insert 本来就意义不大，加上 emplace 追求性能意义不大，所以这个函数是真的没必要用。
+
+---
+
 insert 的托马斯黄金大回旋分奴版：try_emplace
+
+```cpp
+template <class Args>
+pair<iterator, bool> try_emplace(K const &k, Args &&...args);
+```
+
+写法：
+
+```cpp
+m.try_emplace(key, arg1, arg2, ...);
+```
+
+等价于：
+
+```cpp
+m.insert({key, V(arg1, arg2, ...)});
+```
+
+由于 emplace 实在是憨憨，他变长参数列表就地构造的是 pair，然而 pair 的构造函数正常不就是只有两个参数吗，变长没有用。实际有用的往往是我们希望用变长参数列表就地构造值类型 V，对 K 部分并不关系。因此 C++17 引入了 try_emplace，其键部分保持 `K const &`，值部分采用变长参数列表。
+
+我的评价是：这个比 emplace 实用多了，如果要与 vector 的 emplace_back 对标，那么 map 与之对应的一定是 try_emplace。同学们如果要分奴的话还是建议用 try_emplace。
+
+---
 
 insert 的炫彩中二摇摆混沌大魔王分奴版：带插入位置提示的 try_emplace
 
----
-
-find 和 insert 都学完了，最后，让我们来学习删除元素用的 erase 函数，其原型如下[^1]：
+写法：
 
 ```cpp
-iterator erase(K const &key);
-iterator erase(iterator pos);
-iterator erase(iterator beg, iterator end);
+m.try_emplace(pos, key, arg1, arg2, ...);
 ```
 
-[^1]: https://en.cppreference.com/w/cpp/container/map/erase
-
----
-
-erase 运用举例：删除一个元素
+等价于：
 
 ```cpp
-map<string, string> msg = {
-    {"hello", "world"},
-    {"fuck", "rust"},
-};
-print(msg);
-msg.erase("fuck");
-print(msg);
+m.insert(pos, {key, V(arg1, arg2, ...)});
 ```
 
-```
-{"fuck": "rust", "hello": "world"}
-{"hello": "world"}
-```
+> 之所以不需要再分一个 try_emplace_hint，是因为 try_emplace 的第一个参数是 K 类型，不可能和 const_iterator 类型混淆，因此 C++ 委员会最终决定直接用同一个名字，让编译器自动重载了。
+
+还是一如既往的意义不大。
 
 ---
 
@@ -1647,100 +2097,70 @@ print(msg);
 | `auto m = map<K, V>{{k1, v1}, {k2, v2}}` | 初始化为一系列键值对 | C++11 | 💩 |
 | `func({{k1, v1}, {k2, v2}})` | 给函数参数传入一个 map | C++11 | ❤ |
 | `m = {{k1, v1}, {k2, v2}}` | 重置为一系列键值对 | C++11 | ❤ |
-| `m.assign({{k1, v1}, {k2, v2}})` | 重置为一系列键值对 | C++11 | 💩 |
 | `m.clear()` | 清空所有表项 | C++98 | ❤ |
 | `m = {}` | 清空所有表项 | C++11 | 💣 |
 
 ---
 
-map 的迭代器失效问题
-
-- 每当往 map 中插入新元素时，原有的迭代器不会失效。
-- 删除 map 中的其他元素时，也不会失效。
-- **只有当删除的刚好是迭代器指向的那个元素时，才会失效**。
-
-```cpp
-m.insert(m.begin(), m.end());
-```
-
----
-
-一边遍历一边删除部分元素（错误示范）
-
-```cpp
-map<string, string> msg = {
-    {"hello", "world"},
-    {"fucker", "rust"},
-    {"fucking", "java"},
-    {"good", "job"},
-};
-for (auto const &[k, v]: msg) {
-    if (k.find("fuck") == 0) {
-        msg.erase(k);  // 遍历过程中动态删除元素，会导致正在遍历中的迭代器失效，奔溃
-    }
-}
-print(msg);
-```
-
-```
-Segmentation fault (core dumped)
-```
-
----
-
-一边遍历一边删除部分元素（正解[^1]）
-
-```cpp
-map<string, string> msg = {
-    {"hello", "world"},
-    {"fucker", "rust"},
-    {"fucking", "java"},
-    {"good", "job"},
-};
-for (auto it = m.begin(); it != m.end(); ) {  // 没有 ++it
-    auto const &[k, v] = *it;
-    if (k.find("fuck") == 0) {
-        it = msg.erase(it);
-    } else {
-        ++it;
-    }
-}
-print(msg);
-```
-
-```
-{"good": "job", "hello": "world"}
-```
-
-[^1]: https://stackoverflow.com/questions/8234779/how-to-remove-from-a-map-while-iterating-it
-
----
-
-批量删除符合条件的元素（C++20[^1]）
-
-```cpp
-map<string, string> msg = {
-    {"hello", "world"},
-    {"fucker", "rust"},
-    {"fucking", "java"},
-    {"good", "job"},
-};
-std::erase_if(msg, [&] (auto const &kv) {
-    auto &[k, v] = kv;
-    return k.starts_with("fuck");
-});
-print(msg);
-```
-
-```
-{"good": "job", "hello": "world"}
-```
-
-[^1]: https://www.apiref.com/cpp-zh/cpp/container/map/erase_if.html
-
----
-
 swap 与 move
+
+---
+
+extract 和 merge 函数
+
+---
+
+时间复杂度问题
+
+---
+
+允许重复键值的 multimap
+
+---
+
+| 函数或写法 | 解释说明 | 时间复杂度 |
+|-|-|-|
+| m1 = move(m2) | 移动 | $O(1)$ |
+| m1 = m2 | 拷贝 | $O(N)$ |
+| swap(m1, m2) | 交换 | $O(1)$ |
+| m.clear() | 清空 | $O(N)$ |
+
+---
+
+| 函数或写法 | 解释说明 | 时间复杂度 |
+|-|-|-|
+| m.insert({key, val}) | 插入键值对 | $O(\log N)$ |
+| m.insert(pos, {key, val}) | 带提示的插入，如果位置提示准确 | $O(1)$+ |
+| m.insert(pos, {key, val}) | 带提示的插入，如果位置提示不准确 | $O(\log N)$ |
+| m[key] = val | 插入或覆盖 | $O(\log N)$ |
+| m.insert_or_assign(key, val) | 插入或覆盖 | $O(\log N)$ |
+| m.insert({vals...}) | 设 M 为待插入元素（vals）的数量 | $O(M \log N)$ |
+| map m = {vals...} | 如果 vals 无序 | $O(N \log N)$ |
+| map m = {vals...} | 如果 vals 已事先从小到大排列 | $O(N)$ |
+
+---
+
+| 函数或写法 | 解释说明 | 时间复杂度 |
+|-|-|-|
+| m.at(key) | 根据指定的键，查找元素，返回值的引用 | $O(\log N)$ |
+| m.find(key) | 根据指定的键，查找元素，返回迭代器 | $O(\log N)$ |
+| m.count(key) | 判断是否存在指定键元素，返回相同键的元素数量（只能为 0 或 1） | $O(\log N)$ |
+| m.equal_range(key) | 根据指定的键，确定上下界，返回区间 | $O(\log N)$ |
+| m.size() | map 中所有元素的数量 | $O(1)$ |
+| m.erase(key) | 根据指定的键，删除元素 | $O(\log N)$ |
+| m.erase(it) | 根据找到的迭代器，删除元素 | $O(1)+$ |
+| m.erase(beg, end) | 批量删除区间内的元素，设该区间（beg 和 end 之间）有 M 个元素 | $O(M + \log N)$ |
+| erase_if(m, cond) | 批量删除所有符合条件的元素 | $O(N)$ |
+
+---
+
+| 函数或写法 | 解释说明 | 时间复杂度 |
+|-|-|-|
+| m.insert(node) | | $O(\log N)$ |
+| node = m.extract(it) | | $O(1)+$ |
+| node = m.extract(key) | | $O(\log N)$ |
+| m1.merge(m2) | 合并两个 map，清空 m2，结果写入 m1 | $O(\log N)$ |
+| m1.insert(m2.begin(), m2.end()) | 合并两个 map，m2 保持不变，结果写入 m1 | $O(N \log N)$ |
 
 ---
 
@@ -1784,8 +2204,28 @@ unordered_map 不会自动 rehash，rehash 需要手动调用，因此通常来�
 ```cpp
 ```
 
-基于红黑树的映射表 map
+区别于基于红黑树的映射表 map
 
 ---
 
 自定义比较器 / 哈希函数
+
+---
+
+map 中的 RAII
+
+---
+
+map 和 unique_ptr 结合使用
+
+---
+
+map 和 function 结合使用
+
+---
+
+案例：全局句柄表实现仿 C 语言 API
+
+---
+
+案例：全局注册表实现动态反射

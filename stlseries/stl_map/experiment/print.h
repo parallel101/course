@@ -110,7 +110,7 @@ namespace _print_details {
     };
 
     template <class T>
-    struct _printer<T, typename _enable_if_iterable<T, typename _enable_if_string<T, typename _enable_if_tuple<T, typename _enable_if_map<T>::not_type>::not_type>::not_type>::type> {
+    struct _printer<T, typename _enable_if_iterable<T, typename _enable_if_string<T, typename _enable_if_map<T>::not_type>::not_type>::type> {
         static void print(T const &t) {
             std::cout << "{";
             bool once = false;
@@ -218,7 +218,7 @@ namespace _print_details {
     template <class T0, class ...Ts>
     void print(T0 const &t0, Ts const &...ts) {
         _printer<_rmcvref_t<T0>>::print(t0);
-        ((std::cout << " " << _printer<_rmcvref_t<Ts>>::print(ts)), ...);
+        ((std::cout << " ", _printer<_rmcvref_t<Ts>>::print(ts)), ...);
         std::cout << "\n";
     }
 }
@@ -232,8 +232,8 @@ using _print_details::print;
 
 #include "ppforeach.h"
 
-#define DEF_PRINT(Class, ...) \
-template <> \
+#define DEF_PRINT(Class, TmplArgs, ...) \
+template <TmplArgs> \
 struct _print_details::_printer<Class, void> { \
     static void print(Class const &_cls) { \
         std::cout << "{"; \

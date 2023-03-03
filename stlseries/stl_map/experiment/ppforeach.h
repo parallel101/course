@@ -1,6 +1,7 @@
 #pragma once
 
-// https://www.codenong.com/6707148/
+// Based on https://www.codenong.com/6707148/
+// With some tiny usage tweaks
 /*
  * The PP_NARG macro evaluates to the number of arguments that have been
  * passed to it.
