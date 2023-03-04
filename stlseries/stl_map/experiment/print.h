@@ -84,8 +84,18 @@ namespace _print_details {
         using type = U;
     };
 
+    template <class T, class U = void, class = void>
+    struct _enable_if_c_str {
+        using not_type = U;
+    };
+
     template <class T, class U>
-    struct _enable_if_string<T, U, std::enable_if_t<std::is_pointer_v<std::decay_t<T>> && std::is_same_v<std::remove_const_t<std::remove_pointer_t<std::decay_t<T>>>, char>>> {
+    struct _enable_if_c_str<T, U, std::enable_if_t<std::is_pointer_v<std::decay_t<T>> && std::is_same_v<std::remove_const_t<std::remove_pointer_t<std::decay_t<T>>>, char>>> {
+        using type = U;
+    };
+
+    template <class T, class U>
+    struct _enable_if_c_str<T, U, std::enable_if_t<std::is_pointer_v<std::decay_t<T>> && std::is_same_v<std::remove_const_t<std::remove_pointer_t<std::decay_t<T>>>, wchar_t>>> {
         using type = U;
     };
 
@@ -110,7 +120,7 @@ namespace _print_details {
     };
 
     template <class T>
-    struct _printer<T, typename _enable_if_iterable<T, typename _enable_if_string<T, typename _enable_if_map<T>::not_type>::not_type>::type> {
+    struct _printer<T, typename _enable_if_iterable<T, typename _enable_if_c_str<T, typename _enable_if_string<T, typename _enable_if_map<T>::not_type>::not_type>::not_type>::type> {
         static void print(T const &t) {
             std::cout << "{";
             bool once = false;
@@ -164,6 +174,13 @@ namespace _print_details {
     struct _printer<T, typename _enable_if_string<T>::type> {
         static void print(T const &t) {
             std::cout << std::quoted(t);
+        }
+    };
+
+    template <class T>
+    struct _printer<T, typename _enable_if_c_str<T>::type> {
+        static void print(T const &t) {
+            std::cout << t;
         }
     };
 

@@ -927,9 +927,26 @@ layout: center
 
 查询 map 中元素的数量
 
+```cpp
+map<string, int> m;
+print(m.size());
+m["fuck"] = 985;
+print(m.size());
+m["suck"] = 211;
+print(m.size());
+```
+
 ---
 
 应用举例：给每个键一个独一无二的计数
+
+```cpp
+map<string, int> m;
+m["fuck"] = m.size();
+m["suck"] = m.size();
+```
+
+> 注：需要 C++17 保证等号右边先求值
 
 ---
 
@@ -944,6 +961,8 @@ count 返回容器中键和参数 k 相等的元素个数，类型为 size_t（�
 由于 map 中同一个键最多只可能有一个元素，取值只能为 0 或 1。
 
 并且 size_t 可以隐式转换为 bool 类型，0 则 false，1 则 true。
+
+---
 
 因此可以直接通过 count 的返回值是否为 0 判断一个键在 map 中是否存在：
 
@@ -965,7 +984,13 @@ if (msg.count("suck")) {
 }
 ```
 
-C++20 可以改用返回类型为 bool 的 contains 函数，满足你的所有强迫症。
+```
+{"fuck": "rust", "hello": "world"}
+存在fuck，其值为 "rust"
+找不到suck
+```
+
+C++20 中还可以改用返回类型直接为 bool 的 contains 函数，满足你的所有强迫症。
 
 ---
 
@@ -1285,8 +1310,8 @@ print(msg);
 
 ```
 {"fuck": "rust", "hello": "world"}
-"删除fuck成功"
-"删除suck失败"
+删除fuck成功
+删除suck失败
 {"hello": "world"}
 ```
 
