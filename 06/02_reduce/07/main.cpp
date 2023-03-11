@@ -18,24 +18,24 @@ int main() {
             float local_res = 0;
             for (size_t i = beg; i < end; i++) {
                 local_res += std::sin(i);
+                a[i] = local_res;
             }
             tmp_res[t] = local_res;
         });
     }
     tg1.wait();
-    for (size_t t = 0; t < maxt; t++) {
+    for (size_t t = 0; t < maxt-1; t++) {
         tmp_res[t] += res;
         res = tmp_res[t];
     }
     tbb::task_group tg2;
     for (size_t t = 1; t < maxt; t++) {
-        size_t beg = t * n / maxt - 1;
-        size_t end = std::min(n, (t + 1) * n / maxt) - 1;
+        size_t beg = t * n / maxt;
+        size_t end = std::min(n, (t + 1) * n / maxt);
         tg2.run([&, t, beg, end] {
-            float local_res = tmp_res[t];
+            float offset = tmp_res[t-1];
             for (size_t i = beg; i < end; i++) {
-                local_res += std::sin(i);
-                a[i] = local_res;
+                a[i] += offset;
             }
         });
     }
