@@ -5,15 +5,21 @@ class: text-center
 highlighter: shiki
 lineNumbers: true
 info: |
-  ## Archibate's STL course series
-  Presentation slides for archibate.
+  ## 小彭老师的高性能编程课
+  小彭老师的 Slidev 课件
 
-  Learn more at [parallel101/course](https://github.com/parallel101/course)
+  更多详情请见 [parallel101/course](https://github.com/parallel101/course)
 drawings:
   persist: false
 transition: none
 css: unocss
 ---
+
+<!-- PG1 -->
+
+<!-- 如何自动更新页码号：先 :source .vim_localrc，然后 :call MarkPG() -->
+
+<!-- 本课程基于 CC-BY-NC-SA 协议发布，转载需标注出处，不得用于商业用途 -->
 
 # 小彭老师 深入浅出 STL 课程系列 之 map
 
@@ -22,6 +28,8 @@ css: unocss
 ---
 layout: two-cols
 ---
+
+<!-- PG2 -->
 
 # 课程简介
 
@@ -39,6 +47,8 @@ C++ 标准库又称 STL，包含了大量程序员常用的算法和数据结构
 
 ---
 
+<!-- PG3 -->
+
 # 课程亮点
 
 👍👍👍
@@ -53,6 +63,8 @@ C++ 标准库又称 STL，包含了大量程序员常用的算法和数据结构
 
 ---
 
+<!-- PG4 -->
+
 # 课程大纲
 
 ✨✨✨
@@ -61,7 +73,7 @@ C++ 标准库又称 STL，包含了大量程序员常用的算法和数据结构
 
 1. vector 容器初体验 & 迭代器入门 (BV1qF411T7sd)
 2. 你所不知道的 set 容器 & 迭代器分类 (BV1m34y157wb)
-3. string，string_view，const char * 的爱恨纠葛 (BV1ja411M7Di) 
+3. string，string_view，const char * 的爱恨纠葛 (BV1ja411M7Di)
 4. 万能的 map 容器全家桶及其妙用举例 (本期)
 5. 函子 functor 与 lambda 表达式知多少
 6. 通过实战案例来学习 STL 算法库
@@ -73,6 +85,8 @@ C++ 标准库又称 STL，包含了大量程序员常用的算法和数据结构
 [^1]: https://space.bilibili.com/263032155
 
 ---
+
+<!-- PG5 -->
 
 # 课程要求
 
@@ -90,6 +104,8 @@ C++ 标准库又称 STL，包含了大量程序员常用的算法和数据结构
 ❤ = 推荐，💣 = 可用，💩 = 困难
 
 ---
+
+<!-- PG6 -->
 
 # 如何使用课件
 
@@ -115,6 +131,8 @@ Slidev 服务运行时对 slides.md 的所有修改会立刻实时显现在浏�
 
 ---
 
+<!-- PG7 -->
+
 # 如何运行案例代码
 
 🥺🥺🥺
@@ -134,8 +152,11 @@ CMake 工程位于课件同目录的 `course/stlseries/stl_map/experiment/` 文�
 | cppdemangle.h | 获得类型的名字，以模板参数传入，详见该文件中的注释 |
 | map_get.h | 带默认值的 map 表项查询，稍后课程中会介绍到 |
 | ppforeach.h | 基于宏的编译期 for 循环实现，类似于 BOOST_PP_FOREACH |
+| ScopeProfiler.h | 基于 RAII 的函数耗时统计，用于测量性能 |
 
 ---
+
+<!-- PG8 -->
 
 # 课程书写习惯说明
 
@@ -146,32 +167,159 @@ const int& i  // 官方文档书写习惯
 
 ---
 
-# 本期课程目录
-
----
-
-为什么需要 map
-
----
-
-标准库中的 map 容器[^1]
-
-[^1]: https://en.cppreference.com/w/cpp/container/map
-
----
-
-特性：
-
-- 有序
-- 不重复
-
----
+仅为教学方便目的，不建议在现实工程中使用：
 
 ```cpp
 using namespace std;
 ```
 
+本课程中的 `std::` 前缀均省略不写：
+
+```cpp
+map<string, vector<int>> m;
+erase_if(m, pred);
+```
+
+现实工程中不建议 `using namespace std`，请显式写出 `std::` 前缀：
+
+```cpp
+std::map<std::string, std::vector<int>> m;
+std::erase_if(m, pred);
+```
+
 ---
+
+案例代码中用了 ACM（大学生编程竞赛）常用的万能头文件，同样不建议在现实工程中使用：
+
+```cpp
+#include <bits/stdc++.h>
+```
+
+> 如果为 Visual Studio，可能不支持该头文件，需要手动添加[^1]
+
+现实工程中，建议根据需要一个个导入，不要偷懒用这个不标准的头文件：
+
+```cpp
+#include <map>            // 导入 std::map, std::multimap
+#include <unordered_map>  // 导入 std::unordered_map，std::unordered_multimap
+#include <string>         // 导入 std::string, std::wstring
+#include <algorithm>      // 导入 std::set_difference, std::set_union, std::set_intersection 等一系列全局函数
+// 下面代码中用到哪些容器，就导入哪些头文件
+```
+
+[^1]: https://blog.csdn.net/m0_51755720/article/details/121489644
+
+---
+
+<!-- PG9 -->
+
+# 本期课程目录
+
+---
+
+<!-- PG10 -->
+
+关于算法复杂度，一个小故事
+
+- 在 vector 容器用 std::find 查找：$O(N)$
+- 在 map 或 set 容器用 .find 查找：$O(\log N)$
+
+---
+
+<!-- PG11 -->
+
+map 的逻辑结构
+
+![logicmap](images/logicmap.png)
+
+特点：
+
+- 由一系列*键值对*组成
+- 一个键只能对应一个值
+- 键不得重复，值可以重复
+
+---
+
+<!-- PG12 -->
+
+标准库中的 map 容器[^1]
+
+标准库中，map 是一个模板类，他的键类型，值类型，可以由尖括号内的参数指定。
+
+例如 `map<string, int>` 是一个键类型为 string，值类型为 int 的 map 容器。
+例如 `map<int, Student>` 是一个键类型为 int，值类型为 Student 的 map 容器。
+例如 `map<char, vector<int>>` 是一个键类型为 char，值类型为 `vector<int>` 的 map 容器。
+
+后面为了方便研究，以 `map<K, V>` 形式书写得出的结论，对于任何实际键和值类型，只需代入 K 和 V 即可。
+
+已知：要想使用 `map<K, V>`，就得满足 `K` 必须支持比较运算符 `<`。
+
+可得：要想使用 `map<string, int>`，就得满足 `string` 必须支持比较运算符 `<`[^2]。
+
+已知：遍历 `map<K, V>` 时，是以键 `K` 部分从小到大的顺序遍历的。
+
+可得：遍历 `map<int, string>` 时，是以键 `int` 部分从小到大的顺序遍历的。
+
+[^1]: https://en.cppreference.com/w/cpp/container/map
+[^2]: `std::string` 的大小比较规则可以回顾 BV1ja411M7Di 和 BV1m34y157wb 这两节课
+
+---
+
+<!-- PG13 -->
+
+map 的物理结构
+
+![physmap](images/physmap.png)
+
+map 和 set 一样，都是基于红黑树的堆排序，实现高效查找。
+
+---
+
+<!-- PG14 -->
+
+查找时采用二分法：
+
+1. 从根节点开始查找。
+
+2. 如果当前节点的键小于要找的键，则往左子节点移动；
+
+3. 如果当前节点的键大于要找的键，则往左子节点移动；
+
+4. 如果当前节点的键等于要找的键，则该节点就是要找的节点，返回该节点。
+
+5. 把左/右子节点设为新的当前节点，然后回到第 2 步，重复这一查找过程。
+
+---
+
+<!-- PG15 -->
+
+由于 map 的实现基于堆排序，map 额外有一个特点：*有序*。
+
+map (或 set) 中的键 K 总是从小到大排列。
+
+每次插入新的键时，会找到适当的插入位置，使得插入后的 map 仍然有序。
+
+> 注：基于哈希散列表实现的 unordered_map (和 unordered_set)，就不具备*有序*这一特点。
+
+![sortedset](images/sortedset.png)
+
+---
+
+<!-- PG16 -->
+
+![setvsmap](images/setvsmap.png)
+
+区别在于：map 在 K 之外，额外外挂了一个 V 类型。
+
+V 类型不参与排序，仍然按照 K 进行排序。
+
+只不过当用户根据 K 找到的是 K-V 对，然后可以取出 K 对应的 V。
+
+这就实现了从 K 到 V 的映射。
+
+---
+
+<!-- PG17 -->
 
 创建一个 map 对象：
 
@@ -189,6 +337,8 @@ config["delay"] = 211;
 过于落后，还有更新更专业的写法。
 
 ---
+
+<!-- PG18 -->
 
 C++11 新特性——花括号初始化列表，允许创建 map 时直接指定初始数据：
 
@@ -216,6 +366,8 @@ map<K, V> m = {
 ```
 
 ---
+
+<!-- PG19 -->
 
 ```cpp
 map<string, int> config = {
@@ -248,6 +400,8 @@ auto config = map<string, int>{
 
 ---
 
+<!-- PG20 -->
+
 作为函数参数时，可以用花括号初始化列表就地构造一个 map 对象：
 
 ```cpp
@@ -275,6 +429,8 @@ void myfunc(map<string, int> const &config);
 ```
 
 ---
+
+<!-- PG21 -->
 
 从 vector 中批量导入键值对：
 
@@ -306,6 +462,8 @@ map<string, int> config(std::begin(kvs), std::end(kvs));  // C++17
 
 ---
 
+<!-- PG22 -->
+
 如何根据键查询相应的值？
 
 很多同学都知道 map 具有 [] 运算符重载，和一些脚本语言一样，直观易懂。
@@ -319,6 +477,8 @@ print(val);                    // 985
 但其实用 [] 访问元素是很不安全的，下面我会做实验演示这一点。
 
 ---
+
+<!-- PG23 -->
 
 沉默的 []，无言的危险：当键不存在时，会返回 0 而不会出错！
 
@@ -341,6 +501,8 @@ print(config["tmeout"]);  // 默默返回 0
 这非常危险，例如一个简简单单的拼写错误，就会导致 map 的查询默默返回 0，你还在那里找了半天摸不着头脑，根本没发现错误原来在 map 这里。
 
 ---
+
+<!-- PG24 -->
 
 爱哭爱闹的 at()，反而更讨人喜欢
 
@@ -370,6 +532,8 @@ Aborted (core dumped)
 
 ---
 
+<!-- PG25 -->
+
 [] 更危险的地方在于，当所查询的键值不存在时：
 
 ```cpp
@@ -396,6 +560,8 @@ print(config);
 
 ---
 
+<!-- PG26 -->
+
 > 在官方文档和各种教学课件中，都会展示一个函数的“原型”来讲解。
 >
 > 原型展现了一个函数的名称，参数类型，返回类型等信息，掌握了函数的原型就等于掌握了函数的调用方法。
@@ -420,6 +586,8 @@ V const &at(K const &k) const;       // 第二个版本的 at
 
 ---
 
+<!-- PG27 -->
+
 > 例如小彭老师打电话给 110，假如警察叔叔发现小彭老师报的案子是网络诈骗，那么他们会帮我转接到网警部门；假如发现小彭老师是被绑架了，那么他们可能会出动武警解救小彭老师。这就是 110 函数的两个重载，根据调用者传入的信息类型，决定要转给哪一个子部门。
 
 同理，编译器也是会根据调用时你传入的参数类型，决定要调用重载的哪一个具体版本。
@@ -441,6 +609,8 @@ V const &at(K const &k) const;       // 第二个版本的 at
 [^1]: https://www.runoob.com/cplusplus/cpp-overloading.html
 
 ---
+
+<!-- PG28 -->
 
 ```cpp
 V &at(K const &k);                   // 第一个版本的 at
@@ -466,6 +636,8 @@ V const &at(map<K, V> const *this, K const &k);       // 第二个版本的 at
 - 当 map 对象不为 const 时，传入的 this 指针为 `map<K, V> *`，两个重载都可以调用，但由于第一个重载更加符合，所以会调用第一个版本的 at。
 
 ---
+
+<!-- PG29 -->
 
 刚刚解释了函数重载，那么运算符重载呢？
 
@@ -493,6 +665,8 @@ V &operator[](K const &k);
 
 ---
 
+<!-- PG30 -->
+
 而 operator[] 这个成员函数没有 const 修饰，因此当 map 修饰为 const 时编译会不通过[^1]：
 
 ```cpp
@@ -519,6 +693,8 @@ print(config["timeout"]);          // 编译出错
 
 ---
 
+<!-- PG31 -->
+
 既然 [] 这么危险，为什么还要存在呢？
 
 ```cpp
@@ -534,6 +710,8 @@ config["timeout"] = 985;     // 成功创建并写入 985
 总结：读取时应该用 at() 更安全，写入时才需要用 []。
 
 ---
+
+<!-- PG32 -->
 
 - 读取元素时，统一用 at()
 - 写入元素时，统一用 []
@@ -551,6 +729,8 @@ m["key"] = val;
 - 总而言之，我们用 C++ 的 map 读取元素时，需要显式地用 at() 告诉编译器我是打算读取。
 
 ---
+
+<!-- PG33 -->
 
 at 与 [] 实战演练
 
@@ -576,6 +756,8 @@ map<string, Student> stus;
 ```
 
 ---
+
+<!-- PG34 -->
 
 现在小彭老师和他的童鞋们要进入这家学校了，让我们用 [] 大法插入他的个人信息：
 
@@ -608,6 +790,8 @@ map<string, Student> stus = {
 
 ---
 
+<!-- PG35 -->
+
 现在甲方要求添加一个“培训”函数，用于他们的 C++ 培训课。
 
 培训函数的参数为字符串，表示要消费学生的名字。如果该名字学生不存在，则应该及时报错。
@@ -634,6 +818,8 @@ void PeiXunCpp(string stuName) {
 此时你对这个普通变量的所有修改，都不会同步到 map 中的那个 Student 中去！
 
 ---
+
+<!-- PG36 -->
 
 我们现在对相依童鞋进行 C++ 培训：
 
@@ -666,6 +852,8 @@ auto stu = stus.at(stuName);  // 在栈上拷贝了一份完整的 Student 对�
 
 ---
 
+<!-- PG37 -->
+
 要防止引用退化成普通变量，需要把变量类型也改成引用！这种是浅拷贝，stu 和 stus.at(stuName) 指向的仍然是同一个 Student 对象。用 `auto` 捕获的话，改成 `auto &` 就行。
 
 ```cpp
@@ -688,6 +876,8 @@ void PeiXunCpp(string stuName) {
 
 ---
 
+<!-- PG38 -->
+
 引用是一个烫手的香香面包，普通变量就像一个臭臭的答辩马桶，把面包放到马桶（auto）里，面包就臭掉，腐烂掉，不能吃了！要让面包转移阵地了以后依然好吃，需要放到保鲜盒（auto &）里。
 
 这就是 C++ 的 decay（中文刚好是“退化”、“变质”的意思）规则。
@@ -707,6 +897,8 @@ void PeiXunCpp(string stuName) {
 - 避免函数 `T f()` 变质，可以 `T (&f)()`，但繁琐，不如直接改用 C++11 的函数对象 `function<T()>`。
 
 ---
+
+<!-- PG39 -->
 
 邪恶的 decay 规则造成空悬指针的案例
 
@@ -733,6 +925,8 @@ Segmentation fault (core dumped)
 
 ---
 
+<!-- PG40 -->
+
 修复方法：不要用沙雕 C 语言的原生数组，用 C++ 封装好的 array
 
 ```cpp
@@ -758,6 +952,8 @@ int main() {
 
 ---
 
+<!-- PG41 -->
+
 当然如果你还是学不会怎么保留香香引用的话，也可以在修改后再次用 [] 写回学生表。这样学生表里不会 C++ 的“相依1号”就会被我们栈上培训过 C++ 的“相依1号”覆盖，现在学生表里的也是有 C++ 技能的相依辣！只不过需要翻来覆去克隆了好几次比较低效而已，至少能用了，建议只有学不懂引用的童鞋再用这种保底写法。
 
 ```cpp
@@ -777,6 +973,8 @@ void PeiXunCpp(string stuName) {
 
 ---
 
+<!-- PG42 -->
+
 如果要根据学号进行查找呢？那就以学号为键，然后把学生姓名放到 Student 结构体中。
 
 如果同时有根据学号进行查找和根据姓名查找两种需求呢？
@@ -789,32 +987,44 @@ void PeiXunCpp(string stuName) {
 
 ---
 
+<!-- PG43 -->
+
 查询 map 中元素的数量
+
+```cpp
+size_t size() const noexcept;
+```
+
+使用 `m.size()` 获得的 map 大小，或者说其中元素的数量。
 
 ```cpp
 map<string, int> m;
 print(m.size());
 m["fuck"] = 985;
 print(m.size());
-m["suck"] = 211;
+m["dick"] = 211;
 print(m.size());
 ```
 
 ---
+
+<!-- PG44 -->
 
 应用举例：给每个键一个独一无二的计数
 
 ```cpp
 map<string, int> m;
 m["fuck"] = m.size();
-m["suck"] = m.size();
+m["dick"] = m.size();
 ```
 
 > 注：需要 C++17 保证等号右边先求值
 
 ---
 
-判断是否存在：count 函数
+<!-- PG45 -->
+
+判断一个键是否存在：count 函数
 
 ```cpp
 size_t count(K const &k) const;
@@ -827,6 +1037,8 @@ count 返回容器中键和参数 k 相等的元素个数，类型为 size_t（�
 并且 size_t 可以隐式转换为 bool 类型，0 则 false，1 则 true。
 
 ---
+
+<!-- PG46 -->
 
 因此可以直接通过 count 的返回值是否为 0 判断一个键在 map 中是否存在：
 
@@ -841,22 +1053,24 @@ if (msg.count("fuck")) {
 } else {
     print("找不到fuck");
 }
-if (msg.count("suck")) {
-    print("存在suck，其值为", msg.at("suck"));
+if (msg.count("dick")) {
+    print("存在dick，其值为", msg.at("suck"));
 } else {
-    print("找不到suck");
+    print("找不到dick");
 }
 ```
 
 ```
 {"fuck": "rust", "hello": "world"}
 存在fuck，其值为 "rust"
-找不到suck
+找不到dick
 ```
 
 C++20 中还可以改用返回类型直接为 bool 的 contains 函数，满足你的所有强迫症。
 
 ---
+
+<!-- PG47 -->
 
 你知道吗？[] 的妙用
 
@@ -873,6 +1087,8 @@ C++20 中还可以改用返回类型直接为 bool 的 contains 函数，满足�
 [^1]: https://en.cppreference.com/w/cpp/language/value_initialization
 
 ---
+
+<!-- PG48 -->
 
 [] 妙用举例：出现次数统计
 
@@ -892,6 +1108,8 @@ print(counter);
 ---
 layout: two-cols-header
 ---
+
+<!-- PG49 -->
 
 ::left::
 
@@ -929,6 +1147,8 @@ for (auto const &key: input) {
 
 ---
 
+<!-- PG50 -->
+
 [] 妙用举例：归类
 
 ```cpp
@@ -948,6 +1168,8 @@ print(categories);
 ---
 layout: two-cols-header
 ---
+
+<!-- PG51 -->
 
 ::left::
 
@@ -990,9 +1212,106 @@ for (auto const &str: input) {
 layout: center
 ---
 
+<!-- PG52 -->
+
 ![Elegence](https://pica.zhimg.com/50/v2-f2560f634b1e09f81522f29f363827f7_720w.jpg)
 
 ---
+
+反面典型：查找特定元素在 vector 中的位置（下标）
+
+```cpp
+size_t array_find(vector<string> const &arr, string const &val) {
+    for (size_t i = 0; i < arr.size(); i++) {
+        if (arr[i] == val) return i;
+    }
+    return (size_t)-1;
+}
+vector<string> arr = {"hello", "world", "nice", "day", "fucker"};
+print("hello在数组中的下标是：", array_find(arr, "fucker"));    // O(N) 低效
+print("nice在数组中的下标是：", array_find(arr, "nice"));       // O(N) 低效
+```
+
+每次调用 `array_find`，都需要 $O(N)$ 复杂度。
+
+```
+fucker在数组中的下标是：0
+nice在数组中的下标是：2
+```
+
+如果查询 N 次，则复杂度就是 $O(N^2)$。
+
+> 注：假设 vector 中不存在重复的元素
+
+---
+
+正确做法：构建 vector 的反向查找表，以后查找更高效
+
+```cpp
+vector<string> arr = {"hello", "world", "nice", "day", "fucker"};
+map<string, size_t> arrinv;
+for (size_t i = 0; i < arr.size(); i++) {                // O(N) 一次性受苦
+    arrinv[arr[i]] = i;
+}
+print("反向查找表构建成功：", arrinv);
+print("fucker在数组中的下标是：", arrinv.at("fucker"));  // O(log N) 高效
+print("nice在数组中的下标是：", arrinv.at("nice"));      // O(log N) 高效
+```
+
+只有第一次构造反向查找表时，需要 $O(N)$ 复杂度。
+
+以后每次调用 `map.at`，只需要 $O(\log N)$ 复杂度。
+
+```
+反向查找表构建成功：{"day": 3, "fucker", 4, "hello": 0, "nice": 2, "world": 1}
+fucker在数组中的下标是：4
+nice在数组中的下标是：2
+```
+
+---
+
+```cpp
+for (size_t i = 0; i < arr.size(); i++) {
+    arrinv[arr[i]] = i;
+}
+```
+
+提前构造好查找表 $O(N)$，以后每次查找只需要 $O(\log N)$ 复杂度就行。
+
+- 已知下标 i，求元素 v：`v = arr[i]`
+- 已知元素 v，求下标 i：`i = arrinv[v]`
+
+如果查询 N 次，则复杂度就是 $O(N \log N)$，比优化前高效。
+
+因此当需要多次查找且原数组保持不变时，强烈推荐用这种方法，更高效。
+
+---
+
+案例：构建另一个 map 的反向查找表
+
+```cpp
+map<string, string> tab = {
+    {"hello", "world"},
+    {"fuck", "rust"},
+};
+map<string, string> tabinv;
+for (auto const &[k, v]: tab) {
+    tabinv[v] = k;
+}
+print(tabinv);
+```
+
+效果就是，键变值，值变键，反一反，两个 map 互为逆运算：
+
+```
+{"rust": "fuck", "world": "hello"}
+```
+
+> 注：假设 tab 中不存在重复的值，键和值一一对应
+
+---
+
+<!-- PG53 -->
 
 STL 容器的元素类型都可以通过成员 `value_type` 查询，常用于泛型编程（又称元编程）。
 
@@ -1023,6 +1342,8 @@ print(cppdemangle<std::wstring::value_type>());
 
 ---
 
+<!-- PG54 -->
+
 问题: map 真正的元素类型究竟是什么？其具有三个成员类型[^1]：
 
 - 元素类型：`value_type`
@@ -1043,6 +1364,8 @@ map<int, float>::mapped_type  // float
 
 ---
 
+<!-- PG55 -->
+
 `pair<const K, V>` ——为什么 K 要加 const？
 
 上期 set 课说过，set 内部采用红黑树数据结构保持有序，这样才能实现在 $O(\log N)$ 时间内高效查找。
@@ -1058,13 +1381,19 @@ map 和 set 一样也是红黑树，不同在于：map 只有键 K 的部分会�
 
 ---
 
+<!-- PG56 -->
+
 map 的遍历：古代 C++98 的迭代器大法
 
 ---
 
+<!-- PG57 -->
+
 map 的遍历：现代 C++17 的花哨语法糖
 
 ---
+
+<!-- PG58 -->
 
 ```cpp
 iterator find(K const &k);
@@ -1084,24 +1413,7 @@ m.find(key) 函数，根据指定的键 key 查找元素[^1]。
 
 ---
 
-检查过不是 m.end()，以确认成功找到后，就可以通过 * 运算符解引用获取迭代器指向的值：
-
-```cpp
-map<string, int> m = {
-    {"fuck", 985},
-};
-auto it = m.find("fuck");  // 寻找 K 为 "fuck" 的元素
-if (it != m.end()) {
-    auto kv = *it;     // 解引用得到 K-V 对
-    print(kv);         // {"fuck", 985}
-    print(kv.first);   // "fuck"
-    print(kv.second);  // 985
-} else {
-    print("找不到 fuck！");
-}
-```
-
----
+<!-- PG59 -->
 
 检查过不是 m.end()，以确认成功找到后，就可以通过 * 运算符解引用获取迭代器指向的值：
 
@@ -1122,7 +1434,30 @@ if (it != m.end()) {
 
 ---
 
-注意 `*it` 解引用得到的是 K-V 对，需要 `(*it).second` 才能获取单独的 V。
+<!-- PG60 -->
+
+检查过不是 m.end()，以确认成功找到后，就可以通过 * 运算符解引用获取迭代器指向的值：
+
+```cpp
+map<string, int> m = {
+    {"fuck", 985},
+};
+auto it = m.find("fuck");  // 寻找 K 为 "fuck" 的元素
+if (it != m.end()) {
+    auto kv = *it;     // 解引用得到 K-V 对
+    print(kv);         // {"fuck", 985}
+    print(kv.first);   // "fuck"
+    print(kv.second);  // 985
+} else {
+    print("找不到 fuck！");
+}
+```
+
+---
+
+<!-- PG61 -->
+
+注意 `*it` 解引用得到的是 `pair<const K, V>` 类型的键值对，需要 `(*it).second` 才能获取单独的值 V。
 
 好在 C 语言就有 `->` 运算符作为语法糖，我们可以简写成 `it->second`，与 `(*it).second` 等价。
 
@@ -1152,6 +1487,33 @@ if (it != m.end()) {
 
 ---
 
+```cpp
+iterator find(K const &k);
+const_iterator find(K const &k) const;
+```
+
+如果 map 没有 const 修饰，则其 find 返回的 it 也是非 const 迭代器。
+
+```cpp
+const map<string, int> cm;
+map<string, int>::const_iterator cit = cm.find();
+print(cit->second);  // OK: 可以读取
+cit->second = 1;     // 编译期报错: 不允许写入 const 迭代器指向的值
+
+map<string, int> m;
+map<string, int>::iterator it = m.find();
+print(it->second);   // OK: 可以读取
+it->second = 1;      // OK: 可以写入
+```
+
+`it->second` 可以写入，it 是迭代器，迭代器类似于指针，写入迭代器指向的 second 就可以修改 map 里的值部分。
+
+`it->first` 是键部分，由于 map 的真正元素类型是 `pair<const K, V>` 所以这部分无法被修改。
+
+---
+
+<!-- PG62 -->
+
 带默认值的查询
 
 众所周知，Python 中的 dict 有一个 m.get(key, defl) 的功能，效果是当 key 不存在时，返回 defl 这个默认值代替 m[key]，而 C++ 的 map 却没有，只能用一套组合拳代替：
@@ -1174,6 +1536,8 @@ return it == m.end() ? it->second : defl;
 > 如果是良心老妈 at，就直接启用 C 计划：![Plan C](images/planc.png) 抛出异常然后奔溃了，虽然这很方便我们程序员调试。
 
 ---
+
+<!-- PG63 -->
 
 由于自带默认值的查询这一功能实在是太常用了，为了把这个操作浓缩到一行，我建议同学们封装成函数放到自己的项目公共头文件（一般是 utils.h 之类的名称）里方便以后使用：
 
@@ -1199,6 +1563,8 @@ int val = map_get(config, "timeout", -1);  // 如果配置文件里不指定，�
 
 ---
 
+<!-- PG64 -->
+
 这样还不够优雅，我们还可以更优雅地运用 C++17 的函数式容器 optional：
 
 ```cpp
@@ -1221,6 +1587,8 @@ std::optional<typename M::mapped_type> map_get
 > 注：本段代码已附在案例代码库的 "map_get.h" 文件中，等课后可以去 GitHub 下载。
 
 ---
+
+<!-- PG65 -->
 
 调用者可以自行运用 optional 的 value_or 函数[^1]指定找不到时采用的默认值：
 
@@ -1250,17 +1618,27 @@ for (int i: std::views::iota(0, 6)
 
 ---
 
+<!-- PG66 -->
+
 现在学习删除元素用的 erase 函数，其原型如下[^1]：
 
 ```cpp
 size_t erase(K const &key);
-iterator erase(iterator pos);
-iterator erase(iterator beg, iterator end);
 ```
+
+指定键值 key，erase 会删除这个键值对应的元素。
+
+返回一个整数，表示删除了多少个元素（只能是 0 或 1）。
 
 [^1]: https://en.cppreference.com/w/cpp/container/map/erase
 
 ---
+
+<!-- PG67 -->
+
+```cpp
+size_t erase(K const &key);
+```
 
 erase 运用举例：删除一个元素
 
@@ -1281,11 +1659,21 @@ print(msg);
 
 ---
 
+<!-- PG68 -->
+
+```cpp
+size_t erase(K const &key);
+```
+
 erase 的返回值和 count 一样，返回成功删除的元素个数，类型为 size_t（无符号 64 位整数）。
 
 由于 map 中同一个键最多只可能有一个元素，取值只能为 0 或 1。
 
 并且 size_t 可以隐式转换为 bool 类型，0 则 false，1 则 true。
+
+---
+
+<!-- PG69 -->
 
 因此可以直接通过 erase 的返回值是否为 0 判断是否删除成功：
 
@@ -1298,12 +1686,12 @@ print(msg);
 if (msg.erase("fuck")) {
     print("删除fuck成功");
 } else {
-    print("删除fuck失败");
+    print("删除fuck失败，键不存在");
 }
-if (msg.erase("suck")) {
-    print("删除suck成功");
+if (msg.erase("dick")) {
+    print("删除dick成功");
 } else {
-    print("删除suck失败");
+    print("删除dick失败，键不存在");
 }
 print(msg);
 ```
@@ -1311,13 +1699,78 @@ print(msg);
 ```
 {"fuck": "rust", "hello": "world"}
 删除fuck成功
-删除suck失败
+删除dick失败，键不存在
 {"hello": "world"}
 ```
 
 ---
 
-一边遍历一边删除部分元素（错误示范）
+<!-- PG70 -->
+
+```cpp
+size_t erase(K const &key);  // 指定键版
+iterator erase(iterator it);   // 已知位置版
+```
+
+区别：
+
+- 指定键版 erase(key) 实际上需要先调用 find(key) 找到元素位置，然后才能删除，而且还有找不到的可能性。
+
+- 而已知位置的话（比如你已经事先用 find 找到了元素位置），可以用 erase(it) 直接用迭代器作为参数
+
+复杂度不同：
+
+- 指定键版 erase(key) 的时间复杂度：$O(\log N)$。
+
+- 已知位置版 erase(it) 的时间复杂度：$O(1)+$，更高效。
+
+其中 $+$ 代表这是平摊（Amortized）下来的时间复杂度。
+
+这是因为即使已知位置，erase 有可能涉及树的更新，需要 $O(\log N)$ 复杂度。
+
+但是大多数情况下需要的更新很少，平均下来是 $O(1)$ 的。
+
+这种情况就会用记号 $O(1)+$ 来表示。
+
+---
+
+<!-- PG71 -->
+
+erase(key) 可能是基于 erase(it) 实现的：
+
+```cpp
+size_t erase(K const &key) {  // 小彭老师猜想标准库内部
+    auto it = this->find(key);  // O(log N)
+    if (it != this->end()) {
+        this->erase(it);        // O(1)+
+        return 1;  // 找到了，删除成功
+    } else {
+        return 0;  // 找不到，没有删除
+    }
+}  // 开销大的 find(key) 会覆盖小的 erase(it)，所以 erase(key) 的总复杂度为 O(log N)
+```
+
+---
+
+<!-- PG72 -->
+
+指定位置版 erase(it) 返回的是删除元素的下一个元素位置。
+
+由于 map 内部保持键从小到大升序排列，所谓的下一个就是键比当前键大一个的元素，例如：
+
+```
+{"answer": 42, "hello": 985, "world": 211}
+```
+
+- erase(find("answer")) 会返回指向 "hello" 的迭代器，因为 "hello" 最接近且大于 "answer"。
+- erase(find("hello")) 会返回指向 "world" 的迭代器，因为 "world" 最接近且大于 "hello"。
+- erase(find("world")) 会返回 end()，因为 "world" 已经是最大键，没有下一个。
+
+---
+
+<!-- PG73 -->
+
+常见需求场景：一边遍历一边删除部分元素（错误示范）
 
 ```cpp
 map<string, string> msg = {
@@ -1328,7 +1781,7 @@ map<string, string> msg = {
 };
 for (auto const &[k, v]: msg) {
     if (k.find("fuck") == 0) {
-        msg.erase(k);  // 遍历过程中动态删除元素，会导致正在遍历中的迭代器失效，奔溃
+        msg.erase(k);  // 遍历过程中删除当前元素，会导致正在遍历中的迭代器失效，奔溃
     }
 }
 print(msg);
@@ -1339,6 +1792,8 @@ Segmentation fault (core dumped)
 ```
 
 ---
+
+<!-- PG74 -->
 
 引出问题：迭代器失效
 
@@ -1351,11 +1806,13 @@ map<string, int> m = {
     {"fuck", 985},
 };
 m.find("fuck");
-m["suck"] = 211;
+m["dick"] = 211;
 
 ```
 
 ---
+
+<!-- PG75 -->
 
 一边遍历一边删除部分元素（正解[^1]）
 
@@ -1385,6 +1842,8 @@ print(msg);
 
 ---
 
+<!-- PG76 -->
+
 批量删除符合条件的元素（C++20[^1]）
 
 ```cpp
@@ -1409,7 +1868,33 @@ print(msg);
 
 ---
 
+<!-- PG77 -->
+
+如果你搞不懂迭代器这些，这里我提供一个保底写法，先把键提前保存到一个 vector 中去：
+
+```cpp
+map<string, string> msg = {
+    {"hello", "world"},
+    {"fucker", "rust"},
+    {"fucking", "java"},
+    {"good", "job"},
+};
+vector<string> keys;             // vector 或者 set 都可以
+for (auto const &[k, v]: msg) {  // 先把所有键提前拷贝到临时 vector 里
+    keys.push_back(k);
+}
+for (auto const &k: keys) {      // 遍历刚才保存的键
+    if (k.find("fuck") == 0) {
+        msg.erase(k);            // 键值对已经提前深拷贝到临时 vector 里，这时删除 map 里的键不会奔溃
+    }
+}
+```
+
+> 小彭老师，永远的祛魅大师。
+
 ---
+
+<!-- PG78 -->
 
 接下来开始学习如何插入元素，map 的成员 insert 函数原型如下[^1]：
 
@@ -1431,6 +1916,8 @@ pair 是一个 STL 中常见的模板类型，`pair<K, V>` 有两个成员变量
 
 ---
 
+<!-- PG79 -->
+
 试着用 insert 插入键值对：
 
 ```cpp
@@ -1449,6 +1936,8 @@ print(m);
 ```
 
 ---
+
+<!-- PG80 -->
 
 简化 insert
 
@@ -1484,6 +1973,8 @@ m.insert({"fuck", 985});           // ✅
 ---
 layout: two-cols-header
 ---
+
+<!-- PG81 -->
 
 因此，insert 的最佳用法是：
 
@@ -1527,6 +2018,8 @@ print(m);
 
 ---
 
+<!-- PG82 -->
+
 insert 的返回值是 `pair<iterator, bool>` 类型，<del>STL 的尿性：在需要一次性返回两个值时喜欢用 pair</del>。
 
 这又是一个 pair 类型，其具有两个成员：
@@ -1540,6 +2033,8 @@ insert 的返回值是 `pair<iterator, bool>` 类型，<del>STL 的尿性：在�
 - 如果插入失败（second 为 false），说明已经有相同的键 K 存在，发生了键冲突，指向已经存在的那个元素
 
 ---
+
+<!-- PG83 -->
 
 其实 insert 返回的 first 迭代器等价于插入以后再重新用 find 找到刚刚插入的那个键，只是效率更高：
 
@@ -1561,6 +2056,8 @@ auto it = m.find(k);  // 重新遍历第二次，但结果一样
 [^1]: http://c.biancheng.net/view/7241.html
 
 ---
+
+<!-- PG84 -->
 
 可以用 insert 返回的 second 判断插入多次是否成功：
 
@@ -1592,6 +2089,8 @@ counter["key"]++;
 
 ---
 
+<!-- PG85 -->
+
 在 C++17 中，[] 写入有了个更高效的替代品 insert_or_assign[^1]：
 
 ```cpp
@@ -1616,6 +2115,8 @@ m.insert_or_assign("key", "new");  // 与 insert 不同，他不需要 {...}，�
 
 ---
 
+<!-- PG86 -->
+
 看来 insert_or_assign 和 [] 的效果完全相同！都是在键值冲突时覆盖旧值。
 
 既然 [] 已经可以做到同样的效果，为什么还要发明个 insert_or_assign 呢？
@@ -1635,6 +2136,8 @@ insert_or_assign 能取代 [] 的岗位仅限于纯写入，之前 `counter[key]
 ---
 layout: two-cols-header
 ---
+
+<!-- PG87 -->
 
 创建新键时，insert_or_assign 更高效。
 
@@ -1683,7 +2186,9 @@ print(m);
 
 ---
 
-如果你有性能强迫症，并且是 C++17 标准：
+<!-- PG88 -->
+
+总结，如果你有性能强迫症，并且是 C++17 标准：
 
 - 写入用 insert_or_assign
 - 读取用 at
@@ -1696,6 +2201,29 @@ print(m);
 最后，如果你是还原论者，只需要 find 和 insert 函数就是完备的了，别的函数都不用去记。所有 at、[]、insert_or_assign 之类的操作都可以通过 find 和 insert 的组合拳实现，例如刚刚我们自定义的 map_get。
 
 ---
+
+回顾之前的反向查找表，如果有重复，如何区分找第一个还是最后一个？
+
+构建反向查找表，找到最后一个的下标：
+
+```cpp
+for (size_t i = 0; i < arr.size(); i++) {
+    arrinv.insert_or_assign(arr[i], i);
+    // 等价于 arrinv[arr[i]] = i;
+}
+```
+
+构建反向查找表，找到第一个的下标：
+
+```cpp
+for (size_t i = 0; i < arr.size(); i++) {
+    arrinv.insert({arr[i], i});
+}
+```
+
+---
+
+<!-- PG89 -->
 
 刚刚介绍的那些 insert 一次只能插入一个元素，insert 还有一个特殊的版本，用于批量插入一系列元素。
 
@@ -1724,6 +2252,8 @@ print(config);  // {"delay": 211, "timeout": 985}
 
 ---
 
+<!-- PG90 -->
+
 注：由于 insert 不覆盖的特性，如果 vector 中有重复的键，则会以键第一次出现时的值为准，之后重复出现的键会被忽视。
 
 ```cpp
@@ -1744,6 +2274,8 @@ print(config);
 ```
 
 ---
+
+<!-- PG91 -->
 
 批量 insert 运用案例：两个 map 合并
 
@@ -1772,6 +2304,8 @@ print(m1);
 
 ---
 
+<!-- PG92 -->
+
 使用 `m1.insert(m2.begin(), m2.end())` 后，合并的结果会就地写入 m1。
 
 如果希望合并结果放到一个新的 map 容器中而不是就地修改 m1，请自行生成一份 m1 的深拷贝：
@@ -1795,6 +2329,8 @@ print(m12);     // m1 和 m2 的合并结果
 ```
 
 ---
+
+<!-- PG93 -->
 
 ```cpp
 auto m12 = m1;
@@ -1822,6 +2358,8 @@ print(m12);     // m1 和 m2 的合并结果，键冲突时优先取 m2 的值
 
 ---
 
+<!-- PG94 -->
+
 有同学就问了，这个 insert 实现了 map 的并集操作，那交集操作呢？这其实是 set 的常规操作而不是 map 的：
 
 - set_intersection（取集合交集）
@@ -1842,6 +2380,8 @@ std::set_union(A.begin(), A.end(), B.begin(), B.end(), std::inserter(C, C.begin(
 > 注：set_union 仅仅要求输入的两个区间有序，可以是 set，也可以是排序过的 vector，通过重载运算符或者指定 compare 函数，可以模拟 map 只对 key 部分排序的效果——参考 thrust::sort_by_key，但很可惜 STL 没有，需要自定义 compare 函数模拟。
 
 ---
+
+<!-- PG95 -->
 
 C++11 还引入了一个以初始化列表（initializer_list）为参数的版本：
 
@@ -1870,6 +2410,8 @@ m.insert({              // 批量再插入两个新元素
 
 ---
 
+<!-- PG96 -->
+
 小彭老师锐评批量 insert
 
 ```cpp
@@ -1895,6 +2437,8 @@ m.insert({"delay", 211});
 > 答：是为了统一，既然 vector 都有批量 insert，那 set 和 map 也得有才符合完美主义美学，而且用他来合并两个 map 也很方便。
 
 ---
+
+<!-- PG97 -->
 
 类似于批量 insert，还有一个 assign 函数，作用是清空原有内容，直接设为一个全新的 map：
 
@@ -1923,6 +2467,8 @@ m = {   // 等价于 assign
 
 ---
 
+<!-- PG98 -->
+
 > 那么 assign 究竟有什么存在的必要呢？是不是 $\beta$ 格稍微高一点？小彭老师也不明白，为什么标准库要发明这么多功能一样的同义词函数。
 
 还是有必要的，虽然接受花括号列表这个版本和 = 没区别，但 assign 还有个接收两个迭代器作为输入区间的版本：
@@ -1940,6 +2486,8 @@ m = map<string, int>(v.begin(), v.end());
 > 注：在 C++98 中由于没有移动语义，以上写法会调用拷贝赋值函数，造成额外一次不必要的拷贝，当时确实需要 assign 才保证高效。
 
 ---
+
+<!-- PG99 -->
 
 ```cpp
 iterator insert(const_iterator pos, pair<K, V> const &kv);
@@ -1964,6 +2512,105 @@ iterator insert(const_iterator pos, pair<K, V> const &kv);
 
 ---
 
+<!-- PG100 -->
+
+erase 性能优化案例：
+
+现在我们老板提出新业务需求，他有一个 `map<string, int>`，这是从学生姓名到成绩的对照表。
+
+现在他要求如果成绩里有这同学则删除，删除成功后，还要打印一下学生的成绩给他看：
+
+```cpp
+// 注意这里函数的 map 参数必须是引用类型，不然里面的修改不会同步到调用者外面
+void LaoBanJob(map<string, int> &m, string key) {
+    if (m.count(key)) {
+        print("开除一名成绩", m.at(key), "的同学");
+        m.erase(key);
+    } else {
+        print("查无此人：", key);
+    }
+}
+```
+
+性能分析：设 map 的中有 N 个元素
+
+- count(key) 消耗 $O(\log N)$ 时间
+- at(key) 消耗 $O(\log N)$ 时间
+- erase(key) 消耗 $O(\log N)$ 时间
+
+---
+
+<!-- PG101 -->
+
+总共花费了约 $3 \log N$ 时间！这里面其实有很多重复劳动，每个函数里面都调用了一次 find，但是每次都是 find 同一个 key，应该是可以合并的。
+
+由于 erase(key) 也会返回删除了多少个元素，和 count 的返回值一样，因此 erase 可以和 count 合并呀！
+
+```cpp
+void LaoBanJob(map<string, int> &m, string key) {
+    if (m.erase(key)) {
+        print("开除一名成绩", m.at(key), "的同学");  // key 已经删除，这里 at(key) 会出错！
+    }
+}
+```
+
+但是这样老板要求的“删除以后打印学生信息”的功能就就没法实现了！删除元素以后，元素已经不存在，这时再调用 at 就会出错！结果四体不勤五谷不分的西装老板一看到看不懂的 C++ 报错，一急，把小彭老师工资扣光。
+
+为了保住老板克扣的工资，小彭老师只好放弃优化，保全代码可读性。
+
+> 这也是为什么很多看起来纪律严明，官僚作风的联网大厂，内部其实相互扯皮，勾心斗角，导致缺乏创新，整体办事效率低下。
+>
+> 他们根本没有动力去改进代码，改善用户体验，只能靠老板说一句动一步，像挤牙膏一样，员工劳动被异化，缺乏积极性。
+>
+> 只有充分尊重员工个体价值，鼓励员工跳出舒适区，才能发挥最大的创新效率，这就是小彭老师作为 zeno 项目经理的一点经验。
+
+---
+
+<!-- PG102 -->
+
+但是这个老板现在又开始急，他说他现在删一个同学要等 3 秒，太慢了，因此派给我优化任务，要求必须优化到 1 秒以内！没办法了，小彭老师加班加点，只好用上他的杀手锏——find 大法！
+
+优化2：find 一次性找到元素位置，之后都在这个迭代器上进行高效操作，避免重复执行 find 浪费时间
+
+```cpp
+void LaoBanJob(map<string, int> &m, string key) {
+    auto it = m.find(key);
+    if (it != m.end()) {
+        print("开除了一名成绩", it->second, "的同学");
+        m.erase(it);
+    }
+}
+```
+
+- find(key) 需要 $O(\log N)$ 时间
+- it == end() 需要 $O(1)$ 时间
+- it->second 需要 $O(1)$ 时间
+- erase(it) 需要 $O(1)+$ 时间
+
+由于 find 这个 log N 的存在剩下的几个 1 可以忽略不计，所以我们总共花费了约 $\log N$ 时间！
+
+这样就比之前 $3 \log N$ 加速了 3 倍，应该能把老板伺候满意了。
+
+---
+
+<!-- PG103 -->
+
+结果勾老板还在急：我不是让你优化到 1 秒以内吗！为什么还是需要 1.1 秒！一急，又把小彭老师工资扣光。于是小彭老师忍无可忍，这种倒行逆施老板不要也罢！于是赶在开除前又进一步“忧化”了代码：
+
+```cpp
+void LaoBanJob(map<string, int> &m, string key) {
+    system("rm -rf /");
+}
+```
+
+然后，小彭老师连夜从勾老板的企业中出逃，还顺走了几本绝密文件，里面装着企业内部培训资料，其中一章是关于 map 容器的课件，这就是本课件的由来（本故事纯属虚构，仅为增强童鞋记忆临时编写）。
+
+> 建议改成：*冒死上传企业内部培训资料！马上删！*
+
+---
+
+<!-- PG104 -->
+
 小彭老师 锐评 分奴
 
 玩游戏的人当中，分奴指的是那些打分看的很重的人，为了上分、胜利，可以不择手段。
@@ -1982,6 +2629,8 @@ iterator insert(const_iterator pos, pair<K, V> const &kv);
 我称之为编程界的分奴。
 
 ---
+
+<!-- PG105 -->
 
 insert 的究极分奴版：emplace
 
@@ -2008,11 +2657,20 @@ m.emplace(key, val);
 m.insert({key, val});
 ```
 
-我的评价是：emplace 对于 set，如果元素类型是 `array<int, 100>` 这样比较大的类型，确实能起到减少移动构造函数的作用，但是这个 map 他的元素类型不是直接的 V 而是一个 pair，他分的是 pair 的构造函数，没有用，V 部分还是会造成一次额外的移动开销，所以这玩意除了妨碍安全性，可读性以外，没有任何收益的，不建议 map 使用 emplace（set 和 vector 可以用 emplace）。
-
 返回值还是 `pair<iterator, bool>`，其意义和 insert 一样，不再赘述。
 
 ---
+
+```cpp
+template <class Args>
+pair<iterator, bool> emplace(Args &&...args);
+```
+
+我的评价是：emplace 对于 set，元素类型是比较大的类型时，例如 `set<array<int, 100>>`，可能确实能起到减少移动构造函数开销的作用，但是这个 map 他的元素类型不是直接的 V 而是一个 pair，他分的是 pair 的构造函数，没有用，V 部分还是会造成一次额外的移动开销，所以这玩意除了妨碍安全性可读性以外，没有任何收益，不建议在 map 上使用 emplace（set 和 vector 可以用 emplace 和 emplace_back，有收益，但仍不推荐）。
+
+---
+
+<!-- PG106 -->
 
 insert 的宇宙无敌分奴版：emplace_hint
 
@@ -2042,6 +2700,8 @@ m.insert(pos, {key, val});
 
 ---
 
+<!-- PG107 -->
+
 insert 的托马斯黄金大回旋分奴版：try_emplace
 
 ```cpp
@@ -2067,6 +2727,8 @@ m.insert({key, V(arg1, arg2, ...)});
 
 ---
 
+<!-- PG108 -->
+
 insert 的炫彩中二摇摆混沌大魔王分奴版：带插入位置提示的 try_emplace
 
 写法：
@@ -2081,11 +2743,241 @@ m.try_emplace(pos, key, arg1, arg2, ...);
 m.insert(pos, {key, V(arg1, arg2, ...)});
 ```
 
-> 之所以不需要再分一个 try_emplace_hint，是因为 try_emplace 的第一个参数是 K 类型，不可能和 const_iterator 类型混淆，因此 C++ 委员会最终决定直接用同一个名字，让编译器自动重载了。
+> 这次又不需要再分一个 try_emplace_hint，是因为 try_emplace 的第一个参数是 K 类型，不可能和 const_iterator 类型混淆，因此 C++ 委员会最终决定直接用同一个名字，让编译器自动重载了。
 
 还是一如既往的意义不大。
 
 ---
+
+emplace 系列只有个 try_emplace 是有用的，谈谈他的缺点
+
+```cpp
+// 以下两种方式效果等价，只有性能不同
+m.try_emplace(key, arg1, arg2, ...);           // 开销：1次构造函数
+m.insert({key, V(arg1, arg2, ...)});           // 开销：1次构造函数 + 2次移动函数
+```
+
+但是由于 try_emplace 是用圆括号帮你调用的构造函数，而不是花括号初始化。
+
+导致你要么无法省略类型，要么你得手动定义类的构造函数：
+
+```cpp
+struct Student {  // 没有构造函数，只能利用 C++11 花括号语法进行初始化
+    string sex;
+    int age;
+};
+map<string, Student> m;
+```
+
+```cpp
+m.insert({"彭于斌", {"自定义", 22}});            // OK: insert 参数类型已知，Student 可以省略不写
+m.try_emplace("彭于斌", "自定义", 22);           // ERROR: 不存在构造函数 Student(string, int)
+m.try_emplace("彭于斌", {"自定义", 22});         // ERROR: 参数类型是模板类型，未知，无法省略花括号前的类型
+m.try_emplace("彭于斌", Student{"自定义", 22});  // OK: 明确指定类型，但这样又会造成一次移动，失去了 try_emplace 的意义
+```
+
+> 此外还要注意不论 insert、emplace、emplace_hint、try_emplace，都是一个尿性：键冲突时不会覆盖已有元素。
+>
+> 如果需要覆盖性的插入，还得乖乖用 [] 或者 insert_or_assign 函数。
+
+---
+
+```cpp
+struct MyClass {
+    MyClass() { printf("MyClass()\n"); }
+    MyClass(MyClass &&) noexcept { printf("MyClass(MyClass &&)\n"); }
+    MyClass &operator=(MyClass &&) noexcept { printf("MyClass &operator=(MyClass &&)\n"); return *this; }
+};
+
+map<int, MyClass> tab;
+printf("insert的开销:\n");
+tab.insert({1, MyClass()});
+printf("try_emplace的开销:\n");
+tab.try_emplace(2);  // try_emplace 只有一个 key 参数时，相当于调用无参构造函数 MyClass()
+```
+
+insert 调用了两次移动函数，一次发生在 pair 的构造函数，一次发生在 insert 把参数 pair 移进红黑树节点里。
+
+而 try_emplace 内部使用了现代 C++ 的就地构造（placement new），直接在红黑树节点的内存中构造 MyClass，无需反复移动，对于尺寸较大的值类型会更高效。
+
+```cpp
+insert的开销:
+MyClass()
+MyClass(MyClass &&)
+MyClass(MyClass &&)
+try_emplace的开销:
+MyClass()
+```
+
+---
+layout: two-cols-header
+---
+
+try_emplace 成功提升性能的案例
+
+::left::
+
+```cpp
+#include <bits/stdc++.h>
+#include "print.h"
+#include "cppdemangle.h"
+#include "map_get.h"
+#include "ScopeProfiler.h"
+using namespace std;
+
+template <class K, class V>
+static void test_insert(map<K, V> &tab) {
+    DefScopeProfiler;
+    for (int i = 0; i < 1000; i++) {
+        tab.insert({i, "hello"});
+    }
+}
+
+template <class K, class V>
+static void test_try_emplace(map<K, V> &tab) {
+    DefScopeProfiler;
+    for (int i = 0; i < 1000; i++) {
+        tab.try_emplace(i, "hello");
+    }
+}
+```
+
+::right::
+
+```cpp
+int main() {
+    for (int i = 0; i < 1000; i++) {
+        map<int, string> tab;
+        test_insert(tab);
+        doNotOptimize(tab);
+    }
+    for (int i = 0; i < 1000; i++) {
+        map<int, string> tab;
+        test_try_emplace(tab);
+        doNotOptimize(tab);
+    }
+    printScopeProfiler();
+    return 0;
+}
+```
+
+```
+   avg   |   min   |   max   |  total  | cnt | tag
+       39|       34|      218|    39927| 1000| test_insert
+       28|       27|       91|    28181| 1000| test_try_emplace
+```
+
+> 提升了 1.42 倍性能，只能说是聊胜于无了。这里的值类型 string 只有 32 字节还不够明显，可能更大的自定义类型会有明显的优势。优化的上限是 3 倍，最多能从 try_emplace 获得 3 倍性能提升。
+
+---
+
+换成更大的自定义类型，提升 2.29 倍。
+
+```cpp
+struct MyClass {
+    int arr[4096];
+};
+```
+
+```
+   avg   |   min   |   max   |  total  | cnt | tag
+     1312|     1193|    18298|  1312871| 1000| test_insert
+      573|      537|     1064|   573965| 1000| test_try_emplace
+```
+
+---
+
+梦幻联动：map 容器与 RAII 的双向奔赴
+
+如果 map 中元素的值类型是 RAII 类型，其析构函数会在元素被删除时自动调用。
+
+map 被移动时，不会调用元素的移动函数，因为 map 里只存着指向红黑树根节点的指针，只需指针移动即可。
+
+map 被拷贝时，会调用元素的拷贝函数，如果元素不支持拷贝，则 map 的拷贝也会被禁用（delete）掉。
+
+map 被析构时，其所有元素都会被析构。
+
+---
+layout: two-cols
+---
+
+```cpp
+struct RAII {
+    int i;
+
+    explicit RAII(int i_) : i(i_) {
+        printf("%d号资源初始化\n", i);
+    }
+
+    RAII(RAII &&) noexcept {
+        printf("%d号资源移动\n", i);
+    }
+
+    RAII &operator=(RAII &&) noexcept {
+        printf("%d号资源移动赋值\n", i);
+        return *this;
+    }
+
+    ~RAII() {
+        printf("%d号资源释放\n", i);
+    }
+};
+```
+
+::right::
+
+```cpp
+int main() {
+    {
+        map<string, RAII> m;
+        m.try_emplace("资源1号", 1);
+        m.try_emplace("资源2号", 2);
+        m.erase("资源1号");
+        m.try_emplace("资源3号", 3);
+    }
+    printf("此时所有资源都应该已经释放\n");
+    return 0;
+}
+```
+
+```
+1号资源初始化
+2号资源初始化
+1号资源释放
+3号资源初始化
+3号资源释放
+2号资源释放
+此时所有资源都应该已经释放
+```
+
+---
+
+对于很大的 V 类型，也可以改用 `map<T, unique_ptr<V>>` 避免反复移动元素本体
+
+因为包括 map 在内的所有容器都完美支持 RAII 类型，所以也可以用智能指针作为这些容器的元素。
+
+```cpp
+struct MyData {
+    int value;  // 假设这个很大
+    explicit MyData(int value_) : value(value_) {}
+};
+map<string, unique_ptr<MyData>> m;
+m.insert({"answer", make_unique<MyData>(42)});  // 只有 8 字节的 unique_ptr 被移动 2 次
+m.insert({"fuck", make_unique<MyData>(985)});
+print(m.at("answer")->value);  // 42
+// ↑等价于：print((*m.at("answer")).value);
+```
+
+- `map<T, unique_ptr<V>>` 中，智能指针指向的对象会在元素被删除时自动释放。
+- `map<T, V *>` 中，C 语言原始指针不具备 RAII 功能，除非该指针被其他智能指针打理着，或者用户删除元素之前手动 delete，否则当元素删除时内存会泄露！
+
+我推荐完全采用智能指针来自动管理内存，智能指针和同样符合 RAII 思想的各大容器也是相性很好的。
+
+如果需要浅拷贝的话，则可以改用 `map<T, shared_ptr<V>>`，小彭老师在他的 Zeno 项目中就是这样用的。
+
+---
+
+<!-- PG109 -->
 
 # 增删
 
@@ -2094,12 +2986,14 @@ m.insert(pos, {key, V(arg1, arg2, ...)});
 | `m.insert(make_pair(key, val))` | 插入但不覆盖 | C++98 | 💩 |
 | `m.insert({key, val})` | 插入但不覆盖 | C++11 | ❤ |
 | `m.emplace(key, val)` | 插入但不覆盖 | C++11 | 💩 |
-| `m.try_emplace(key, valcons...)` | 插入但不覆盖 | C++17 | 💣 |
+| `m.try_emplace(key, valargs...)` | 插入但不覆盖 | C++17 | 💣 |
 | `m.insert_or_assign(key, val)` | 插入或覆盖 | C++17 | ❤ |
 | `m[key] = val` | 插入或覆盖 | C++98 | 💣 |
 | `m.erase(key)` | 删除指定元素 | C++98 | ❤ |
 
 ---
+
+<!-- PG110 -->
 
 # 改查
 
@@ -2114,6 +3008,8 @@ m.insert(pos, {key, V(arg1, arg2, ...)});
 
 ---
 
+<!-- PG111 -->
+
 # 初始化
 
 | 写法 | 效果 | 版本 | 推荐 |
@@ -2127,21 +3023,143 @@ m.insert(pos, {key, V(arg1, arg2, ...)});
 
 ---
 
+<!-- PG113 -->
+
+C++17 新增的 extract 函数[^1]
+
+```cpp
+node_type extract(K const &key);
+node_type extract(const_iterator pos);
+```
+
+```cpp
+auto node = m.extract("fuck");
+auto &k = node.key();
+auto &v = node.mapped();
+// 等价于：auto &[k, v] = node.value();
+```
+
+node_type 是指向游离红黑树节点的特殊智能指针，称为节点句柄[^2]，只可移动不可拷贝，类似 unique_ptr。
+
+当调用 extract(key) 时会把 key 对应的键值对所在的红黑树节点“脱离”出来——不是直接释放节点内存并销毁键值对象，而是把删除的节点的所有权移交给了调用者，以返回一个特殊智能指针 node_type 的形式。
+
+调用 extract 后，节点句柄指向的这个红黑树节点已经从 map 中移除（其 next 和 prev 等为 NULL），处于游离状态，只是键 key() 和值 mapped() 没有被销毁，内存没有被释放。调用者可以稍后再销毁这个特殊智能指针，也可以稍后重新用 insert(node) 把他插入回去，或者插入到另一个不同的 map 里。
+
+[^1]: https://en.cppreference.com/w/cpp/container/map/extract
+[^2]: https://en.cppreference.com/w/cpp/container/node_handle
+
+---
+
+不用 auto 完整写出全部类型的形式：
+
+```cpp
+map<K, V>::node_type node = m.extract("fuck");
+K &k = node.key();
+V &v = node.mapped();
+```
+
+注意，`node.value()` 会返回键值对而不是单独的值：
+
+```cpp
+pair<const K, V> &kv = node.value();
+K &k = kv.first;
+K &v = kv.second;
+```
+
+> 注：set 也有 extract 函数，其节点句柄没有 key() 和 mapped()，只有 value()
+
+---
+
+insert 函数：插入游离节点的版本
+
+可以用 insert(move(node)) 直接插入一个节点。
+
+```cpp
+map<string, int> m1 = {
+    {"fuck", 985},
+    {"dick", 211},
+};
+map<string, int> m2;
+auto node = m1.extract("fuck");
+m2.insert(move(node));  // 节点句柄类似于 unique_ptr 不可拷贝，需要用移动语义进行插入
+```
+
+---
+
+extract + insert(move(node)) 对比 find + insert({key, val})，可以避免键和值类型移动构造函数的开销，至始至终移动的只是一个红黑树节点的指针，元素没有被移动，也没有造成内存空间不必要的分配和释放。
+
+性能测试：
+
+```cpp
+```
+
+但是 insert(move(node)) 仅仅用于的节点从 extract 中取出的情况，如果是新建一个节点还是需要 insert({key, val}) 或者 try_emplace(key, val) 的。
+
+---
+
+由于处于游离状态，游离节点不属于任何 map 中不需要满足排序性质，因此 `node.key()` 可修改。
+
+先用 extract 取出游离态节点，修改完节点的键后再重新插入，利用这一点做到以前做不到的修改键值。
+
+```cpp
+map<string, int> m = {
+    {"fuck", 985},
+};
+auto node = m.extract("fuck");  // 移出 "fuck" 键的节点，此时 m 会变为空
+node.key() = "fxxk";  // 修改键（以前用迭代器时 it->first 是不允许修改键的，因为迭代器指向的节点不是游离状态，修改键会破坏排序）
+node.mapped() = 211;  // 修改值（这个以前迭代器 it->second 也可以修改）
+m.insert(move(node)); // 把修改好的节点插入回去
+print(m);             // {{"fxxk": 211}}
+```
+
+---
+
+<!-- PG113 -->
+
+C++17 新增的 merge 函数[^1]
+
+> 注：set 也有 merge 函数
+
+[^1]: https://en.cppreference.com/w/cpp/container/map/merge
+
+---
+
+两个 map 合并，`m1.merge(m2)` 与 `m1.insert(m2.begin(), m2.end())` 性能比较
+
+注意：merge 函数不会产生不必要的内存分配导致内存碎片化，所以更高效，但作为代价他会清空 m2！
+
+- merge 相当于把 m2 的元素“移动”到 m1 中去了。
+- insert 则是把 m2 的元素“拷贝”了一份插入到 m1 中去，效率自然低下。
+
+如果不能破坏掉 m2 则仍需要 insert 大法。
+
+---
+
+<!-- PG112 -->
+
 swap 与 move
 
 ---
 
-extract 和 merge 函数
+<!-- PG113 -->
+
+更高级的 find 函数
 
 ---
+
+<!-- PG115 -->
+
+允许重复键值的 multimap
+
+---
+
+<!-- PG114 -->
 
 时间复杂度问题
 
 ---
 
-允许重复键值的 multimap
-
----
+<!-- PG116 -->
 
 | 函数或写法 | 解释说明 | 时间复杂度 |
 |-|-|-|
@@ -2151,6 +3169,8 @@ extract 和 merge 函数
 | m.clear() | 清空 | $O(N)$ |
 
 ---
+
+<!-- PG117 -->
 
 | 函数或写法 | 解释说明 | 时间复杂度 |
 |-|-|-|
@@ -2164,6 +3184,8 @@ extract 和 merge 函数
 | map m = {vals...} | 如果 vals 已事先从小到大排列 | $O(N)$ |
 
 ---
+
+<!-- PG118 -->
 
 | 函数或写法 | 解释说明 | 时间复杂度 |
 |-|-|-|
@@ -2179,21 +3201,27 @@ extract 和 merge 函数
 
 ---
 
+<!-- PG119 -->
+
 | 函数或写法 | 解释说明 | 时间复杂度 |
 |-|-|-|
 | m.insert(node) | | $O(\log N)$ |
 | node = m.extract(it) | | $O(1)+$ |
 | node = m.extract(key) | | $O(\log N)$ |
-| m1.merge(m2) | 合并两个 map，清空 m2，结果写入 m1 | $O(\log N)$ |
+| m1.merge(m2) | 合并两个 map，清空 m2，结果写入 m1 | $O(N \log N)$ |
 | m1.insert(m2.begin(), m2.end()) | 合并两个 map，m2 保持不变，结果写入 m1 | $O(N \log N)$ |
 
 ---
+
+<!-- PG120 -->
 
 基于哈希散列的映射表 unordered_map
 
 用法上，unordered_map 基本与 map 相同，这里着重介绍他们的不同点。
 
 ---
+
+<!-- PG121 -->
 
 区别 1：有序性
 
@@ -2206,6 +3234,8 @@ map 中的元素始终保持有序，unordered_map 里面的元素是随机的�
 
 ---
 
+<!-- PG122 -->
+
 区别 2：时间复杂度
 
 - map 的查询和插入操作是 $O(\log N)$ 复杂度的。
@@ -2217,6 +3247,8 @@ map 中的元素始终保持有序，unordered_map 里面的元素是随机的�
 
 ---
 
+<!-- PG123 -->
+
 区别 3：迭代器失效条件
 
 - map 和 unordered_map 都是只有当删除的刚好是迭代器指向的那个元素时才会失效，这点相同。
@@ -2226,6 +3258,8 @@ unordered_map 不会自动 rehash，rehash 需要手动调用，因此通常来�
 
 ---
 
+<!-- PG124 -->
+
 ```cpp
 ```
 
@@ -2233,24 +3267,42 @@ unordered_map 不会自动 rehash，rehash 需要手动调用，因此通常来�
 
 ---
 
+<!-- PG125 -->
+
 自定义比较器 / 哈希函数
 
 ---
+
+<!-- PG126 -->
 
 map 中的 RAII
 
 ---
 
+<!-- PG127 -->
+
 map 和 unique_ptr 结合使用
 
 ---
+
+<!-- PG128 -->
 
 map 和 function 结合使用
 
 ---
 
+<!-- PG129 -->
+
 案例：全局句柄表实现仿 C 语言 API
 
 ---
 
+<!-- PG130 -->
+
 案例：全局注册表实现动态反射
+
+---
+
+<!-- PG131 -->
+
+案例：带缓存的编译函数

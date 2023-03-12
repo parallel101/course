@@ -10,12 +10,13 @@ func! MarkPG()
         let [mark_lnum, mark_col] = searchpos('^<!-- PG\d\+ -->$', 'nW')
         let [lnum, col] = searchpos('^---\n\n', 'nW')
         if mark_lnum == 0 || (lnum != 0 && mark_lnum > lnum)
-            exec 'norm! o\n<!-- PG'.pgidx.' -->'
+            exec 'norm! o'
+            exec 'norm! o<!-- PG'.pgidx.' -->'
             if lnum != 0
                 let lnum = lnum + 2
             endif
         else
-            exec 'norm! '.mark_lnum.'G0ddc$\n<!-- PG'.pgidx.' -->'
+            exec 'norm! '.mark_lnum.'G0c$<!-- PG'.pgidx.' -->'
         endif
         let pgidx = pgidx + 1
     endwhile
