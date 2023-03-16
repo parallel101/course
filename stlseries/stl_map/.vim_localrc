@@ -1,0 +1,24 @@
+" vim: ft=vim
+
+func! MarkPG()
+    let pgidx = 1
+    let [bufnum, old_lnum, old_col, old_off] = getpos('.')
+    norm 1G0
+    let [lnum, col] = searchpos('^---\n\n', 'cnW')
+    while lnum != 0
+        exec 'norm! '.lnum.'G0'
+        let [mark_lnum, mark_col] = searchpos('^<!-- PG\d\+ -->$', 'nW')
+        let [lnum, col] = searchpos('^---\n\n', 'nW')
+        if mark_lnum == 0 || (lnum != 0 && mark_lnum > lnum)
+            exec 'norm! o'
+            exec 'norm! o<!-- PG'.pgidx.' -->'
+            if lnum != 0
+                let lnum = lnum + 2
+            endif
+        else
+            exec 'norm! '.mark_lnum.'G0c$<!-- PG'.pgidx.' -->'
+        endif
+        let pgidx = pgidx + 1
+    endwhile
+    call cursor(old_lnum, old_col, old_off)
+endfunc

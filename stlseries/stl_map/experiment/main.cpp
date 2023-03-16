@@ -2,23 +2,17 @@
 #include "print.h"
 #include "cppdemangle.h"
 #include "map_get.h"
+#include "ScopeProfiler.h"
 using namespace std;
 
 int main() {
-map<string, string> msg = {
-    {"hello", "world"},
-    {"fuck", "rust"},
-};
-print(msg);
-if (msg.count("fuck")) {
-    print("存在fuck，其值为", msg.at("fuck"));
-} else {
-    print("找不到fuck");
-}
-if (msg.count("suck")) {
-    print("存在suck，其值为", msg.at("suck"));
-} else {
-    print("找不到suck");
-}
+    struct MyData {
+        int value;
+        explicit MyData(int value_) : value(value_) {}
+    };
+    map<string, unique_ptr<MyData>> m;
+    m.insert({"answer", make_unique<MyData>(42)});
+    m.insert({"fuck", make_unique<MyData>(985)});
+    print(m.at("answer")->value);  // 42
     return 0;
 }
