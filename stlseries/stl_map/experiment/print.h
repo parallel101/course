@@ -247,8 +247,8 @@ using _print_details::print;
 // map<string, optional<int>> m = {{"hello", 42}, {"world", nullopt}};
 // print(m);  // {"hello": 42, "world": nullopt}
 
-#include "ppforeach.h"
 
+// use of the macro below requires #include "ppforeach.h"
 #define DEF_PRINT(Class, TmplArgs, ...) \
 template <TmplArgs> \
 struct _print_details::_printer<Class, void> { \
@@ -258,7 +258,6 @@ struct _print_details::_printer<Class, void> { \
         std::cout << "}"; \
     } \
 };
-
 #define _PRINTER_PER_MEMBER(memb) \
     std::cout << #memb << ": "; \
     _print_details::_printer<_print_details::_rmcvref_t<decltype(_cls.memb)>>::print(_cls.memb);
