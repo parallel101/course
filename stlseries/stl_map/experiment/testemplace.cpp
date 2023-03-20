@@ -26,6 +26,16 @@ static void test_try_emplace(map<K, V> &tab) {
 }
 
 int main() {
-    map<
+    for (int i = 0; i < 1000; i++) {
+        map<int, string> tab;
+        test_insert(tab);
+        doNotOptimize(tab);
+    }
+    for (int i = 0; i < 1000; i++) {
+        map<int, string> tab;
+        test_try_emplace(tab);
+        doNotOptimize(tab);
+    }
+    printScopeProfiler();
     return 0;
 }
