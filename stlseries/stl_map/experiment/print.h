@@ -14,6 +14,28 @@ namespace _print_details {
         static void print(T const &t) {
             std::cout << t;
         }
+
+        using is_default_print = std::true_type;
+    };
+
+    template <class T, class = void>
+    struct _is_default_printable : std::false_type {
+    };
+
+    template <class T>
+    struct _is_default_printable<T, std::void_t<std::pair<typename _printer<T>::is_default_print, decltype(std::declval<std::ostream &>() << std::declval<T const &>())>>> : std::true_type {
+    };
+
+    template <class T, class = void>
+    struct _is_printer_printable : std::true_type {
+    };
+
+    template <class T>
+    struct _is_printer_printable<T, std::void_t<typename _printer<T>::is_default_print>> : std::false_type {
+    };
+
+    template <class T, class = void>
+    struct is_printable : std::disjunction<_is_default_printable<T>, _is_printer_printable<T>> {
     };
 
     template <class T>
@@ -54,19 +76,26 @@ namespace _print_details {
     /*     using type = U; */
     /* }; */
 
+    template <class T>
+    struct _is_char : std::false_type {
+    };
+
+    template <>
+    struct _is_char<char> : std::true_type {
+    };
+
+    template <>
+    struct _is_char<wchar_t> : std::true_type {
+    };
+
     template <class T, class U = void, class = void>
     struct _enable_if_char {
         using not_type = U;
     };
 
-    template <class U>
-    struct _enable_if_char<char, U, void> {
-        using not_type = U;
-    };
-
-    template <class U>
-    struct _enable_if_char<wchar_t, U, void> {
-        using not_type = U;
+    template <class T, class U>
+    struct _enable_if_char<T, U, std::enable_if_t<_is_char<T>::value>> {
+        using type = U;
     };
 
     template <class T, class U = void, class = void>
@@ -75,12 +104,12 @@ namespace _print_details {
     };
 
     template <class T, class Alloc, class Traits, class U>
-    struct _enable_if_string<std::basic_string<T, Alloc, Traits>, U, void> {
+    struct _enable_if_string<std::basic_string<T, Alloc, Traits>, U, typename _enable_if_char<T>::type> {
         using type = U;
     };
 
     template <class T, class Traits, class U>
-    struct _enable_if_string<std::basic_string_view<T, Traits>, U, void> {
+    struct _enable_if_string<std::basic_string_view<T, Traits>, U, typename _enable_if_char<T>::type> {
         using type = U;
     };
 
@@ -90,12 +119,7 @@ namespace _print_details {
     };
 
     template <class T, class U>
-    struct _enable_if_c_str<T, U, std::enable_if_t<std::is_pointer_v<std::decay_t<T>> && std::is_same_v<std::remove_const_t<std::remove_pointer_t<std::decay_t<T>>>, char>>> {
-        using type = U;
-    };
-
-    template <class T, class U>
-    struct _enable_if_c_str<T, U, std::enable_if_t<std::is_pointer_v<std::decay_t<T>> && std::is_same_v<std::remove_const_t<std::remove_pointer_t<std::decay_t<T>>>, wchar_t>>> {
+    struct _enable_if_c_str<T, U, std::enable_if_t<std::is_pointer_v<std::decay_t<T>> && _is_char<std::remove_const_t<std::remove_pointer_t<std::decay_t<T>>>>::value>> {
         using type = U;
     };
 
@@ -232,15 +256,62 @@ namespace _print_details {
         }
     };
 
+    template <>
+    struct _printer<bool, void> {
+        static void print(bool const &t) {
+            if (t) {
+                std::cout << "true";
+            } else {
+                std::cout << "false";
+            }
+        }
+    };
+
     template <class T0, class ...Ts>
     void print(T0 const &t0, Ts const &...ts) {
         _printer<_rmcvref_t<T0>>::print(t0);
         ((std::cout << " ", _printer<_rmcvref_t<Ts>>::print(ts)), ...);
         std::cout << "\n";
     }
+
+    template <class T, class = void>
+    class print_adaptor {
+        T const &t;
+
+    public:
+        explicit constexpr print_adaptor(T const &t_) : t(t_) {
+        }
+
+        friend std::ostream &operator<<(std::ostream &os, print_adaptor const &&self) {
+            auto oldflags = os.flags();
+            os << "[object 0x" << std::hex << reinterpret_cast<uintptr_t>(
+                reinterpret_cast<void const volatile *>(std::addressof(self.t))) << ']';
+            os.flags(oldflags);
+            return os;
+        }
+    };
+
+    template <class T>
+    class print_adaptor<T, std::enable_if_t<is_printable<T>::value>> {
+        T const &t;
+
+    public:
+        explicit constexpr print_adaptor(T const &t_) : t(t_) {
+        }
+
+        friend std::ostream &operator<<(std::ostream &os, print_adaptor const &&self) {
+            print(self.t);
+            return os;
+        }
+    };
+
+    template <class T>
+    explicit print_adaptor(T const &) -> print_adaptor<T>;
 }
 
 using _print_details::print;
+using _print_details::print_adaptor;
+using _print_details::is_printable;
 
 // Usage:
 //
@@ -261,3 +332,5 @@ struct _print_details::_printer<Class, void> { \
 #define _PRINTER_PER_MEMBER(memb) \
     std::cout << #memb << ": "; \
     _print_details::_printer<_print_details::_rmcvref_t<decltype(_cls.memb)>>::print(_cls.memb);
+
+#define PRINT(x) print(#x " :=", x)
