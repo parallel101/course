@@ -1,0 +1,9 @@
+ext and pbds hash maps
+tbb::concurrent_unordered_map
+absl::flat_hash_map
+robinhood hash map
+std::flat_map (C++23)
+heto transparent find improve performance for const char * to string construction
+explain post-to-end iterator end() better, why it cannot access, but begin() can
+std::hash<int> is identity! consider use better hash for performance
+hash: turn arbitrary input into random numbers, deterministic, may-collide

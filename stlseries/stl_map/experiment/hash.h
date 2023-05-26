@@ -8,8 +8,39 @@
 #include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <concepts>
+#include <bit>
 
 namespace _hash_details {
+
+template <class T>
+struct basic_hash {
+    constexpr std::size_t operator()(T const &t) const {
+        std::hash<T> hasher;
+        return hasher(t);
+    }
+};
+
+template <std::integral T>
+struct basic_hash<T> {
+    constexpr std::size_t operator()(T const &t) const {
+        return static_cast<std::size_t>(t);
+    }
+};
+
+template <>
+struct basic_hash<float> {
+    constexpr std::size_t operator()(float const &t) const {
+        return static_cast<std::size_t>(std::bit_cast<std::uint32_t>(t));
+    }
+};
+
+template <>
+struct basic_hash<double> {
+    constexpr std::size_t operator()(double const &t) const {
+        return static_cast<std::size_t>(std::bit_cast<std::uint64_t>(t));
+    }
+};
 
 // copied from boost:
 // https://www.boost.org/doc/libs/1_64_0/boost/functional/hash/hash.hpp
@@ -58,7 +89,7 @@ constexpr std::uint64_t hash_combine_64(std::uint64_t h, std::uint64_t k) {
 
 template <class T>
 constexpr void hash_combine(std::size_t &seed, T const &v) {
-    std::hash<T> hasher;
+    basic_hash<T> hasher;
     return _hash_combine_impl(seed, hasher(v));
 }
 
@@ -67,7 +98,7 @@ constexpr std::size_t hash_range(It first, It last,
                                  std::input_iterator_tag = typename std::iterator_traits<It>::iterator_category{}) {
     std::size_t seed = 0;
     for (; first != last; ++first) {
-        std::hash<T> hasher;
+        basic_hash<T> hasher;
         _hash_combine_impl(seed, hasher(*first));
     }
     return seed;
@@ -77,14 +108,14 @@ template <class It, class T = typename std::iterator_traits<It>::value_type>
 constexpr void hash_range(std::size_t &seed, It first, It last,
                           std::input_iterator_tag = typename std::iterator_traits<It>::iterator_category{}) {
     for (; first != last; ++first) {
-        std::hash<T> hasher;
+        basic_hash<T> hasher;
         _hash_combine_impl(seed, hasher(*first));
     }
 }
 
 template <class T>
 constexpr std::size_t hash_value(T const &v) {
-    std::hash<T> hasher;
+    basic_hash<T> hasher;
     return hasher(v);
 }
 

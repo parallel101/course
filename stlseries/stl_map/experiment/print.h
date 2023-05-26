@@ -71,6 +71,16 @@ namespace _print_details {
         using type = U;
     };
 
+    template <class T, class U = void, class = void>
+    struct _enable_if_has_print {
+        using not_type = U;
+    };
+
+    template <class T, class U>
+    struct _enable_if_has_print<T, U, std::void_t<decltype(std::declval<T const &>().do_print())>> {
+        using type = U;
+    };
+
     /* template <class T, class U> */
     /* struct _enable_if_iterable<T, U, std::void_t<typename std::iterator_traits<typename T::const_iterator>::value_type>> { */
     /*     using type = U; */
@@ -144,7 +154,14 @@ namespace _print_details {
     };
 
     template <class T>
-    struct _printer<T, typename _enable_if_iterable<T, typename _enable_if_c_str<T, typename _enable_if_string<T, typename _enable_if_map<T>::not_type>::not_type>::not_type>::type> {
+    struct _printer<T, typename _enable_if_has_print<T>::type> {
+        static void print(T const &t) {
+            t.do_print();
+        }
+    };
+
+    template <class T>
+    struct _printer<T, typename _enable_if_has_print<T, typename _enable_if_iterable<T, typename _enable_if_c_str<T, typename _enable_if_string<T, typename _enable_if_map<T>::not_type>::not_type>::not_type>::type>::not_type> {
         static void print(T const &t) {
             std::cout << "{";
             bool once = false;
@@ -161,7 +178,7 @@ namespace _print_details {
     };
 
     template <class T>
-    struct _printer<T, typename _enable_if_tuple<T, typename _enable_if_iterable<T>::not_type>::type> {
+    struct _printer<T, typename _enable_if_has_print<T, typename _enable_if_tuple<T, typename _enable_if_iterable<T>::not_type>::type>::not_type> {
         template <std::size_t ...Is>
         static void _unrolled_print(T const &t, std::index_sequence<Is...>) {
             std::cout << "{";
@@ -176,7 +193,7 @@ namespace _print_details {
     };
 
     template <class T>
-    struct _printer<T, typename _enable_if_map<T>::type> {
+    struct _printer<T, typename _enable_if_has_print<T, typename _enable_if_map<T>::type>::not_type> {
         static void print(T const &t) {
             std::cout << "{";
             bool once = false;
@@ -195,7 +212,7 @@ namespace _print_details {
     };
 
     template <class T>
-    struct _printer<T, typename _enable_if_string<T>::type> {
+    struct _printer<T, typename _enable_if_has_print<T, typename _enable_if_string<T>::type>::not_type> {
         static void print(T const &t) {
             std::cout << std::quoted(t);
         }
@@ -211,7 +228,8 @@ namespace _print_details {
     template <class T>
     struct _printer<T, typename _enable_if_char<T>::type> {
         static void print(T const &t) {
-            std::cout << std::quoted(t, T('\''));
+            T s[2] = {t, T('\0')};
+            std::cout << std::quoted(s, T('\''));
         }
     };
 
@@ -237,7 +255,7 @@ namespace _print_details {
     };
 
     template <class T>
-    struct _printer<T, typename _enable_if_optional<T>::type> {
+    struct _printer<T, typename _enable_if_has_print<T, typename _enable_if_optional<T>::type>::not_type> {
         static void print(T const &t) {
             if (t.has_value()) {
                 _printer<typename T::value_type>::print(*t);
@@ -248,11 +266,11 @@ namespace _print_details {
     };
 
     template <class T>
-    struct _printer<T, typename _enable_if_variant<T>::type> {
+    struct _printer<T, typename _enable_if_has_print<T, typename _enable_if_variant<T>::type>::not_type> {
         static void print(T const &t) {
             std::visit([] (auto const &v) {
                 _printer<_rmcvref_t<decltype(v)>>::print(v);
-            });
+            }, t);
         }
     };
 
@@ -272,6 +290,12 @@ namespace _print_details {
         _printer<_rmcvref_t<T0>>::print(t0);
         ((std::cout << " ", _printer<_rmcvref_t<Ts>>::print(ts)), ...);
         std::cout << "\n";
+    }
+
+    template <class T0, class ...Ts>
+    void printnl(T0 const &t0, Ts const &...ts) {
+        _printer<_rmcvref_t<T0>>::print(t0);
+        ((std::cout << " ", _printer<_rmcvref_t<Ts>>::print(ts)), ...);
     }
 
     template <class T, class = void>
@@ -300,7 +324,7 @@ namespace _print_details {
         }
 
         friend std::ostream &operator<<(std::ostream &os, print_adaptor const &&self) {
-            print(self.t);
+            printnl(self.t);
             return os;
         }
     };
@@ -310,6 +334,7 @@ namespace _print_details {
 }
 
 using _print_details::print;
+using _print_details::printnl;
 using _print_details::print_adaptor;
 using _print_details::is_printable;
 
@@ -319,18 +344,18 @@ using _print_details::is_printable;
 // print(m);  // {"hello": 42, "world": nullopt}
 
 
-// use of the macro below requires #include "ppforeach.h"
-#define DEF_PRINT(Class, TmplArgs, ...) \
-template <TmplArgs> \
-struct _print_details::_printer<Class, void> { \
-    static void print(Class const &_cls) { \
-        std::cout << "{"; \
-        PP_FOREACH(_PRINTER_PER_MEMBER, std::cout << ", ";, __VA_ARGS__); \
-        std::cout << "}"; \
-    } \
-};
-#define _PRINTER_PER_MEMBER(memb) \
-    std::cout << #memb << ": "; \
-    _print_details::_printer<_print_details::_rmcvref_t<decltype(_cls.memb)>>::print(_cls.memb);
-
-#define PRINT(x) print(#x " :=", x)
+/* // use of the macro below requires #include "ppforeach.h" */
+/* #define DEF_PRINT(Class, TmplArgs, ...) \ */
+/* template <TmplArgs> \ */
+/* struct ::constl::_print_details::_printer<Class, void> { \ */
+/*     static void print(Class const &_cls) { \ */
+/*         std::cout << "{"; \ */
+/*         PP_FOREACH(_PRINTER_PER_MEMBER, std::cout << ", ";, __VA_ARGS__); \ */
+/*         std::cout << "}"; \ */
+/*     } \ */
+/* }; */
+/* #define _PRINTER_PER_MEMBER(memb) \ */
+/*     std::cout << #memb << ": "; \ */
+/*     ::constl::_print_details::_printer<_print_details::_rmcvref_t<decltype(_cls.memb)>>::print(_cls.memb); */
+/*  */
+/* #define PRINT(x) print(#x " :=", x) */

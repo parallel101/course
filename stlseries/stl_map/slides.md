@@ -92,16 +92,17 @@ C++ 标准库又称 STL，包含了大量程序员常用的算法和数据结构
 
 ✅✅✅
 
-课件中所示代码推荐实验环境如下：
+小彭老师个人推荐实验环境如下：
 
-| 要求     | ❤❤❤        | 💣💣💣       | 💩💩💩         |
-|----------|------------|--------------|----------------|
-| 操作系统 | Arch Linux | Ubuntu 20.04 | Wendous 10     |
-| 知识储备 | 会一点 C++ | 大学 C 语言  | Java 面向对象  |
-| 编译器   | GCC 9 以上 | Clang 12     | VS 2019        |
-| 构建系统 | CMake 3.18 | 任意 C++ IDE | 命令行手动编译 |
+| 要求     | ❤❤❤        | 💣💣💣       | 💩💩💩         | 💀💀💀         |
+|----------|------------|--------------|----------------|----------------|
+| 操作系统 | Arch Linux | Ubuntu 20.04 | Wendous 10     | Maike OS       |
+| 知识储备 | 会一点 C++ | 大学 C 语言  | Java 面向对象  | 编程小白       |
+| 编译器   | GCC 9 以上 | Clang 12     | VS2019         | 什么是编译器   |
+| 构建系统 | CMake 3.18 | 任意 C++ IDE | 单文件编译运行 | 命令行手动编译 |
+| 编辑器   | Vim/NeoVim | CLion        | VS Code        | notepad.exe    |
 
-❤ = 推荐，💣 = 可用，💩 = 困难
+游戏难度：❤ = 简单，💣 = 普通，💩 = 困难，💀 = 地狱副本
 
 ---
 
@@ -145,7 +146,7 @@ Slidev 服务运行时，你对 slides.md 的所有修改会立刻实时显现�
 
 此外为了方便，还有一些形如 `testxxx.cpp` 的文件是一些完整的测试案例，不用从 slides.md 中拷贝，可直接单独运行。
 
-所需头文件都在同一个目录，可以通过 CMake 构建，也可以用任意自己喜欢的 IDE 单文件编译运行，无强制要求。
+为了方便同学们实验，所需头文件都在同一个目录，没有第三方库依赖。既可以用 CMake 构建，也可以用任意自己喜欢的 IDE 或编辑器 **单文件编译** 运行，无强制要求，只需编译器支持 C++17 即可。
 
 ---
 
@@ -158,13 +159,13 @@ Slidev 服务运行时，你对 slides.md 的所有修改会立刻实时显现�
 | 文件名 | 功能 |
 |-|-|
 | print.h | 内含 print 函数，支持打印绝大多数 STL 容器，方便调试 |
-| cppdemangle.h | 获得类型的名字，以模板参数传入，详见该文件中的注释 |
 | map_get.h | 带默认值的 map 表项查询，稍后课程中会介绍到 |
 | ScopeProfiler.h | 基于 RAII 的函数耗时统计，用于测量性能 |
+| OrderedMap.h | 遍历顺序始终保持和插入顺序一致的魔改版 map |
+| cppdemangle.h | 获得类型的名字，以模板参数传入，详见该文件中的注释 |
 | ppforeach.h | 基于宏的编译期 for 循环实现，类似于 BOOST_PP_FOREACH |
-| bits_stdc++.h | 仿照 bits/stdc++.h 的万能头文件跨平台版，一次性导入所有库 |
-| utf8.h | UTF-8 的编码与解码，u8string 和 u32string 互相转换 |
 | hash.h | 比 std::hash 更通用的 generic_hash 实现，支持任意区间和元组 |
+| bits_stdc++.h | 仿照 bits/stdc++.h 的万能头文件跨平台版，一次性导入所有库 |
 
 </font>
 
@@ -186,17 +187,19 @@ template <typename T>  // 官方文档书写习惯
 
 仅为个人书写习惯不同，在 C++ 编译器看来都是等价的。
 
+> 我喜欢把 const 后置，其一是因为这有利于理解 `int const *` 和 `int *const` 的区别，如果写成 `const int *` 就会很困惑 const 究竟是修饰谁的。其二我经常需要把函数参数中 `T t` 修改成 `T const &t`。连在一起加起来比较方便，只需要一次性插入 `const &` 即可，不用前后两个地方分别加 `const` 和 `&`，你觉得呢？
+
 ---
 
 <!-- PG10 -->
 
-仅为教学方便目的，不建议在现实工程中使用：
+# 课程书写习惯说明（续）
 
 ```cpp
-using namespace std;
+using namespace std; // 仅为教学方便目的，不建议在现实工程中使用 ⚠️
 ```
 
-本课程中的 `std::` 前缀均省略不写：
+由于使用了 `using namespace std`，本课程中的 `std::` 前缀均省略不写：
 
 ```cpp
 map<string, vector<int>> m;
@@ -230,6 +233,8 @@ std::erase_if(m, pred);
 // 下面代码中用到哪些容器，就导入哪些头文件
 ```
 
+> `<bits/stdc++.h>` 这个万能头文件在 VS 中似乎不存在[^1]，因此我自己写了一个跨平台的 `"bits_stdc++.h"` 放在源码同目录。
+
 [^1]: https://blog.csdn.net/m0_51755720/article/details/121489644
 
 ---
@@ -251,11 +256,12 @@ std::erase_if(m, pred);
 我并不懂得四面体，但性能优化的思路是通用的。我打开文件看了一下，我发现他读取时需要查询一个点周围所有的面，他是这样查询的：
 
 ```python
+# 以下为他的大致伪代码
 face_lut = []
-# ...
-face_lut.append(vert_id)
-# ...
-face_id = face_lut.index(vert_id)
+for ... in ...:
+    face_lut.append(vert_id)  # O(1) ✅
+for ... in ...:
+    face_id = face_lut.index(vert_id)  # O(N) ⚠️
 ```
 
 我说你这个 face_lut 是个普通数组，数组的 index 函数是 $O(N)$ 复杂度的你不知道吗？他相当于暴力遍历了数组找到你需要的值，你这个 index 的调用还是在一个循环里的，所以是 $O(N^2)$ 复杂度！难怪这么慢了。
@@ -267,14 +273,15 @@ face_id = face_lut.index(vert_id)
 后来我给他改了一下，把他的 face_lut 改成字典，用字典查找，高效得多了：
 
 ```python
+# 以下为我优化后的大致伪代码
 face_lut = []
-# ...
-face_lut[vert_id] = face_id
-# ...
-face_id = face_lut[vert_id]
+for ... in ...:
+    face_lut[vert_id] = face_id  # O(1)+ ✅
+for ... in ...:
+    face_id = face_lut[vert_id]  # O(1)+ ✅
 ```
 
-一次字典的查询只需要 $O(1)+$，所以加上他外面的循环总共只有 $O(N)$，变成线性复杂度了。他一试，果然几毫秒就加载完了，我说用字典加速查找这不是常识吗？还搁着 C++ 你就是 CUDA 来了也压不住复杂度爆表呀？
+一次字典的查询只需要 $O(1)+$，加上他外面的循环总共只有 $O(N)$，变成线性复杂度了。他一试，果然几毫秒就加载完了，我说用字典加速查找这不是常识吗？还搁着 C++ 你就是 CUDA 来了也压不住复杂度的爆表呀？
 
 他很高兴，不知道怎么感谢我，于是就把我推荐给张心欣了。
 
@@ -282,13 +289,19 @@ face_id = face_lut[vert_id]
 
 <!-- PG15 -->
 
+不论语言，容器（或者说数据结构）的正确使用，能够有效提升。
+
 C++ 中也是如此，有数组（vector），字典（map），还有上一课讲过的集合（set）。
 
-今天我们要介绍的就是 C++ 的字典容器 map，以及 C++11 引入的另一个字典容器 unordered_map，他们的异同我们稍后会详细讨论。
+今天我们要介绍的就是 C++ 的字典容器 map，以及 C++11 引入的另一个字典容器 unordered_map，他们的区别我们最后会详细讨论。我们先学习较为简单的 map，随后 unordered_map 也可以融会贯通。
+
+map/set 家族都是高效查找的专家：
 
 - 在 vector 容器用 std::find 查找：$O(N)$
 - 在 map 或 set 容器用 .find 查找：$O(\log N)$
 - 在 unordered_map 或 unordered_set 容器用 .find 查找：$O(1)+$
+
+不仅仅是查找，他们还支持高效的增删改查等操作。
 
 ---
 
@@ -314,9 +327,9 @@ map 的逻辑结构
 
 标准库中的 map 容器[^1]
 
-标准库中，map 是一个模板类，他的键类型，值类型，可以由尖括号内的参数指定。
+标准库中，map 是一个**模板类**，他的键类型，值类型，可以由尖括号内的参数指定，便于适应不同的用户需求。
 
-键类型和值类型可以是任意类型，包括基本类型，用户自定义的类，或是其他 STL 容器等。
+键类型和值类型可以是任意类型，包括基本类型，用户自定义的类，其他 STL 容器等，体现了容器的泛用性。
 
 - 例如 `map<string, int>` 是一个键类型为 string，值类型为 int 的 map 容器。
 - 例如 `map<int, Student>` 是一个键类型为 int，值类型为 Student 的 map 容器。
@@ -333,7 +346,7 @@ map 的逻辑结构
 > 可得：遍历 `map<int, string>` 时，是以键 `int` 部分从小到大的顺序遍历的。
 
 [^1]: https://en.cppreference.com/w/cpp/container/map
-[^2]: `std::string` 的大小比较规则可以回顾 BV1ja411M7Di 和 BV1m34y157wb 这两节课
+[^2]: `std::string` 的大小比较运算符和 `std::set` 的配合可以回顾 BV1ja411M7Di 和 BV1m34y157wb 这两节课
 
 ---
 
@@ -426,22 +439,22 @@ print(config.at("delay"));
 
 ---
 
-<!-- PG26 -->
+<!-- PG23 -->
 
 老生常谈的问题：map 中存 string 还是 const char *？
 
 ```cpp
 map<const char *, const char *> m;
 m["hello"] = "old";    // 常量区的 "hello"
-char key[] = "hello";
-m[key] = "new";        // 栈上变量的 key = "hello"
-print(m);
+char key[] = "hello";  // key 的地址在栈上
 print(key == "hello"); // false
+m[key] = "new";        // 栈上变量的 key = "hello"
+print(m);              // 两个重复的键 "hello"
 ```
 
 ```
-{hello: old, hello: new}
 false
+{hello: old, hello: new}
 ```
 
 在 C++ 中，任何时候都务必用 string！别用 C 语言老掉牙的 const char *，太危险了。
@@ -453,6 +466,8 @@ const char * 危险的原因：
 
 ---
 
+<!-- PG24 -->
+
 请用安全的 string：
 
 ```cpp
@@ -461,7 +476,7 @@ m["hello"] = "old";
 string key = "hello";
 m[key] = "new";
 print(m);
-print(key == "hello");
+print(key == "hello");  // string 的 == 运算符是经过重载的，比较的是字符串里面的内容相等，而不是地址相等
 ```
 
 ```
@@ -469,9 +484,18 @@ print(key == "hello");
 true
 ```
 
+| C++ | Java | Python |
+|-|-|-|
+| string("hello") == string("hello") | "hello".equals("hello") | 'hello' == 'hello' |
+| "hello" == "hello" | "hello" == "hello" | id('hello') == id('hello') |
+
 ---
 
-即使你精通对象生命周期分析，能保证 key 指向的字符串活的比 m 久，也请用封装了正确 == 运算符的 string_view：
+<!-- PG25 -->
+
+如果你精通对象生命周期分析，能保证 key 指向的字符串活的比 m 久，想要避免拷贝，节省性能。
+
+可以用封装了正确 == 运算符的弱引用 string_view（会比较字符串内容而不是地址）：
 
 ```cpp
 map<string_view, string_view> m;
@@ -488,13 +512,17 @@ print(key == "hello");
 true
 ```
 
+⚠️ string_view 属于不建议初学者使用的优化小寄巧，有手之前，非常好用。
+
+> 注：map 实际上完全没有用到 ==，用到的只有 &lt; 运算符，当需要判定 `a == b` 时，他会转而用 `!(a < b || b < a)` 来判定。
+
 <br/>
 
-> 注：map 实际上用到的是 &lt; 运算符。
+> string_view 也具有正确的 hash<string_view> 特化，因此也可以用做 unordered_map 的键类型。string_view 试图和 string 表现得完全一样，区别在于他是个弱引用，不持有对象，拷贝构造函数是浅拷贝。string_view 大小只有 16 个字节，内部是一个 const char * 和 size_t，但封装了正确的 ==，&lt;，&gt; 和 hash。
 
 ---
 
-<!-- PG23 -->
+<!-- PG26 -->
 
 C++11 新特性——花括号初始化列表，允许创建 map 时直接指定初始数据：
 
@@ -515,6 +543,8 @@ print(config.at("timeout"));  // 985
 
 ---
 
+<!-- PG27 -->
+
 总结花括号初始化语法：
 
 ```cpp
@@ -529,7 +559,7 @@ map<K, V> m = {
 
 ---
 
-<!-- PG24 -->
+<!-- PG28 -->
 
 ```cpp
 map<string, int> config = {
@@ -562,7 +592,7 @@ auto config = map<string, int>{
 
 ---
 
-<!-- PG25 -->
+<!-- PG29 -->
 
 作为函数参数时，可以用花括号初始化列表就地构造一个 map 对象：
 
@@ -592,7 +622,7 @@ void myfunc(map<string, int> const &config);
 
 ---
 
-<!-- PG27 -->
+<!-- PG30 -->
 
 从 vector 中批量导入键值对：
 
@@ -623,11 +653,11 @@ map<string, int> config(std::begin(kvs), std::end(kvs));  // C++17
 
 ---
 
-<!-- PG28 -->
+<!-- PG31 -->
 
-如何根据键查询相应的值？
+重点来了：如何根据键查询相应的值？
 
-很多同学都知道 map 具有 [] 运算符重载，和一些脚本语言一样，直观易懂。
+很多同学都知道 map 具有 [] 运算符重载，[] 里写要查询的键就可以返回对应值，也可以用 = 往里面赋值，和某些脚本语言一样直观易懂。
 
 ```cpp
 config["timeout"] = 985;       // 把 config 中键 timeout 对应值设为 985
@@ -635,11 +665,11 @@ auto val = config["timeout"];  // 读取 config 中键 timeout 对应值
 print(val);                    // 985
 ```
 
-但其实用 [] 访问元素是很不安全的，下面我会做实验演示这一点。
+但其实用 [] 去**读取元素**是很不安全的，下面我会做实验演示这一点。
 
 ---
 
-<!-- PG29 -->
+<!-- PG32 -->
 
 沉默的 []，无言的危险：当键不存在时，会返回 0 而不会出错！
 
@@ -657,13 +687,13 @@ print(config["tmeout"]);  // 默默返回 0
 0
 ```
 
-当查询的键值不存在时，[] 会默默创建并返回 0。
+当查询的键值不存在时，[] 会默默创建并返回 0，而不会爆出任何错误。
 
 这非常危险，例如一个简简单单的拼写错误，就会导致 map 的查询默默返回 0，你还在那里找了半天摸不着头脑，根本没发现错误原来在 map 这里。
 
 ---
 
-<!-- PG30 -->
+<!-- PG33 -->
 
 爱哭爱闹的 at()，反而更讨人喜欢
 
@@ -693,35 +723,7 @@ Aborted (core dumped)
 
 ---
 
-<!-- PG31 -->
-
-[] 更危险的地方在于，当所查询的键值不存在时：
-
-```cpp
-map<string, int> config = {
-    {"timeout", 985},
-    {"delay", 211},
-};
-print(config);
-print(config["tmeout"]);  // 有副作用！
-print(config);
-```
-
-```
-{"delay": 211, "timeout": 985}
-0
-{"delay": 211, "timeout": 985, "tmeout": 0}
-```
-
-会自动创建那个不存在的键值！
-
-你以为你只是观察了一下 map 里的 "tmeout" 元素，却意外改变了 map 的内容，薛定谔[^1]直呼内行。
-
-[^1]: https://baike.baidu.com/item/%E8%96%9B%E5%AE%9A%E8%B0%94%E7%9A%84%E7%8C%AB/554903
-
----
-
-<!-- PG32 -->
+<!-- PG35 -->
 
 > 在官方文档和各种教学课件中，都会展示一个函数的“原型”来讲解。
 >
@@ -747,7 +749,7 @@ V const &at(K const &k) const;       // 第二个版本的 at
 
 ---
 
-<!-- PG33 -->
+<!-- PG36 -->
 
 > 例如小彭老师打电话给 110，假如警察叔叔发现小彭老师报的案子是网络诈骗，那么他们会帮我转接到网警部门；假如发现小彭老师是被绑架了，那么他们可能会出动武警解救小彭老师。这就是 110 函数的两个重载，根据调用者传入的信息类型，决定要转给哪一个子部门。
 
@@ -771,7 +773,7 @@ V const &at(K const &k) const;       // 第二个版本的 at
 
 ---
 
-<!-- PG34 -->
+<!-- PG37 -->
 
 ```cpp
 V &at(K const &k);                   // 第一个版本的 at
@@ -798,7 +800,7 @@ V const &at(map<K, V> const *this, K const &k);       // 第二个版本的 at
 
 ---
 
-<!-- PG35 -->
+<!-- PG38 -->
 
 刚刚解释了函数重载，那么运算符重载呢？
 
@@ -826,7 +828,7 @@ V &operator[](K const &k);
 
 ---
 
-<!-- PG36 -->
+<!-- PG39 -->
 
 而 operator[] 这个成员函数没有 const 修饰，因此当 map 修饰为 const 时编译会不通过[^1]：
 
@@ -854,7 +856,33 @@ print(config["timeout"]);          // 编译出错
 
 ---
 
-<!-- PG37 -->
+<!-- PG34 -->
+
+非 const 的 [] 危险性演示，当所查询的键值不存在时：
+
+```cpp
+map<string, int> config = {
+    {"timeout", 985},
+    {"delay", 211},
+};
+print(config);
+print(config["tmeout"]);  // 有副作用！
+print(config);
+```
+
+```
+{"delay": 211, "timeout": 985}
+0
+{"delay": 211, "timeout": 985, "tmeout": 0}
+```
+
+会自动创建那个不存在的键值！
+
+你以为你只是观察了一下 map 里的 "tmeout" 元素，却意外改变了 map 的内容，薛定谔直呼内行。
+
+---
+
+<!-- PG40 -->
 
 既然 [] 这么危险，为什么还要存在呢？
 
@@ -866,13 +894,13 @@ config.at("timeout") = 985;  // 键值不存在，报错！
 config["timeout"] = 985;     // 成功创建并写入 985
 ```
 
-因为当我们写入一个本不存在的键值的时候，恰恰需要他的“自动创建”这一特性。
+由上可见，当我们写入一个本不存在的键值的时候，恰恰需要 [] 的“自动创建”这一特性，这是 at() 所不具有的。
 
-总结：读取时应该用 at() 更安全，写入时才需要用 []。
+总结：读取时应该用 at() 更安全，写入时才需要用带有自动创建功能的 []。
 
 ---
 
-<!-- PG38 -->
+<!-- PG41 -->
 
 - 读取元素时，统一用 at()
 - 写入元素时，统一用 []
@@ -891,16 +919,17 @@ m["key"] = val;
 
 ---
 
-<!-- PG39 -->
+[] 找不到就返回个默认值，其实也是很多语言的传统异能了，只有 Python 是最为友善的给你报错
 
-```cpp
-print(config.at("hello"));  // "world"
-print(config.at("hello"));  // "kitty"
-```
+| 语言及其关联容器名 | C++ map | Python dict | Lua table | JS HashMap | Java HashMap |
+|-|-|-|-|-|-|
+| 找不到键时的行为 | 默默返回 0 | 报错 KeyError | 默默返回 nil | 默默返回 undefined | .get()，默默返回 null |
+
+实际上 C++ 的 [] 最为恶劣，因为 C++ 中并没有一个 null 或 nil 之类的额外特殊常量，[] 返回的是个具体的类型，由于 [] 不能报错，值的类型千变万化，只能返回值类型默认构造的值，对于 int 而言是 0，对于 string 而言是 ""...
 
 ---
 
-<!-- PG40 -->
+<!-- PG43 -->
 
 at 与 [] 实战演练
 
@@ -927,7 +956,7 @@ map<string, Student> stus;
 
 ---
 
-<!-- PG41 -->
+<!-- PG44 -->
 
 现在小彭老师和他的童鞋们要进入这家学校了，让我们用 [] 大法插入他的个人信息：
 
@@ -960,7 +989,7 @@ map<string, Student> stus = {
 
 ---
 
-<!-- PG42 -->
+<!-- PG45 -->
 
 现在甲方要求添加一个“培训”函数，用于他们的 C++ 培训课。
 
@@ -989,7 +1018,7 @@ void PeiXunCpp(string stuName) {
 
 ---
 
-<!-- PG43 -->
+<!-- PG46 -->
 
 我们现在对相依童鞋进行 C++ 培训：
 
@@ -1022,7 +1051,7 @@ auto stu = stus.at(stuName);  // 在栈上拷贝了一份完整的 Student 对�
 
 ---
 
-<!-- PG44 -->
+<!-- PG47 -->
 
 要防止引用退化成普通变量，需要把变量类型也改成引用！这种是浅拷贝，stu 和 stus.at(stuName) 指向的仍然是同一个 Student 对象。用 `auto` 捕获的话，改成 `auto &` 就行。
 
@@ -1046,7 +1075,7 @@ void PeiXunCpp(string stuName) {
 
 ---
 
-<!-- PG45 -->
+<!-- PG48 -->
 
 引用是一个烫手的香香面包，普通变量就像一个臭臭的答辩马桶，把面包放到马桶（auto）里，面包就臭掉，腐烂掉，不能吃了！要让面包转移阵地了以后依然好吃，需要放到保鲜盒（auto &）里。
 
@@ -1070,7 +1099,7 @@ void PeiXunCpp(string stuName) {
 
 ---
 
-<!-- PG46 -->
+<!-- PG49 -->
 
 邪恶的 decay 规则造成空悬指针的案例
 
@@ -1097,7 +1126,7 @@ Segmentation fault (core dumped)
 
 ---
 
-<!-- PG47 -->
+<!-- PG50 -->
 
 修复方法：不要用沙雕 C 语言的原生数组，用 C++ 封装好的 array
 
@@ -1124,7 +1153,7 @@ int main() {
 
 ---
 
-<!-- PG48 -->
+<!-- PG51 -->
 
 当然如果你还是学不会怎么保留香香引用的话，也可以在修改后再次用 [] 写回学生表。这样学生表里不会 C++ 的“相依1号”就会被我们栈上培训过 C++ 的“相依1号”覆盖，现在学生表里的也是有 C++ 技能的相依辣！只不过需要翻来覆去克隆了好几次比较低效而已，至少能用了，建议只有学不懂引用的童鞋再用这种保底写法。
 
@@ -1145,7 +1174,7 @@ void PeiXunCpp(string stuName) {
 
 ---
 
-<!-- PG49 -->
+<!-- PG52 -->
 
 如果要根据学号进行查找呢？那就以学号为键，然后把学生姓名放到 Student 结构体中。
 
@@ -1159,7 +1188,7 @@ void PeiXunCpp(string stuName) {
 
 ---
 
-<!-- PG50 -->
+<!-- PG53 -->
 
 查询 map 中元素的数量
 
@@ -1180,7 +1209,7 @@ print(m.size());
 
 ---
 
-<!-- PG51 -->
+<!-- PG54 -->
 
 应用举例：给每个键一个独一无二的计数
 
@@ -1194,7 +1223,7 @@ m["dick"] = m.size();
 
 ---
 
-<!-- PG52 -->
+<!-- PG55 -->
 
 判断一个键是否存在：count 函数
 
@@ -1210,7 +1239,7 @@ count 返回容器中键和参数 k 相等的元素个数，类型为 size_t（�
 
 ---
 
-<!-- PG53 -->
+<!-- PG56 -->
 
 因此可以直接通过 count 的返回值是否为 0 判断一个键在 map 中是否存在：
 
@@ -1250,7 +1279,7 @@ if (msg.contains("fuck")) {
 
 ---
 
-<!-- PG54 -->
+<!-- PG57 -->
 
 你知道吗？[] 的妙用
 
@@ -1268,7 +1297,7 @@ if (msg.contains("fuck")) {
 
 ---
 
-<!-- PG55 -->
+<!-- PG58 -->
 
 [] 妙用举例：出现次数统计
 
@@ -1289,7 +1318,7 @@ print(counter);
 layout: two-cols-header
 ---
 
-<!-- PG56 -->
+<!-- PG59 -->
 
 ::left::
 
@@ -1327,7 +1356,7 @@ for (auto const &key: input) {
 
 ---
 
-<!-- PG57 -->
+<!-- PG60 -->
 
 [] 妙用举例：归类
 
@@ -1349,7 +1378,7 @@ print(categories);
 layout: two-cols-header
 ---
 
-<!-- PG58 -->
+<!-- PG61 -->
 
 ::left::
 
@@ -1392,13 +1421,13 @@ for (auto const &str: input) {
 layout: center
 ---
 
-<!-- PG59 -->
+<!-- PG62 -->
 
 ![Elegence](https://pica.zhimg.com/50/v2-f2560f634b1e09f81522f29f363827f7_720w.jpg)
 
 ---
 
-<!-- PG60 -->
+<!-- PG63 -->
 
 反面典型：查找特定元素在 vector 中的位置（下标）
 
@@ -1427,7 +1456,7 @@ nice在数组中的下标是：2
 
 ---
 
-<!-- PG61 -->
+<!-- PG64 -->
 
 正确做法：构建 vector 的反向查找表，以后查找更高效
 
@@ -1456,7 +1485,7 @@ nice在数组中的下标是：2
 
 ---
 
-<!-- PG62 -->
+<!-- PG65 -->
 
 ```cpp
 for (size_t i = 0; i < arr.size(); i++) {
@@ -1475,7 +1504,7 @@ for (size_t i = 0; i < arr.size(); i++) {
 
 ---
 
-<!-- PG63 -->
+<!-- PG66 -->
 
 案例：构建另一个 map 的反向查找表
 
@@ -1501,7 +1530,7 @@ print(tabinv);
 
 ---
 
-<!-- PG64 -->
+<!-- PG67 -->
 
 STL 容器的元素类型都可以通过成员 `value_type` 查询，常用于泛型编程（又称元编程）。
 
@@ -1526,7 +1555,7 @@ map<int, string>::value_type       // 没有不定类型，不需要
 
 ---
 
-<!-- PG65 -->
+<!-- PG68 -->
 
 在本课程的案例代码中附带的 "cppdemangle.h"，可以实现根据指定的类型查询类型名称并打印出来。
 
@@ -1549,7 +1578,7 @@ print(cppdemangle<std::wstring::value_type>());
 
 ---
 
-<!-- PG66 -->
+<!-- PG69 -->
 
 问题: map 真正的元素类型究竟是什么？其具有三个成员类型[^1]：
 
@@ -1573,7 +1602,7 @@ map<int, float>::mapped_type  // float
 
 ---
 
-<!-- PG67 -->
+<!-- PG70 -->
 
 `pair<const K, V>` ——为什么 K 要加 const？
 
@@ -1590,7 +1619,7 @@ map 和 set 一样也是红黑树，不同在于：map 只有键 K 的部分会�
 
 ---
 
-<!-- PG68 -->
+<!-- PG71 -->
 
 ```cpp
 iterator begin();
@@ -1605,7 +1634,7 @@ begin() 和 end() 迭代器分别指向 map 的首个元素和最后一个元素
 
 ---
 
-<!-- PG69 -->
+<!-- PG72 -->
 
 - 迭代器可以通过 `*it` 或 `it->` 解引用，获取其指向的元素。
 - 由于 map 内部总是保持有序，map 的首个元素一定是键最小的元素。
@@ -1635,7 +1664,7 @@ print("最高分:", bestStudent);
 
 ---
 
-<!-- PG70 -->
+<!-- PG73 -->
 
 map 的遍历：古代 C++98 的迭代器大法
 
@@ -1650,7 +1679,7 @@ for (map<string, int>::iterator it = m.begin(); it != m.end(); ++it) {
 
 ---
 
-<!-- PG71 -->
+<!-- PG74 -->
 
 运用 C++11 的 auto 简写一下：
 
@@ -1675,7 +1704,7 @@ for (auto it = m.begin(); it != m.end(); ++it) {
 
 ---
 
-<!-- PG72 -->
+<!-- PG75 -->
 
 map 的遍历：现代 C++17 基于范围的循环（range-based loop）
 
@@ -1697,7 +1726,7 @@ for (auto [k, v]: m) {
 
 ---
 
-<!-- PG73 -->
+<!-- PG76 -->
 
 如何在遍历的过程中修改值？
 
@@ -1720,7 +1749,7 @@ print(m);
 
 ---
 
-<!-- PG74 -->
+<!-- PG77 -->
 
 如何在遍历的过程中修改值？
 
@@ -1745,7 +1774,7 @@ print(m);
 
 ---
 
-<!-- PG75 -->
+<!-- PG78 -->
 
 ```cpp
 for (auto [k, v]: m) {
@@ -1777,7 +1806,7 @@ for (auto it = m.begin(); it != m.end(); ++it) {
 
 ---
 
-<!-- PG76 -->
+<!-- PG79 -->
 
 ```cpp
 for (auto &[k, v]: m) {  // 解决方案是在这里加一个小小的 &，让 range-based loop 捕获引用而不是拷贝
@@ -1809,7 +1838,7 @@ for (auto it = m.begin(); it != m.end(); ++it) {
 
 ---
 
-<!-- PG77 -->
+<!-- PG80 -->
 
 总结，当需要在遍历的同时修改 map 中的值时，要用 `auto &` 捕获引用：
 
@@ -1829,7 +1858,7 @@ for (auto const &[k, v]: m) {   // 捕获只读的 const 引用，引用避免�
 
 ---
 
-<!-- PG78 -->
+<!-- PG81 -->
 
 注：即使捕获为 `auto &`，由于 map 的元素类型是 `pair<const K, V>` 所以 K 部分还是会捕获为 `K const &`，无法写入。
 
@@ -1851,7 +1880,7 @@ for (auto const &[k, v]: m) {
 
 ---
 
-<!-- PG79 -->
+<!-- PG82 -->
 
 ```cpp
 iterator find(K const &k);
@@ -1877,7 +1906,7 @@ m.find(key) 函数，根据指定的键 key 查找元素[^1]。
 layout: two-cols-header
 ---
 
-<!-- PG80 -->
+<!-- PG83 -->
 
 实际上 count 和 contains 函数就是基于 find 实现的，性能没有区别，glibc 源码：
 
@@ -1927,7 +1956,7 @@ m.find(key) != m.end()
 
 ---
 
-<!-- PG81 -->
+<!-- PG84 -->
 
 检查过不是 m.end()，以确认成功找到后，就可以通过 * 运算符解引用获取迭代器指向的值：
 
@@ -1950,7 +1979,7 @@ if (it != m.end()) {
 layout: two-cols-header
 ---
 
-<!-- PG82 -->
+<!-- PG85 -->
 
 find 的高效在于，可以把两次查询合并成一次。
 
@@ -1977,9 +2006,9 @@ if (it != m.end()) {     // 查询的结果，既包含"是否找到"的信息
 
 ---
 
-<!-- PG83 -->
+<!-- PG86 -->
 
-此外运用 C++17 的 if-auto 语法糖还可以更写的紧凑一点。
+C++17 的 if-auto 语法糖如何简化 find 的迭代器判断
 
 ```cpp
 auto it = m.find("key1");
@@ -2007,7 +2036,7 @@ if (auto it = m.find("key2"); it != m.end()) {  // 这个变量 it 是局域的�
 
 ---
 
-<!-- PG84 -->
+<!-- PG87 -->
 
 我给 C++ 标准委员会提一个建议，能不能给迭代器加一个 `operator bool` 代替烦人的 `!= m.end()`？
 
@@ -2037,7 +2066,7 @@ if (auto it = m.find("key")) {
 
 ---
 
-<!-- PG85 -->
+<!-- PG88 -->
 
 注意 `*it` 解引用得到的是 `pair<const K, V>` 类型的键值对，需要 `(*it).second` 才能获取单独的值 V。
 
@@ -2069,7 +2098,7 @@ if (it != m.end()) {
 
 ---
 
-<!-- PG86 -->
+<!-- PG89 -->
 
 ```cpp
 iterator find(K const &k);
@@ -2096,7 +2125,7 @@ it->second = 1;      // OK: 可以写入
 
 ---
 
-<!-- PG87 -->
+<!-- PG90 -->
 
 带默认值的查询
 
@@ -2121,7 +2150,7 @@ return it == m.end() ? it->second : defl;
 
 ---
 
-<!-- PG88 -->
+<!-- PG91 -->
 
 由于自带默认值的查询这一功能实在是太常用了，为了把这个操作浓缩到一行，我建议同学们封装成函数放到自己的项目公共头文件（一般是 utils.h 之类的名称）里方便以后使用：
 
@@ -2147,7 +2176,7 @@ int val = map_get(config, "timeout", -1);  // 如果配置文件里不指定，�
 
 ---
 
-<!-- PG89 -->
+<!-- PG92 -->
 
 这样还不够优雅，我们还可以更优雅地运用 C++17 的函数式容器 optional：
 
@@ -2172,7 +2201,7 @@ std::optional<typename M::mapped_type> map_get
 
 ---
 
-<!-- PG90 -->
+<!-- PG93 -->
 
 调用者可以自行运用 optional 的 value_or 函数[^1]指定找不到时采用的默认值：
 
@@ -2199,7 +2228,7 @@ if (auto o_val = map_get(config, "timeout")) {
 
 ---
 
-<!-- PG91 -->
+<!-- PG94 -->
 
 以上是典型的函数式编程范式 (FP)，C++20 还引入了更多这样的玩意[^2]，等有空会专门开节课为大家一一介绍。
 
@@ -2217,7 +2246,7 @@ for (int i: std::views::iota(0, 6)
 
 ---
 
-<!-- PG92 -->
+<!-- PG95 -->
 
 现在学习删除元素用的 erase 函数，其原型如下[^1]：
 
@@ -2233,7 +2262,7 @@ size_t erase(K const &key);
 
 ---
 
-<!-- PG93 -->
+<!-- PG96 -->
 
 ```cpp
 size_t erase(K const &key);
@@ -2258,7 +2287,7 @@ print(msg);
 
 ---
 
-<!-- PG94 -->
+<!-- PG97 -->
 
 ```cpp
 size_t erase(K const &key);
@@ -2272,7 +2301,7 @@ erase 的返回值和 count 一样，返回成功删除的元素个数，类型�
 
 ---
 
-<!-- PG95 -->
+<!-- PG98 -->
 
 因此可以直接通过 erase 的返回值是否为 0 判断是否删除成功：
 
@@ -2304,7 +2333,7 @@ print(msg);
 
 ---
 
-<!-- PG96 -->
+<!-- PG99 -->
 
 ```cpp
 size_t erase(K const &key);  // 指定键版
@@ -2333,7 +2362,7 @@ iterator erase(iterator it);   // 已知位置版
 
 ---
 
-<!-- PG97 -->
+<!-- PG100 -->
 
 erase(key) 可能是基于 erase(it) 实现的：
 
@@ -2351,7 +2380,7 @@ size_t erase(K const &key) {  // 小彭老师猜想标准库内部
 
 ---
 
-<!-- PG98 -->
+<!-- PG101 -->
 
 指定位置版 erase(it) 返回的是删除元素的下一个元素位置。
 
@@ -2380,7 +2409,7 @@ score.erase(score.begin());
 
 ---
 
-<!-- PG99 -->
+<!-- PG102 -->
 
 常见需求场景：一边遍历一边删除部分元素（错误示范）
 
@@ -2405,7 +2434,7 @@ Segmentation fault (core dumped)
 
 ---
 
-<!-- PG100 -->
+<!-- PG103 -->
 
 引出问题：迭代器失效
 
@@ -2428,7 +2457,7 @@ print(it->second);  // 没有失效，打印 985
 
 ---
 
-<!-- PG101 -->
+<!-- PG104 -->
 
 map 比起 unordered_map 来，已经是非常稳定，随便增删改查都不会迭代器失效。
 
@@ -2442,7 +2471,7 @@ map 比起 unordered_map 来，已经是非常稳定，随便增删改查都不�
 
 ---
 
-<!-- PG102 -->
+<!-- PG105 -->
 
 所以《好友清除计划》完整的剧情是：
 
@@ -2464,7 +2493,7 @@ for (auto it = m.begin(); it != m.end(); ++it /* 进入燃烧中的1号朋友家
 
 ---
 
-<!-- PG103 -->
+<!-- PG106 -->
 
 你拿着1号朋友家的地址，一发 RPG 导弹把他家炸了。然后你现在突然意识到需要2号朋友家的地址，但是1号朋友家已经被你炸了，你傻乎乎进入燃烧的1号朋友家，被火烧死了。
 
@@ -2487,7 +2516,7 @@ for (auto it = m.begin(); it != m.end(); ) {
 
 ---
 
-<!-- PG104 -->
+<!-- PG107 -->
 
 注意到 erase 会返回删除元素的下一个元素的迭代器，也就是说这个 RPG 导弹非常智能，好像他就是专为《好友清除计划》设计的一样：他能在炸毁你朋友的房屋前，自动拿到其中的字条，并把他通过“弹射座椅”弹出来送到门外的你手上，把纸条安全送出来后，再爆炸摧毁你朋友的房屋。这样你就不用冒险进入燃烧的房屋拿字条（迭代器失效导致 segfault），也不用先劳烦您自己先进去一趟房屋拿字条了（上一页中那样提前保存 next_it）。
 
@@ -2501,7 +2530,7 @@ for (auto it = m.begin(); it != m.end(); ) {
 
 ---
 
-<!-- PG105 -->
+<!-- PG108 -->
 
 一边遍历一边删除部分元素（正解[^1]）
 
@@ -2533,7 +2562,7 @@ print(msg);
 layout: two-cols-header
 ---
 
-<!-- PG106 -->
+<!-- PG109 -->
 
 ::left::
 
@@ -2566,7 +2595,7 @@ for (auto it = m.begin(); it != m.end(); ++it) {
 
 ---
 
-<!-- PG107 -->
+<!-- PG110 -->
 
 批量删除符合条件的元素（C++20[^1]）
 
@@ -2592,7 +2621,7 @@ print(msg);
 
 ---
 
-<!-- PG108 -->
+<!-- PG111 -->
 
 如果你搞不懂迭代器这些，这里我提供一个保底写法，先把键提前保存到一个 vector 中去：
 
@@ -2618,7 +2647,7 @@ for (auto const &k: keys) {      // 遍历刚才保存的键
 
 ---
 
-<!-- PG109 -->
+<!-- PG112 -->
 
 还是搞不懂的话，也可以新建一个 map，条件反之，把不需要删除的元素插入新 map，过滤出需要保留的元素，最后再一次性用新 map 覆盖旧 map。
 
@@ -2642,7 +2671,7 @@ msg = std::move(newmsg);        // 覆盖旧的 map，用更高效的移动赋�
 
 ---
 
-<!-- PG110 -->
+<!-- PG113 -->
 
 接下来开始学习如何插入元素，map 的成员 insert 函数原型如下[^1]：
 
@@ -2664,7 +2693,7 @@ pair 是一个 STL 中常见的模板类型，`pair<K, V>` 有两个成员变量
 
 ---
 
-<!-- PG111 -->
+<!-- PG114 -->
 
 试着用 insert 插入键值对：
 
@@ -2685,7 +2714,7 @@ print(m);
 
 ---
 
-<!-- PG112 -->
+<!-- PG115 -->
 
 简化 insert
 
@@ -2722,7 +2751,7 @@ m.insert({"fuck", 985});           // ✅
 layout: two-cols-header
 ---
 
-<!-- PG113 -->
+<!-- PG116 -->
 
 因此，insert 的最佳用法是：
 
@@ -2766,7 +2795,7 @@ print(m);
 
 ---
 
-<!-- PG114 -->
+<!-- PG117 -->
 
 insert 的返回值是 `pair<iterator, bool>` 类型，<del>STL 的尿性：在需要一次性返回两个值时喜欢用 pair</del>。
 
@@ -2782,7 +2811,7 @@ insert 的返回值是 `pair<iterator, bool>` 类型，<del>STL 的尿性：在�
 
 ---
 
-<!-- PG115 -->
+<!-- PG118 -->
 
 其实 insert 返回的 first 迭代器等价于插入以后再重新用 find 找到刚刚插入的那个键，只是效率更高：
 
@@ -2805,7 +2834,7 @@ auto it = m.find(k);  // 重新遍历第二次，但结果一样
 
 ---
 
-<!-- PG116 -->
+<!-- PG119 -->
 
 可以用 insert 返回的 second 判断插入多次是否成功：
 
@@ -2837,7 +2866,7 @@ counter["key"]++;
 
 ---
 
-<!-- PG117 -->
+<!-- PG120 -->
 
 在 C++17 中，[] 写入有了个更高效的替代品 insert_or_assign[^1]：
 
@@ -2863,7 +2892,7 @@ m.insert_or_assign("key", "new");  // 与 insert 不同，他不需要 {...}，�
 
 ---
 
-<!-- PG118 -->
+<!-- PG121 -->
 
 看来 insert_or_assign 和 [] 的效果完全相同！都是在键值冲突时覆盖旧值。
 
@@ -2885,7 +2914,7 @@ insert_or_assign 能取代 [] 的岗位仅限于纯写入，之前 `counter[key]
 layout: two-cols-header
 ---
 
-<!-- PG119 -->
+<!-- PG122 -->
 
 创建新键时，insert_or_assign 更高效。
 
@@ -2934,7 +2963,7 @@ print(m);
 
 ---
 
-<!-- PG120 -->
+<!-- PG123 -->
 
 总结，如果你有性能强迫症，并且是 C++17 标准：
 
@@ -2950,7 +2979,7 @@ print(m);
 
 ---
 
-<!-- PG121 -->
+<!-- PG124 -->
 
 回顾之前的反向查找表，如果有重复，如何区分找第一个还是最后一个？
 
@@ -2973,7 +3002,7 @@ for (size_t i = 0; i < arr.size(); i++) {
 
 ---
 
-<!-- PG122 -->
+<!-- PG125 -->
 
 刚刚介绍的那些 insert 一次只能插入一个元素，insert 还有一个特殊的版本，用于批量插入一系列元素。
 
@@ -3002,7 +3031,7 @@ print(config);  // {"delay": 211, "timeout": 985}
 
 ---
 
-<!-- PG123 -->
+<!-- PG126 -->
 
 注：由于 insert 不覆盖的特性，如果 vector 中有重复的键，则会以键第一次出现时的值为准，之后重复出现的键会被忽视。
 
@@ -3025,7 +3054,7 @@ print(config);
 
 ---
 
-<!-- PG124 -->
+<!-- PG127 -->
 
 批量 insert 运用案例：两个 map 合并
 
@@ -3054,7 +3083,7 @@ print(m1);
 
 ---
 
-<!-- PG125 -->
+<!-- PG128 -->
 
 使用 `m1.insert(m2.begin(), m2.end())` 后，合并的结果会就地写入 m1。
 
@@ -3080,7 +3109,7 @@ print(m12);     // m1 和 m2 的合并结果
 
 ---
 
-<!-- PG126 -->
+<!-- PG129 -->
 
 ```cpp
 auto m12 = m1;
@@ -3108,7 +3137,7 @@ print(m12);     // m1 和 m2 的合并结果，键冲突时优先取 m2 的值
 
 ---
 
-<!-- PG127 -->
+<!-- PG130 -->
 
 有同学就问了，这个 insert 实现了 map 的并集操作，那交集操作呢？这其实是 set 的常规操作而不是 map 的：
 
@@ -3131,7 +3160,7 @@ std::set_union(A.begin(), A.end(), B.begin(), B.end(), std::inserter(C, C.begin(
 
 ---
 
-<!-- PG128 -->
+<!-- PG131 -->
 
 C++11 还引入了一个以初始化列表（initializer_list）为参数的版本：
 
@@ -3160,7 +3189,7 @@ m.insert({              // 批量再插入两个新元素
 
 ---
 
-<!-- PG129 -->
+<!-- PG132 -->
 
 小彭老师锐评批量 insert
 
@@ -3188,7 +3217,7 @@ m.insert({"delay", 211});
 
 ---
 
-<!-- PG130 -->
+<!-- PG133 -->
 
 ```cpp
 map &operator=(initializer_list<pair<const K, V>> ilist);
@@ -3215,7 +3244,7 @@ m = {              // 原有内容全部清空！重新插入两个新元素
 
 ---
 
-<!-- PG131 -->
+<!-- PG134 -->
 
 带插入位置提示的 insert
 
@@ -3242,7 +3271,7 @@ iterator insert(const_iterator pos, pair<K, V> const &kv);
 
 ---
 
-<!-- PG132 -->
+<!-- PG135 -->
 
 ```cpp
 iterator insert(const_iterator pos, pair<K, V> const &kv);
@@ -3256,7 +3285,7 @@ iterator insert(const_iterator pos, pair<K, V> const &kv);
 
 ---
 
-<!-- PG133 -->
+<!-- PG136 -->
 
 可以让有序数据的插入更高效！
 
@@ -3285,7 +3314,7 @@ for (auto const &[k, v]: arr) {
 
 ---
 
-<!-- PG134 -->
+<!-- PG137 -->
 
 你是一名小学老师，马上就要出早操了，为应付领导面子，你需要给你的学生排队，根据个子从矮到高排列。
 
@@ -3301,7 +3330,7 @@ for (auto const &[k, v]: arr) {
 
 ---
 
-<!-- PG135 -->
+<!-- PG138 -->
 
 后来你发现一个规律，似乎学生来的早晚顺序和高矮有关：矮小的同学喜欢起的早，高大的同学喜欢起的晚。
 
@@ -3313,7 +3342,7 @@ for (auto const &[k, v]: arr) {
 
 ---
 
-<!-- PG136 -->
+<!-- PG139 -->
 
 1111
 
@@ -3453,7 +3482,7 @@ void LaoBanJob(map<string, int> &m, string key) {
 
 ---
 
-<!-- PG137 -->
+<!-- PG140 -->
 
 insert 的究极分奴版（不推荐）：emplace
 
@@ -3484,7 +3513,7 @@ m.insert({key, val});
 
 ---
 
-<!-- PG138 -->
+<!-- PG141 -->
 
 insert 的宇宙无敌分奴版（不推荐）：emplace_hint[^1]
 
@@ -3515,7 +3544,7 @@ m.insert(pos, {key, val});
 
 ---
 
-<!-- PG139 -->
+<!-- PG142 -->
 
 ```cpp
 template <class ...Args>
@@ -3532,7 +3561,7 @@ emplace 对于 set，元素类型是比较大的类型时，例如 `set<array<in
 
 ---
 
-<!-- PG140 -->
+<!-- PG143 -->
 
 glibc 源码一览：emplace 基于 emplace_hint 实现
 
@@ -3565,7 +3594,7 @@ emplace(_Args&&... __args)
 
 ---
 
-<!-- PG141 -->
+<!-- PG144 -->
 
 insert 的托马斯黄金大回旋分奴版：try_emplace
 
@@ -3592,7 +3621,7 @@ m.insert({key, V(arg1, arg2, ...)});
 
 ---
 
-<!-- PG142 -->
+<!-- PG145 -->
 
 try_emplace 会就地构造值对象，避免移动造成开销。
 
@@ -3613,7 +3642,7 @@ m.try_emplace("key", "hell", 3.14f);  // MyClass(const char *, float)
 
 ---
 
-<!-- PG143 -->
+<!-- PG146 -->
 
 谈谈 try_emplace 的缺点
 
@@ -3648,7 +3677,7 @@ m.try_emplace("彭于斌", Student{"自定义", 22});  // OK: 明确指定类型
 
 ---
 
-<!-- PG144 -->
+<!-- PG147 -->
 
 由于 try_emplace 里写死了圆括号，我们只好手动定义的构造函数才能劳驾 try_emplace 就地构造。
 
@@ -3674,7 +3703,7 @@ m.insert({"彭于斌", Student("自定义", 22)});     // ERROR: insert 需要�
 
 ---
 
-<!-- PG145 -->
+<!-- PG148 -->
 
 无构造函数时，C++11 支持花括号初始化（官方名: 聚合初始化[^1]），C++20 开始聚合初始化也能用圆括号了：
 
@@ -3709,7 +3738,7 @@ func(("自定义", 22));             // ERROR: 无法从 int 转换为 Student
 
 ---
 
-<!-- PG146 -->
+<!-- PG149 -->
 
 C++20 修复了 try_emplace 的这个缺点
 
@@ -3728,7 +3757,7 @@ m.try_emplace("彭于斌");                    // OK: 等价于 m["彭于斌"] =
 
 ---
 
-<!-- PG147 -->
+<!-- PG150 -->
 
 ```cpp
 struct MyClass {
@@ -3761,7 +3790,7 @@ MyClass()
 layout: two-cols-header
 ---
 
-<!-- PG148 -->
+<!-- PG151 -->
 
 try_emplace 成功提升性能的案例
 
@@ -3815,7 +3844,7 @@ int main() {
 
 ---
 
-<!-- PG149 -->
+<!-- PG152 -->
 
 如果改成更大的自定义类型，可以提升 2.3 倍。
 
@@ -3833,7 +3862,7 @@ struct MyClass {
 
 ---
 
-<!-- PG150 -->
+<!-- PG153 -->
 
 insert 的炫彩中二摇摆混沌大魔王分奴版：带插入位置提示的 try_emplace
 
@@ -3858,7 +3887,7 @@ m.insert(pos, {key, V(arg1, arg2, ...)});
 
 ---
 
-<!-- PG151 -->
+<!-- PG154 -->
 
 总结，如何用 emplace 家族优化？分直接插入和带提示插入两种情况：
 
@@ -3877,7 +3906,7 @@ hint = m.emplace_hint(hint, std::piecewise_construct, std::forward_as_tuple("key
 
 ---
 
-<!-- PG152 -->
+<!-- PG155 -->
 
 梦幻联动：map 容器与 RAII 的双向奔赴
 
@@ -3893,7 +3922,7 @@ map 被析构时，其所有元素都会被析构。
 layout: two-cols
 ---
 
-<!-- PG153 -->
+<!-- PG156 -->
 
 ```cpp
 struct RAII {
@@ -3948,7 +3977,7 @@ int main() {
 layout: two-cols
 ---
 
-<!-- PG154 -->
+<!-- PG157 -->
 
 ```cpp
 struct RAII {
@@ -4003,7 +4032,7 @@ int main() {
 layout: two-cols
 ---
 
-<!-- PG155 -->
+<!-- PG158 -->
 
 ```cpp
 struct RAII {
@@ -4053,7 +4082,7 @@ int main() {
 
 ---
 
-<!-- PG156 -->
+<!-- PG159 -->
 
 对于很大的 V 类型，也可以改用 `map<T, unique_ptr<V>>` 避免反复移动元素本体
 
@@ -4080,7 +4109,7 @@ print(m.at("answer")->value);  // 42
 
 ---
 
-<!-- PG157 -->
+<!-- PG160 -->
 
 # 增删
 
@@ -4096,7 +4125,7 @@ print(m.at("answer")->value);  // 42
 
 ---
 
-<!-- PG158 -->
+<!-- PG161 -->
 
 # 改查
 
@@ -4111,7 +4140,7 @@ print(m.at("answer")->value);  // 42
 
 ---
 
-<!-- PG159 -->
+<!-- PG162 -->
 
 # 初始化
 
@@ -4126,7 +4155,7 @@ print(m.at("answer")->value);  // 42
 
 ---
 
-<!-- PG160 -->
+<!-- PG163 -->
 
 C++17 新增的 extract 函数[^1]
 
@@ -4152,7 +4181,7 @@ node_type 是指向游离红黑树节点的特殊智能指针，称为节点句�
 
 ---
 
-<!-- PG161 -->
+<!-- PG164 -->
 
 不用 auto 完整写出全部类型的形式：
 
@@ -4172,7 +4201,7 @@ V &v = node.value();
 
 ---
 
-<!-- PG162 -->
+<!-- PG165 -->
 
 insert 函数：插入游离节点的版本
 
@@ -4197,7 +4226,7 @@ m2.insert(move(node));  // 节点句柄类似于 unique_ptr 不可拷贝，需�
 
 ---
 
-<!-- PG163 -->
+<!-- PG166 -->
 
 这个版本的 insert 返回值类型 insert_return_type 是一个结构体（我的天他们终于肯用结构体而不是 pair 了）：
 
@@ -4225,7 +4254,7 @@ insert_return_type insert(node_type &&nh);
 
 ---
 
-<!-- PG164 -->
+<!-- PG167 -->
 
 extract 运用案例
 
@@ -4251,7 +4280,7 @@ print(hells);
 
 ---
 
-<!-- PG165 -->
+<!-- PG168 -->
 
 extract + insert(move(node)) 对比 find + insert({key, val})，可以避免键和值类型移动构造函数的开销，至始至终移动的只是一个红黑树节点的指针，元素没有被移动，也没有造成内存空间不必要的分配和释放。
 
@@ -4259,7 +4288,7 @@ extract + insert(move(node)) 对比 find + insert({key, val})，可以避免键�
 
 ---
 
-<!-- PG166 -->
+<!-- PG169 -->
 
 extract 大型运用案例
 
@@ -4276,7 +4305,7 @@ extract 大型运用案例
 
 ---
 
-<!-- PG167 -->
+<!-- PG170 -->
 
 ```cpp
 template <class K, class V, class Cond>
@@ -4307,7 +4336,7 @@ void filter_with_erase(map<K, V> &tab1, map<K, V> &tab2, Cond &&cond) {
 
 ---
 
-<!-- PG168 -->
+<!-- PG171 -->
 
 ```cpp
 template <class K, class V, class Cond>
@@ -4340,7 +4369,7 @@ void filter_with_erase_with_hint(map<K, V> &tab1, map<K, V> &tab2, Cond &&cond) 
 
 ---
 
-<!-- PG169 -->
+<!-- PG172 -->
 
 extract vs erase 性能测试 (testextractvserase.cpp)：
 
@@ -4356,7 +4385,7 @@ extract + 带提示的 insert 获胜，即函数 `filter_with_extract_with_hint`
 
 ---
 
-<!-- PG170 -->
+<!-- PG173 -->
 
 由于处于游离状态，游离节点不属于任何 map 中，不需要满足排序性质，因此 `node.key()` 可修改。
 
@@ -4385,7 +4414,7 @@ TODO
 
 ---
 
-<!-- PG171 -->
+<!-- PG174 -->
 
 C++17 新增的 merge 函数[^1]
 
@@ -4421,7 +4450,7 @@ for (auto it = m2.begin(); it != m2.end(); ++it) {
 
 ---
 
-<!-- PG172 -->
+<!-- PG175 -->
 
 两个 map 合并，`m1.merge(m2)` 与 `m1.insert(m2.begin(), m2.end())` 性能比较
 
@@ -4434,7 +4463,7 @@ for (auto it = m2.begin(); it != m2.end(); ++it) {
 
 ---
 
-<!-- PG173 -->
+<!-- PG176 -->
 
 merge(m2) 和 insert(m2.begin(), m2.end()) 一样尿性：如果 m2 中的键在 m1 中已经存在，则不会 extract 该 m2 中的节点。
 
@@ -4456,13 +4485,13 @@ int main()
 
 ---
 
-<!-- PG174 -->
+<!-- PG177 -->
 
 swap 与 move
 
 ---
 
-<!-- PG175 -->
+<!-- PG178 -->
 
 map 容器的全部参数为：
 
@@ -4489,7 +4518,7 @@ std::map<K, V, std::less<K>, std::allocator<std::pair<K, V>>>
 
 ---
 
-<!-- PG176 -->
+<!-- PG179 -->
 
 ```cpp
 std::map<K, V, std::less<K>>
@@ -4510,7 +4539,7 @@ struct less {
 
 ---
 
-<!-- PG177 -->
+<!-- PG180 -->
 
 仿函数对象，可以直接用圆括号当做普通函数调用，这就是“仿函数”的得名原因，例如：
 
@@ -4534,7 +4563,7 @@ print(cmp("cmake", "cppcon"));  // "cmake" < "cppcon": true
 
 ---
 
-<!-- PG178 -->
+<!-- PG181 -->
 
 注意仿函数的成员函数 `operator()` 是两个括号：
 
@@ -4549,7 +4578,7 @@ operator()(...)
 
 ---
 
-<!-- PG179 -->
+<!-- PG182 -->
 
 ```cpp
 std::map<K, V, std::less<K>>
@@ -4569,7 +4598,7 @@ map 决定大小顺序的，并不是直接调用 K 类型的比较运算符 `op
 
 ---
 
-<!-- PG180 -->
+<!-- PG183 -->
 
 一个类型要想作为 map 的键，只需要他支持 `<` 运算符即可，不必定义其他 `>`、`==` 运算符。
 
@@ -4581,7 +4610,7 @@ string, string_view, int, float, void *, shared_ptr, pair, tuple, array...
 
 ---
 
-<!-- PG181 -->
+<!-- PG184 -->
 
 如果你写了个自定义类 Student，要让他作为 map 的键类型，有三种方法：
 
@@ -4603,7 +4632,7 @@ map<Student, int> stutab;
 
 ---
 
-<!-- PG182 -->
+<!-- PG185 -->
 
 二、特化 `less<Student>`，添加 `operator()`
 
@@ -4616,10 +4645,6 @@ struct Student {
 
 template <>
 struct std::less<Student> {  // 用户可以特化标准库中的 trait
-    string name;
-    int id;
-    string sex;
-
     bool operator()(Student const &x, Student const &y) const {
         return x.name < y.name || x.id < y.id || x.sex < y.sex;
     }
@@ -4632,7 +4657,7 @@ map<Student, int> stutab;
 
 ---
 
-<!-- PG183 -->
+<!-- PG186 -->
 
 三、重新自定义一个仿函数类 `LessStudent`，添加 `operator()`，然后把这个 `LessStudent` 作为 map 的比较器传入模板
 
@@ -4644,10 +4669,6 @@ struct Student {
 };
 
 struct LessStudent {
-    string name;
-    int id;
-    string sex;
-
     bool operator()(Student const &x, Student const &y) const {
         return x.name < y.name || x.id < y.id || x.sex < y.sex;
     }
@@ -4660,16 +4681,12 @@ map<Student, int, LessStudent> stutab;
 
 ---
 
-<!-- PG184 -->
+<!-- PG187 -->
 
-如果希望 map 在查找时只判断学生姓名，则只需要改一下比较器的实现，让他只比较姓名字段即可。
+如果希望 map 在查找时只根据学生姓名索引，则只需要改一下比较器的实现，让他只比较姓名字段即可。
 
 ```cpp
 struct LessStudent {
-    string name;
-    int id;
-    string sex;
-
     bool operator()(Student const &x, Student const &y) const {
         return x.name < y.name;
     }
@@ -4682,7 +4699,7 @@ struct LessStudent {
 
 ---
 
-<!-- PG185 -->
+<!-- PG188 -->
 
 四（同一）、利用 C++20 新特性，三路比较运算符 `<=>`：如果自定义类的每个成员都支持比较运算符，可以把 `operator<=>` 函数声明为 `default`，然后编译器会自动添加自定义类的所有比较运算符。
 
@@ -4704,7 +4721,7 @@ struct Student {
 
 ---
 
-<!-- PG186 -->
+<!-- PG189 -->
 
 glibc 头文件中的 less 和 greater 实现参考：
 
@@ -4730,7 +4747,7 @@ struct greater : public binary_function<_Tp, _Tp, bool>
 
 ---
 
-<!-- PG187 -->
+<!-- PG190 -->
 
 类似的运算符仿函数还有：
 
@@ -4753,7 +4770,7 @@ struct greater : public binary_function<_Tp, _Tp, bool>
 
 ---
 
-<!-- PG188 -->
+<!-- PG191 -->
 
 案例：使用 greater 仿函数，让 map 反过来从大到小排序：
 
@@ -4770,19 +4787,20 @@ print(m2);
 
 ---
 
-<!-- PG189 -->
+<!-- PG192 -->
 
 C++14 新增了“透明(transparent)”运算符仿函数。
 
-参数为 void 即可让一个运算符仿函数变成“透明”的，例如 `less<void>`。
+参数为 void 即可让一个运算符仿函数变成“透明”的，对于 less 运算符仿函数而言，就是 `less<void>`。
 
-之前“不透明”版的仿函数，必须指定一个具体的类型，例如 `less<int>` 就只能用于 int 类型的比较，`less<string>` 就只能用于 string 类型的比较。无法用 `less<int>` 仿函数比较 string 类型。
+C++14 之前用的都是“不透明”版的仿函数，必须指定一个具体的类型，例如 `less<int>` 就只能用于 int 类型的比较，`less<string>` 就只能用于 string 类型的比较。无法用 `less<int>` 仿函数比较 string 类型。
 
-而 `less<void>` 是通用的，他的 `operator()` 函数可以接受任意类型，并且。
+而 `less<void>` 是通用的，他的 `operator()` 函数是泛型的，可以接受任意类型。
 
 ```cpp
 template <>
-struct less<void> {   // 针对 void 的特化，由于 void 不可能有 < 运算符，所以他们干脆拿这个作为透明版
+struct less<void> {   // 针对 void 的特化
+    // 标准委员会想：由于 void 类型不可能有 < 运算符的需求，所以他们干脆拿 void 作为透明版的模板参数“占位符”了
     template <class Tx, class Ty>
     constexpr decltype(auto) operator()(Tx &&x, Ty &&y) const {
         return forward<Tx>(x) < forward<Ty>(y);
@@ -4792,11 +4810,13 @@ struct less<void> {   // 针对 void 的特化，由于 void 不可能有 < 运�
 };
 ```
 
+> 不透明版的 `less<T>` 泛型体现在类的模板参数上，
+
 ---
 
-<!-- PG190 -->
+<!-- PG193 -->
 
-“透明”版的好处是可以兼容任意类型，而不必创建多个 cmp 对象。
+“透明”版的好处是可以同一个兼容任意类型，而不必创建多个 cmp 对象。而不透明版的好处是方便特化 traits，但毕竟 < 运算符是可以用户自定义(运算符重载)的，没必要用 traits 特化，所以他们逐步发现透明版香了，还能支持左右参数为不同类型。
 
 ```cpp
 less<void> cmp;
@@ -4806,9 +4826,9 @@ print(cmp(string("hello"), "world"));  // "hello" < "world": false
 print(cmp(string("cmake"), "cppcon"));  // "cmake" < "cppcon": true
 ```
 
-> 但也要特别注意不能再依赖参数类型自动的隐式转换了，必须至少写完整其中一个 `string("hello")` 才能触发 `string` 的 `operator<` 而不是 `const char *` 的指针比大小。
+> 但也要特别注意不能再依赖参数类型自动的隐式转换了，必须至少写完整其中一个 `string("hello")` 才能触发 `string` 的 `operator<` 而不是 `const char *` 的指针比大小。如果只写 `cmp("cmake", "cppcon")` 则是在比较指针的地址大小，结果是不一定的。
 
-`less<void>` 还可以简写成 `less<>`。
+由于 C++14 的 less 模板参数 T 默认为 void，所以 `less<void>` 还可以简写成 `less<>`。
 
 ```cpp
 less<> cmp;
@@ -4820,14 +4840,14 @@ print(cmp(string("cmake"), "cppcon"));  // "cmake" < "cppcon": true
 
 ---
 
-<!-- PG191 -->
+<!-- PG194 -->
 
 自定义比较仿函数，实现无视键大小写的 map 容器：
 
 ```cpp
 struct LessIgnoreCase {
     bool operator()(std::string const &lhs, std::string const &rhs) const {
-        return std::lexicographical_compare
+        return std::lexicographical_compare // 位于 <algorithm> 头文件，和 std::string 同款的字典序比较
         ( lhs.begin(), lhs.end()
         , rhs.begin(), rhs.end()
         , [] (char lhs, char rhs) {
@@ -4839,22 +4859,22 @@ int main() {
     map<string, string, LessIgnoreCase> m = {
         {{"Fuck"}, "rust"},
         {{"fUCK"}, "java"},
-        {{"Study"}, "cpp"},
+        {{"STUdy"}, "cpp"},
     };
     print(m);
-    print(m.at("fuck"));
+    print("fuck对应的值为:", m.at("fuck"));
     return 0;
 }
 ```
 
 ```
-{"Fuck": "rust", "Study": "cpp"}
-"rust"
+{"Fuck": "rust", "STUdy": "cpp"}
+fuck对应的值为: "rust"
 ```
 
 ---
 
-<!-- PG192 -->
+<!-- PG195 -->
 
 C++11 的 lambda 表达式也是仿函数：
 
@@ -4879,7 +4899,7 @@ print(val);
 
 ---
 
-<!-- PG193 -->
+<!-- PG196 -->
 
 写的更清晰一点：
 
@@ -4905,7 +4925,7 @@ print(val);
 
 ---
 
-<!-- PG194 -->
+<!-- PG197 -->
 
 刚刚用到的两个 map 构造函数：
 
@@ -4921,9 +4941,9 @@ class map {
 
 ---
 
-<!-- PG195 -->
+<!-- PG198 -->
 
-传入的仿函数 cmp 甚至可以捕获其他变量，这种捕获了变量的仿函数称之为有状态仿函数 - stateful，和无状态仿函数 - stateless 相对：
+传入的仿函数 cmp 甚至可以捕获其他变量，这种捕获了变量的仿函数称之为有状态仿函数 - stateful functor，和无状态仿函数 - stateless functor 相对：
 
 ```cpp
 vector<int> arr = {1, 4, 2, 8, 5, 7};
@@ -4933,13 +4953,15 @@ auto cmp = [&] (int i, int j) {
 map<int, int, decltype(cmp)> m(cmp);
 ```
 
-利用有状态仿函数可以实现 argsort 等操作，例如上面代码根据在 arr 里对应索引的值来排序。
+利用有状态仿函数可以实现 argsort 等操作，例如上面代码就是根据在 arr 里对应索引的值来排序。
 
-> 传入比较器仿函数是设计模式中典型的策略模式，通过依赖注入，允许我们控制 map 内部的行为。
+> 由于 map 需要比较仿函数为纯函数(pure function)，在上面例子中，请保证 map 存在期间 arr 的内容不发生变化，否则 map 基于排序的二分查找功能会得到错误的结果。
+
+传入比较器仿函数是设计模式中典型的策略模式，通过依赖注入，允许我们控制 map 内部的行为。
 
 ---
 
-<!-- PG196 -->
+<!-- PG199 -->
 
 如果嫌 decltype 麻烦（难以在全局或类内部用），function 容器作为比较运算符，就可以统一了：
 
@@ -4964,7 +4986,7 @@ m.value_comp()({1, 0}, {2, 0});  // 等价于 cmp(1, 2)
 
 ---
 
-<!-- PG197 -->
+<!-- PG200 -->
 
 普通 find 函数：键类型作为参数
 
@@ -4992,7 +5014,18 @@ const_iterator find(Kt &&k) const;
 
 ---
 
-<!-- PG198 -->
+<!-- PG201 -->
+
+泛型 find 如何提升性能
+
+```cpp
+map<string, int> table;
+table.find("hello");  // 等价于 table.find(string("hello"))，调用了一次 string 构造函数，可能产生内存分配
+```
+
+---
+
+<!-- PG201 -->
 
 泛型 find 官方案例：
 
@@ -5024,7 +5057,7 @@ Found 2 b
 
 ---
 
-<!-- PG199 -->
+<!-- PG202 -->
 
 允许重复键值的 multimap
 
@@ -5046,7 +5079,7 @@ iterator insert(pair<K, V> &&kv);
 
 ---
 
-<!-- PG200 -->
+<!-- PG203 -->
 
 ```cpp
 multimap<string, string> tab;
@@ -5065,11 +5098,13 @@ print(tab);
 
 ---
 
+<!-- PG204 -->
+
 multimap 通常意义不大，可以用于实现动态排序。
 
 ---
 
-<!-- PG201 -->
+<!-- PG205 -->
 
 multimap 查询某个键对应的多个值
 
@@ -5078,13 +5113,13 @@ multimap 查询某个键对应的多个值
 
 ---
 
-<!-- PG202 -->
+<!-- PG206 -->
 
 时间复杂度总结说明
 
 ---
 
-<!-- PG203 -->
+<!-- PG207 -->
 
 | 函数或写法 | 解释说明 | 时间复杂度 |
 |-|-|-|
@@ -5095,7 +5130,7 @@ multimap 查询某个键对应的多个值
 
 ---
 
-<!-- PG204 -->
+<!-- PG208 -->
 
 | 函数或写法 | 解释说明 | 时间复杂度 |
 |-|-|-|
@@ -5110,7 +5145,7 @@ multimap 查询某个键对应的多个值
 
 ---
 
-<!-- PG205 -->
+<!-- PG209 -->
 
 | 函数或写法 | 解释说明 | 时间复杂度 |
 |-|-|-|
@@ -5126,7 +5161,7 @@ multimap 查询某个键对应的多个值
 
 ---
 
-<!-- PG206 -->
+<!-- PG210 -->
 
 | 函数或写法 | 解释说明 | 时间复杂度 |
 |-|-|-|
@@ -5138,28 +5173,35 @@ multimap 查询某个键对应的多个值
 
 ---
 
+<!-- PG211 -->
+
 C++11 新增：基于哈希的映射表 unordered_map
 
 ---
 
+<!-- PG212 -->
+
 原理：unordered_map 中的桶
 
-unordered_map 如何快速检索数据？高效的秘诀在于 unordered_map 内部是一个数组，一个桶的数组，把键值对存到键的 hash 对应编号的桶去。
+unordered_map 如何快速检索数据？高效的秘诀在于 unordered_map 内部是一个数组，一个桶的数组。插入时把键值对存到键的 hash 对应编号的桶去，查询时就根据 hash 去线性地查找桶（这一操作是 $O(1)$ 的）。
 
-例如键为 "hello"，假设算出他的 hash 为 42。而桶的数量（bucket_count）是 32 个，则会把 "hello" 存到 42 % 32 = 10 号桶去。
+例如键为 "hello"，假设算出他的 hash 为 42。而当前桶的数量是 32 个，则会把 "hello" 存到 42 % 32 = 10 号桶去。查询时，同样计算出 hash("hello") % 32 = 10 号桶，然后就可以从 10 号桶取出 "hello" 对应的数据了。
 
 ```cpp
 template <class K, class V>
 class unordered_map {
-    vector<pair<K, V>> buckets;
+    array<pair<K, V>, 32> buckets;
 
     void insert(pair<K, V> kv) {
-        int h = hash(kv.first) % buckets.size();
+        size_t h = hash(kv.first) % buckets.size();  // 计算出来的 hash 可能很大，取模可以防止 h >= buckets.size()
         buckets[h] = kv;
     }
 
-    size_t bucket_count() const {
-        return buckets.size();
+    V &at(K k) {
+        size_t h = hash(k) % buckets.size();
+        auto &kv = buckets[h];
+        if (k != kv.first) throw out_of_range{};
+        return kv.second;
     }
 };
 ```
@@ -5168,13 +5210,97 @@ class unordered_map {
 
 ---
 
-<!-- PG207 -->
+但是这里有一个问题，如果两个不同的字符串，刚好 hash 以后的模相同怎么办？这种现象称为 hash 冲突。
+
+C++ 标准库的解决方案是采用链表法：一个桶不是单独的一个 K-V 对，而是数个 K-V 对组成的单链表（forward_list）。一个桶不是只存储一个数据，而是可以存储任意多个数据（0到∞个）。
+
+插入时，找到对应的桶，并往链表的头部插入一个新的 K-V 对。查找时，先找到对应的桶，在这个桶里的链表里顺序遍历查找，由于第一步的桶查找是 $O(1)$ 的，虽然最后还是链表暴力查找，但是已经被桶分摊了一个维度，因此查找的平均复杂度还是 $O(1)+$ 的。
+
+```cpp
+    void insert(pair<K, V> kv) {
+        size_t h = hash(kv.first) % buckets.size();  // 计算 hash 的模（所在桶的编号）
+        buckets[h].push_front(kv);                // 单链表的头插，是最高效的
+    }
+
+    V &at(K k) {
+        size_t h = hash(k) % buckets.size();         // 计算 hash 的模（所在桶的编号）
+        for (auto &kv: buckets[h]) {
+            if (k == kv.first)  // 可能有多个不同的键刚好有相同的 hash 模，需要进一步判断键确实相等才能返回
+                return kv.second;
+        }
+        throw out_of_range{};
+    }
+```
+
+---
+
+这里还是有一个问题，hash 冲突时，对链表的暴力遍历查找复杂度是 $O(N)$ 的，随着越来越多的元素被插入进来，32 个桶将会拥挤不堪。假设有 n 个元素，则平均每个桶都会有 n / 32 个元素，需要 n / 32 次遍历。所以元素数量充分大时 unordered_map 又会退化成暴力遍历的 $O(N)$ 复杂度，满足不了我们用他加速查找的目的。
+
+因此 C++ 标准库规定，插入时，当检测到平均每个桶里都有 1 个元素时，也就是元素数量大于桶的数量时，就会发生自动扩容，一次性让桶的数量扩充 2 倍，并重新计算每个元素的 hash 模（桶编号）全部重新插入一遍。
+
+```cpp
+template <class K, class V>
+class unordered_map {
+    vector<forward_list<pair<K, V>>> buckets;  // 因为需要动态扩容，桶数组变成了动态数组 vector
+    size_t size = 0;  // 记录当前容器共有多少个元素
+
+    void insert(pair<K, V> kv) {
+        if (size + 1 > buckets.size()) reserve(n);  // 如果插入后的元素数量大于桶的容量，则扩容
+        size_t h = hash(kv.first) % buckets.size();
+        buckets[h].push_front(kv);
+        size++;     // insert 时 size 自动加 1，erase 时也要记得减 1
+    }
+
+    void reserve(size_t n) {
+        if (n <= buckets.size()) return;  // 如果要求的大小已经满足，不需要扩容
+        buckets.resize(max(n, buckets.size() * 2));  // 把桶数组至少扩大 2 倍（避免重复扩容），至多扩到 n
+        此处省略 rehash 的具体实现  // 桶的数量发生变化了，需要重新计算一遍所有元素 hash 的模，并重新插入
+    }
+};
+```
+
+---
+
+key 所在的桶编号计算公式：bucket_index(key) = hash(key) % bucket_count()
+
+---
+
+还是存在问题，刚刚的 insert 根本没有检测要插入的键是否已经存在了。如果已经存在还插入，那就变成 unordered_multimap 了！我们是普通的需要去重的 unordered_map，所以插入时先需要遍历下链表检测一下。
+
+```cpp
+template <class K, class V>
+class unordered_map {
+    vector<forward_list<pair<K, V>>> buckets;
+    size_t size = 0;
+
+    struct iterator {
+        explicit iterator(pair<K, V> &kv) { /* ... */ }
+        // ...
+    };
+
+    pair<iterator, bool> insert(pair<K, V> kv) {
+        if (size + 1 > buckets.size()) reserve(size + 1);
+        size_t h = hash(kv.first) % buckets.size();
+        for (auto &kv2: buckets[h]) {
+            if (kv.first == kv2.first)  // 检测是否发生了冲突
+                return {iterator(kv2), false};  // 发生冲突则返回指向已存在的键的迭代器
+        }
+        buckets[h].push_front(kv);
+        size++;
+        return {iterator(buckets.front()), true};  // 没发生冲突则返回成功插入元素的迭代器
+    }
+};
+```
+
+---
+
+<!-- PG213 -->
 
 用法上，unordered_map 基本与 map 相同，以下着重介绍他们的不同点。
 
 ---
 
-<!-- PG208 -->
+<!-- PG214 -->
 
 区别 1：有序性
 
@@ -5187,42 +5313,108 @@ map 中的元素始终保持有序，unordered_map 里面的元素是随机的�
 
 ---
 
-<!-- PG209 -->
+unordered_map 所需的 trait 有两个：hash 和 equal_to
 
-区别 2：时间复杂度
+`unordered_map<K, V>` 的完整形态是：
 
-- map 的查询和插入操作是 $O(\log N)$ 复杂度的。
-- unordered_map 的查询和插入操作是 $O(1)+$ 复杂度的。
+```cpp
+unordered_map<K, V, hash<K>, equal_to<K>, allocator<pair<const K, V>>>
+```
 
-看起来 unordered_map 更高效？那还要 map 干什么？完全上位替代啊？
+- 其中 allocator 我们照例先跳过不讲。
 
-- map 的插入操作**最坏**也只是 $O(\log N)$ 复杂度的。
-- unordered_map 的插入操作**最坏**可以是 $O(N)$ 复杂度的。
+- hash 是用于求键的哈希的仿函数类。他接受一个 K 返回一个 size_t（无符号 64 位整数）。
 
-处理很高的数据量时，这一点最坏的情况会被平摊掉，unordered_map 更高效。
+- equal_to 是用于判断两个键相等的仿函数类。要求是，如果两个键相等，返回 true。
 
-但 unordered_map 不稳定，虽然平均是 $O(1)$ 复杂度，但最坏可以达到 $O(N)$ 复杂度。
+这里对 hash 的实现有一个要求，**如果两个键相等，则他们的哈希必定也相等，反之则不一定**。
 
-这是因为 unordered_map 如果不扩容，那么当很多元素挤在一个桶里，会很低效。但是在扩容的时候是需要进行 rehash 操作的。一次扩容，就需要把所有的元素都移动一遍。
+这个假设构成了 unordered_map 得以高效的基石，他使得 unordered_map 可以更快排除不可能的答案，而不必像 vector 的查找那样需要去暴力遍历全部元素，只需要遍历哈希相等的那一部分元素就够了。
 
-结果就是 unordered_map 的插入如果没触发 rehash，那就是 $O(1)$ 的。如果触发了，那就是最坏的情况，$O(N)$ 的。但是不触发的情况远多于触发了的，所以平均下来还是 $O(1)$，为了提醒人们他最坏的情况，所以写作 $O(1)+$，读作“平摊 O1”（Amortized Constant）。
-
-此外，不仅 unordered_map 的插入函数是 $O(1)+$，他的查询函数也是 $O(1)+$。例如如果你在编写富连网服务器，用户如果已知你的 hash 函数，那他就可以输入恶意的 key，导致所有 key 全部在一个桶里，导致 unordered_map 退化成了一个线性的链表，复杂度达到最坏的 $O(N)$，这一现象叫做 hash 退化。因此 hash 函数的好坏决定着 unordered_map 性能，如果 hash 函数足够随机，就能保证键不冲突，就很快，一旦出现键冲突就会变慢。但需要频繁使用的 hash 函数计算难度又不能太大，那又会影响性能。
-
-标准库里存在平摊复杂度的例子还有很多，例如 vector 的 push_back 不 reserve 的话，就是 $O(1)+$ 的，因为有扩容的情况存在，虽然平均下来确实可以忽略不计，但他特定一次内确实有可能达到。
+```cpp
+template<typename _Key, typename _Tp,
+   typename _Hash = hash<_Key>,      // 默认的哈希函数实现，支持了 int, void *, string 等类型
+   typename _Pred = equal_to<_Key>,  // 默认的 == 运算符
+   typename _Alloc = allocator<pair<const _Key, _Tp>>>
+class unordered_map
+```
 
 ---
 
+hash 返回的 size_t 这个整数可以理解为一个对任意类型的“摘要”。
+
+这种摘要的关键在于如何把一个复杂的类型“映射”到小小的 size_t 上去，并且分布得尽可能均匀，不要冲突。
+
+以字符串类型 string 为例，常见的一种生成“摘要”的方法是，用一个素数的乘方序列和各字符的 ASCII 码点积：
+
+```cpp
+size_t hash_string(string const &s) {
+    size_t h = 0;
+    for (char c: s) {
+        h = h * 37 + c;
+    }
+    return h;
+}
+```
+
+例如对于字符串 "hello"，则 hash 可以生成这样一个摘要：
+
+```cpp
+size_t h = ((('h' * 37 + 'e') * 37 + 'l') * 37 + 'l') * 37 + 'o';
+```
+
+相当于 $h \cdot 37^4 + e \cdot 37^3 + l \cdot 37^2 + l \cdot 37 + o$
+
+> 也有其他更高效的生成摘要的方法，例如借助位运算。甚至还有偷懒直接拿 strlen 当哈希函数的“世界上最好的哈希表”，我不说是谁。
+
+---
+
+```cpp
+size_t h = ((('h' * 37 + 'e') * 37 + 'l') * 37 + 'l') * 37 + 'o';
+```
+
+随着字符串长度的增加，这个 h 肯定会超过 size_t 的表示范围，但是没关系，无符号整数的乘法、加法溢出不是未定义行为，他会自动 wrapping，也就是只保留乘法结果和 2^64 取模的部分。
+
+取模也是对哈希值常见的一个操作，反正哈希值是随机的，取模以后也是随机的，但是缩小了范围。
+
+> 基本假设：m 足够小时，一个均匀的分布取以 m 的模以后仍然应该是均匀的
+
+unordered_map 中桶的数量是有限的，为了把范围从 $0$ 到 $2^{64} - 1$ 的哈希值映射为 0 到 bucket_count - 1 的桶序号，他内部会把键的哈希值取以桶数量的模，作为一个键要存储到的桶的序号：
+
+```
+bucket_index = hash(key) % bucket_count
+```
+
+---
+
+<!-- PG216 -->
+
 std::hash 就是标准库用于计算哈希的仿函数类了，他和 std::less 一样，是一个 trait 类。
+
+一些常见的类型有默认的实现，也可以针对自定义类型添加特化。
 
 ```cpp
 template <class T>
 struct hash {
-    size_t operator()(T const &t) const noexcept {
-        return 114514; // 在这里求 t 的哈希
+    size_t operator()(T const &t) const noexcept;  // 有待实现
+};
+
+template <>
+struct hash<int> {
+    size_t operator()(int t) const noexcept {
+        return t;  // 对 int 的特化
+    }
+};
+
+template <class T>
+struct hash<T *> {
+    size_t operator()(T *t) const noexcept {
+        return reinterpret_cast<uintptr_t>(t);  // 对 T * 的偏特化
     }
 };
 ```
+
+---
 
 std::hash 针对每个不同的类型做了特化，例如当我们需要计算 string 类型的 hash 时：
 
@@ -5232,11 +5424,7 @@ size_t h = hash<string>()(str);
 print(str, "的哈希是", h);
 ```
 
-注意：这里有两个括号，第一个是空的。第一个括号创建仿函数对象，第二个用str作为实参调用仿函数的 `operator()`。
-
-当然还有第一个尖括号，这个括号表示的是 hash 仿函数接下来要接受参数的类型，之所以作为类的模板参数而不是模板函数，是为了方便特化和偏特化。
-
-同学们也可以自己写一个这样的函数，用起来就不用指定类型（如这里的 string）了，让模板函数自动推导参数类型（类似于 make_pair 的思想）：
+注意：这里有两个括号，第一个是空的。第一个括号创建仿函数对象，第二个用str作为实参调用仿函数的 `operator()`。当然还别忘了第一个尖括号，这个尖括号里的 string 表示的是 hash 仿函数接下来要接受参数的类型，之所以作为类的模板参数而不是模板函数，是为了方便特化和偏特化。同学们也可以自己写一个这样的函数，用起来就不用指定类型（如这里的 string）了，让模板函数自动推导参数类型（类似于 make_pair）：
 
 ```cpp
 template <class T>
@@ -5254,30 +5442,85 @@ int main() {
 "Hello, world" 的哈希是 14701251851404232991
 ```
 
-对任意类型哈希的结果都是一个 size_t，其在 32 位系统上等同于 uint32_t，在我们 64 为系统上等同于 uint64_t。选择 size_t 是为了能哈希了以后直接用于 unordered_map 中桶的索引。
-
 ---
 
-std::hash 的实现
+对任意类型哈希的结果都是一个 size_t，其在 32 位系统上等同于 uint32_t，在我们 64 为系统上等同于 uint64_t。选择 size_t 是为了能哈希了以后直接用于 unordered_map 中桶的索引。
 
+由于 hash 是用作哈希表的哈希函数，而不是用于加密领域（请你移步 md5），或是用于随机数生成（请移步 mt19937），因此对于任意类型，只需要根据他生成一个 size_t 的哈希值即可，只要保证哈希值分布均匀即可，不一定要有随机性。例如标准库对 int 的 hash 实现就是个恒等函数——直接返回其整数值，不用做任何计算：
 
 ```cpp
-  template<typename _Tp>
-    struct hash<_Tp*> : public __hash_base<size_t, _Tp*>
-    {
-      size_t
-      operator()(_Tp* __p) const noexcept
-      { return reinterpret_cast<size_t>(__p); }
-    };
+template <>
+struct hash<int> {
+    size_t operator()(int t) const noexcept {
+        return t;  // 对 int 的特化真是什么也不做呢？
+    }
+};
+```
+
+而对于任意指针的实现则是直接把指针 bit-cast 成 size_t：
+
+```cpp
+template <class T>
+struct hash<T *> {
+    size_t operator()(T *t) const noexcept {
+        return reinterpret_cast<uintptr_t>(t);  // 指针强制转换为整数
+    }
+};
 ```
 
 ---
+
+```cpp
+int i = 42;
+int j = hash<int>()(i);  // 没想到罢！我系恒等函数哒
+print(i, j);
+```
+
+```
+42 42
+```
+
+记住，std::hash 不是为了加密或随机而生的，他的功能仅仅是尽可能快速地把任意类型 T 映射到 size_t 而已。
+
+至于这对 unordered_map 的性能有何影响？通常没有什么影响，除非输入键故意设为和 bucket_count 同模，毕竟反正你也无法断定输入键的排布模式，不论选什么哈希函数只要保证均匀都是可以的。而恒等函数刚好是均匀的，又不用额外的花里胡哨位运算浪费时间，反而可能因为键有序而提升了缓存局域性，提升了性能，所以各大厂商的标准库都是这么做的。
+
+---
+
+<!-- PG215 -->
+
+区别 2：时间复杂度
+
+- map 的查询和插入操作是 $O(\log N)$ 复杂度的。
+- unordered_map 的查询和插入操作是 $O(1)+$ 复杂度的。
+
+看起来 unordered_map 更高效？那还要 map 干什么？完全上位替代啊？
+
+- map 的插入操作**最坏**也只是 $O(\log N)$ 复杂度的。
+- unordered_map 的插入操作**最坏**可以是 $O(N)$ 复杂度的。
+
+处理很高的数据量时，这一点最坏的情况会被平摊掉，unordered_map 更高效。
+
+---
+
+但 unordered_map 不稳定，虽然平均是 $O(1)$ 复杂度，但最坏可以达到 $O(N)$ 复杂度。
+
+这是因为 unordered_map 如果不扩容，那么当很多元素挤在一个桶里，会很低效。但是在扩容的时候是需要进行 rehash 操作的。一次扩容，就需要把所有的元素都移动一遍。
+
+结果就是 unordered_map 的插入如果没触发 rehash，那就是 $O(1)$ 的。如果触发了，那就是最坏的情况，$O(N)$ 的。但是不触发的情况远多于触发了的，所以平均下来还是 $O(1)$，为了提醒人们他最坏的情况，所以写作 $O(1)+$，读作“平摊 O1”（Amortized Constant）。
+
+此外，不仅 unordered_map 的插入函数是 $O(1)+$，他的查询函数也是 $O(1)+$。例如如果你在编写富连网服务器，用户如果已知你的 hash 函数，那他就可以输入恶意的 key，导致所有 key 全部在一个桶里，导致 unordered_map 退化成了一个线性的链表，复杂度达到最坏的 $O(N)$，这一现象叫做 hash 退化。因此 hash 函数的好坏决定着 unordered_map 性能，如果 hash 函数足够随机，就能保证键不冲突，就很快，一旦出现键冲突就会变慢。但需要频繁使用的 hash 函数计算难度又不能太大，那又会影响性能。
+
+标准库里存在平摊复杂度的例子还有很多，例如 vector 的 push_back 不 reserve 的话，就是 $O(1)+$ 的，因为有扩容的情况存在，虽然平均下来确实可以忽略不计，但他特定一次内确实有可能达到。
+
+---
+
+<!-- PG218 -->
 
 一些实时性要求很高的领域不能用 unordered_map，例如你造了个火箭，他需要在 1000 μs 内对外界变化做出实时反应，如果不能及时做出反应火箭就会做托马斯回旋给你看。
 
 你用了 unordered_map，第一次他在 180 μs 内反应了，第二次在 250 μs 内反应了，第三次 245 μs 内反应了，你觉得他很高效。
 
-但是突然有一次，unordered_map 觉得他内部“桶太乱”了，需要重新扩容并 rehash 一下“忧化性能”。然后，他把所有的元素都移动了一遍，移动完了，把处理完的数据返回给火箭姿态调控系统，他睁开眼睛一看，却发现自己在做托马斯回旋。原来我这一“忧化”就忧了 4000 μs，超出了火箭实时响应的硬性指标，导致骰子人捐款跑路，小彭老师破产。
+但是突然有一次，unordered_map 觉得他内部“桶太乱”了，需要重新扩容并 rehash 一下“忧化性能”。然后，他把所有的元素都移动了一遍，移动完了，把处理完的数据返回给火箭姿态调控系统，认为大功告成。但当他睁开眼睛一看，却发现自己已经在做托马斯回旋了。原来我这一“忧化”就忧了 4000 μs，超出了火箭实时响应的硬性指标，导致西装骰子人卷款跑路，小彭老师破产。
 
 小彭老师重新创业，这次他选用了稳定的 map，第一次他在 810 μs 内反应了，第二次在 680 μs 内反应了，第三次 730 μs 内反应了，你觉得他很低效。但是他每一次都能成功卡点给你完成任务，从来不会突然超过 $O(\log N)$，他的最坏情况是可控的，从而避免了托马斯破产回旋。小彭老师最终创业成功，1000 年后，我司成功建造完成 Type-II 文明所急需的戴森球，向星辰大海进军。
 
@@ -5287,7 +5530,7 @@ std::hash 的实现
 
 ---
 
-<!-- PG210 -->
+<!-- PG219 -->
 
 区别 3：迭代器失效条件
 
@@ -5302,13 +5545,21 @@ unordered_map 在 insert 时如果发生扩容，之前保存的迭代器可能�
 
 ---
 
+<!-- PG220 -->
+
 小彭老师编写好了迭代器失效表，方便你记忆:
 
-| 容器 | clear | swap | shrink_to_fit | rehash |
+| 容器 | clear | swap | opeartor= | rehash |
 |-|-|-|-|-|
-| vector | 是 | 否 | 是，如果 capacity > size | - |
-| map | 是 | 否 | - | - |
-| unordered_map | 是 | 否 | - | 是 |
+| vector | 是 | 否 | 是 | - |
+| map | 是 | 否 | 是 | - | - |
+| unordered_map | 是 | 否 | 是 | - | 是 |
+
+---
+
+<!-- PG220 -->
+
+小彭老师编写好了迭代器失效表，方便你记忆:
 
 | 容器 | find | count | at | [] |
 |-|-|-|-|-|
@@ -5318,61 +5569,54 @@ unordered_map 在 insert 时如果发生扩容，之前保存的迭代器可能�
 
 ---
 
+<!-- PG221 -->
+
 小彭老师编写好了迭代器失效表，方便你记忆:
 
 | 容器 | push_back | insert | erase | reserve |
 |-|-|-|-|-|
-| vector | 是，如果 size > capacity | 是，如果插入位置在当前迭代器之前，或 size > capacity | 是，如果删除的元素在当前迭代器之前，或刚好是当前迭代器指向的 | 是，如果 reserve 的参数 > capacity |
+| vector | 是，如果 size > capacity | 是，如果插入位置在当前迭代器之前，或 size > capacity | 是，如果删除的元素在当前迭代器之前，或刚好是当前迭代器指向的 | 是 |
 | map | - | 否 | 是，如果删除的刚好是当前迭代器指向的元素 | - |
-| unordered_map | - | 是，如果 size / bucket_count > max_load_factor | 是，如果删除的刚好是当前迭代器指向的元素 | 是，如果 reserve 的参数 > bucket_count |
+| unordered_map | - | 是，如果 size / bucket_count > max_load_factor | 是，如果删除的刚好是当前迭代器指向的元素 | 是 |
 
 ---
+
+<!-- PG222 -->
 
 计算公式：负载因子(load_factor) = 当前元素数量(size) ÷ 当前桶的数量(bucket_count)
 
-当负载因子大于最大负载因子（默认 1.0）时，就会自动进行 rehash 操作。
+插入新元素后，当检测到负载因子大于最大负载因子（默认 1.0）时，就会自动进行 rehash 操作。
 
-> 最大负载因子可以通过 max_load_factor 函数调整。
+为了避免重复小规模扩容浪费时间，这次 rehash 会一次性扩容两倍（跟 vector 的 push_back 扩容类似）。
+
+> 最大负载因子可以通过 max_load_factor 函数调整。当前负载因子可以通过 load_factor 函数查询。
 
 直观理解：当每个桶平均都有一个元素时，unordered_map 就会认为已经很满了，就会扩容并重新分配位置。
 
-```cpp
-```
+> 由于默认最大负载因子是 1.0，所以扩容条件等价于 size > bucket_count
 
 ---
+
+<!-- PG223 -->
 
 rehash 函数
 
 在操作 unordered_map 容器过程（尤其是向容器中添加新键值对）中，一旦当前容器的负载因子超过最大负载因子（默认值为 1.0），该容器就会适当增加桶的数量（通常是翻一倍），并自动执行 rehash() 成员方法，重新调整各个键值对的存储位置（此过程又称“重哈希”），此过程很可能导致之前创建的迭代器失效。[^1]
 
-> 除了扩容时的自动 rehash，确认数据插入完毕不会再改动时，我们也可以手动调用 rehash() 函数来优化 unordered_map 中元素的排布，提升性能。
+> 除了扩容时自动的 rehash，确认数据插入完毕不会再改动时，我们也可以手动调用 rehash() 函数来优化容器中元素的排布，提升性能。
 
 ```cpp
-#include <iostream>
-#include <unordered_map>
-using namespace std;
-int main()
-{
-    //创建 umap 容器
-    unordered_map<int, int> umap;
-    //向 umap 容器添加 50 个键值对
-    for (int i = 1; i <= 50; i++) {
-        umap.emplace(i, i);
-    }
-    //获取键为 49 的键值对所在的区间，由于不是 multimap，区间大小只能为 0 或 1
-    auto pair = umap.equal_range(49);
-    //输出 pair 范围内的每个键值对的键的值
-    for (auto iter = pair.first; iter != pair.second; ++iter) {
-        cout << iter->first << " ";
-    }
-    cout << endl;
-    //手动调用 rehash() 函数重哈希
-    umap.rehash(10);
-    //重哈希之后，pair 的范围可能会发生变化
-    for (auto iter = pair.first; iter != pair.second; ++iter) {
-        cout << iter->first << " ";
-    }
-    return 0;
+unordered_map<int, int> umap;
+for (int i = 1; i <= 50; i++) {
+    umap.emplace(i, i);
+}
+auto pair = umap.equal_range(49);  //获取键为 49 的键值对所在的区间，由于不是 multimap，区间大小只能为 0 或 1
+for (auto iter = pair.first; iter != pair.second; ++iter) { //输出 pair 范围内的每个键值对的键的值
+    cout << iter->first << '\n';
+}
+umap.rehash(10); //手动调用 rehash() 函数重哈希为 10 个桶
+for (auto iter = pair.first; iter != pair.second; ++iter) { // 重哈希之后，之前保存的迭代器可能会发生变化
+    cout << iter->first << '\n';
 }
 ```
 
@@ -5385,38 +5629,291 @@ Segmentation fault (core dumped)
 
 ---
 
-<!-- PG211 -->
+<!-- PG224 -->
+
+基于红黑树的映射表 map 只需支持比较运算的 less 即可，而 unordered_map 需要哈希和相等两个 trait，他们分别名叫 std::hash 和 std::equal_to。
+
+虽然两者都是仿函数，但也有很多区别：
+
+1. hash 只接受一个参数，而 equal_to 接受两个参数。
+2. hash 返回 size_t，而 equal_to 返回 bool 类型。
+3. equal_to 有默认的实现，那就是调用运算符 ==。而 hash 没有默认实现，也没相应的运算符，只能手动特化。
+
+正因为如此，通常我们需要让一个类（例如 Student）支持 equal_to 或 less 这些有相应运算符的仿函数时，直接在类型内部定义 `operator==` 或 `operator<` 即可，而 hash 则是只能用特化的方法才能支持上。
 
 ```cpp
-```
+template <class T>
+struct hash {
+    size_t operator()(T const &t) const noexcept;  // 有待实现
+};
 
-区别于基于红黑树的映射表 map
+template <class T>
+struct equal_to {
+    bool operator()(T const &x, T const &y) const noexcept {
+        return x == y;
+    }
+};
+```
 
 ---
 
-<!-- PG212 -->
+有些类型能用作 map 的键，但不能用作 unordered_map 的键，这是因为偷懒的标准库没对他们的 hash 特化。
+
+例如 tuple 支持 < 运算符，支持 less。
+
+但是 tuple 没有 hash 的特化，不支持 hash。
+
+```cpp
+tuple<int, int> tup;
+size_t h = hash<tuple<int, int>>()(tup);  // 编译期报错：查无此函数！
+```
+
+```cpp
+unordered_map<tuple<int, int>>
+```
+
+---
+
+<!-- PG225 -->
 
 给 tuple 等复合类型自定义哈希函数
 
 ---
 
-<!-- PG213 -->
+和 less 的情形一样，也是有三种解决方案：
+
+1. 自定义一个 hash 的特化，equal_to 的特化
+
+```cpp
+template <>
+struct std::hash<Student> {
+    bool operator()(Student const &x) const {
+        return hash<string>()(x.name) ^ hash<int>(x.id) ^ hash<int>(x.sex);
+    }
+};
+
+template <>
+struct std::equal_to<Student> {
+    bool operator()(Student const &x, Student const &y) const {
+        return x.name == y.name && x.id == y.id && x.sex == y.sex;
+    }
+};
+
+unordered_map<Student, int> stutab;
+```
+
+---
+
+2. 自定义一个 hash 的仿函数类，一个 equal_to 的仿函数类，然后传入 unordered_map 做模板参数
+
+```cpp
+template <>
+struct HashStudent {
+    bool operator()(Student const &x) const {
+        return hash<string>()(x.name) ^ hash<int>(x.id) ^ hash<int>(x.sex);
+    }
+};
+
+struct EqualStudent {
+    bool operator()(Student const &x, Student const &y) const {
+        return x.name == y.name && x.id == y.id && x.sex == y.sex;
+    }
+};
+
+unordered_map<Student, int, HashStudent, EqualStudent> stutab;
+```
+
+> 注：如果 Student 已经定义了 `operator==`，则这里不用 EqualStudent，默认的 equal_to 会自动调用 == 运算符的。
+
+---
+
+3. 对于 tuple 而言，tuple 已经有了 == 运算符，不用特化 equal_to 了，只需要特化或指定 hash 即可
+
+```cpp
+template <class ...Ts>
+inline size_t hash_combine(Ts const &...ts) {
+    return (std::hash<Ts>()(ts) ^ ...);
+}
+
+template <class ...Ts>
+struct std::hash<std::tuple<Ts...>> {
+    size_t operator()(std::tuple<Ts...> const &x) const {
+        return std::apply(hash_combine<Ts...>, x);
+    }
+};
+
+unordered_map<tuple<string, int, int>, int> stutab;
+```
+
+---
+
+试试看效果吧！
+
+```cpp
+template <class ...Ts>
+inline size_t hash_combine(Ts const &...ts) {
+    return (std::hash<Ts>()(ts) ^ ...); // 把任意多个元素哈希通过“位异或(^)”拼凑成一个单独的哈希
+}
+
+template <class ...Ts>
+struct std::hash<std::tuple<Ts...>> {
+    size_t operator()(std::tuple<Ts...> const &x) const {
+        // std::apply 会把 tuple 里的元素全部展开来调用 hash_combine，相当于 Python 里的 *args
+        return std::apply(hash_combine<Ts...>, x);
+    }
+};
+
+int main() {
+    tuple<int, int> t(42, 64);
+    size_t h = hash<tuple<int, int>>()(t);
+    print(t, "的哈希值是:", h);
+    return 0;
+}
+```
+
+```
+{42, 64} 的哈希值是: 106
+```
+
+这里的计算是：42 ^ 64 = 106，位异或的知识可以去 Bing 搜索一下，或者问一下 GPT，CS 学生应该都知道的。
+
+---
+
+但是简简单单用一个位异或 ^ 来把两个成员的哈希组合起来，有个严重的问题，如果 `tuple<int, int>` 里的两个成员值刚好一样，则其两个哈希值也会一样，那么他们通过位异或 ^ 合并的结果就会始终为 0。
+
+例如不论 (42, 42) 还是 (64, 64) 这两个 tuple，他们的哈希值都会为 0。明明具体值不同哈希值却相同，这就是发生了哈希冲突，这会严重影响 unordered_map 的性能，是必须避免的。
+
+用 + 来组合也有这个问题，如果第一个成员刚好是另一个的相反数，或只要是两个数加起来和相等，就会冲突。
+
+例如如果我们用 unordered_map 构建一张地图的话，就发现当玩家在往斜上方移动时就会变得特别卡顿，原来是因为玩家的历史轨迹刚好是一条 y = x 的曲线，斜率为 1，由于我们采用 ^ 来组合哈希，就导致刚好这条线上所有的点都会塌缩到 0 号桶去，让 unordered_map 退化成了 $O(N)$ 复杂度。
+
+---
+
+最先进的是 boost::hash_combine 的方法
+
+```cpp
+template <class ...Ts>
+inline size_t hash_combine(Ts const &...ts) {
+    size_t h = 0;
+    ((h ^= std::hash<Ts>()(ts) + 0x9e3779b9 + (h << 6) + (h >> 2)), ...);
+    return h;
+}
+
+template <class ...Ts>
+struct std::hash<std::tuple<Ts...>> {
+    size_t operator()(std::tuple<Ts...> const &x) const {
+        return std::apply(hash_combine<Ts...>, x);
+    }
+};
+
+int main() {
+    tuple<int, int> t(42, 64);
+    size_t h = hash<tuple<int, int>>()(t);
+    print(t, "的哈希值是:", h);
+    return 0;
+}
+```
+
+```
+{42, 64} 的哈希值是: 175247763666
+```
+
+可以看到随机性大大提升了。
+
+---
+
+用 hash_combine 改进刚刚 Student 的哈希函数。
+
+```cpp
+template <>
+struct std::hash<Student> {
+    bool operator()(Student const &x) const {
+        return hash_combine(hash<string>()(x.name), hash<int>(x.id), hash<int>(x.sex));
+    }
+};
+```
+
+---
+
+同理可得 array 的特化
+
+```cpp
+template <class T, size_t N>
+struct std::hash<std::array<T, N>> {
+    size_t operator()(std::array<T, N> const &x) const {
+        std::hash<T> hasher;
+        size_t h = 0;
+        for (T const &t: x) {
+            h ^= hasher(t);
+        }
+        return h;
+    }
+};
+
+unordered_map<array<string, 3>, int> stutab;
+```
+
+---
+
+采用素数乘方法来提升哈希函数的均匀性和随机性：
+
+```cpp
+template <class T, size_t N>
+struct std::hash<std::array<T, N>> {
+    size_t operator()(std::array<T, N> const &x) const {
+        std::hash<T> hasher;
+        size_t h = 0;
+        for (T const &t: x) {
+            h = h * 18412483 + hasher(t);
+        }
+        return h;
+    }
+};
+
+unordered_map<array<string, 3>, int> stutab;
+```
+
+---
+
+采用最高级的，基于位运算的，最高效的，boost::hash_combine 的实现：
+
+```cpp
+template <class T, size_t N>
+struct std::hash<std::array<T, N>> {
+    size_t operator()(std::array<T, N> const &x) const {
+        std::hash<T> hasher;
+        size_t h = 0;
+        for (T const &t: x) {
+            h ^= hasher(t) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        }
+        return h;
+    }
+};
+
+unordered_map<array<string, 3>, int> stutab;
+```
+
+---
+
+<!-- PG226 -->
 
 map 和 function 结合使用
 
 ---
 
+<!-- PG227 -->
+
 map 和 variant 结合使用
 
 ---
 
-<!-- PG214 -->
+<!-- PG228 -->
 
 map 和 string_view 结合使用加速查找案例
 
 ---
 
-<!-- PG215 -->
+<!-- PG229 -->
 
 案例：全局句柄表实现仿 C 语言 API
 
@@ -5430,17 +5927,19 @@ map 和 string_view 结合使用加速查找案例
 
 ---
 
-<!-- PG216 -->
+<!-- PG230 -->
 
 案例：全局注册表实现动态反射
 
 ---
 
-<!-- PG217 -->
+<!-- PG231 -->
 
 案例：带缓存的编译函数
 
 ---
+
+<!-- PG232 -->
 
 问题：多线程安全
 
@@ -5448,10 +5947,11 @@ map 和 string_view 结合使用加速查找案例
 
 ---
 
-<!-- PG218 -->
+<!-- PG233 -->
 
 本期孝点总结：
 
+- 有手之前，非常好用
 - 面包、答辩 vs 保鲜盒、马桶
 - 老鼠💩的处理方案
 - 《好友清除计划》
