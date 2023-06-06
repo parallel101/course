@@ -14,5 +14,6 @@ int main() {
     string_view key = "hello";
     bool res = std::equal_to<>()(key, entry.first);
     table.find(key);
+    string s = "";
     return 0;
 }

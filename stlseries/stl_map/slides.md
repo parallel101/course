@@ -999,7 +999,7 @@ map<string, Student> stus = {
 
 ```cpp
 void PeiXunCpp(string stuName) {
-    auto stu = stus.at(stuName);  // 在栈上拷贝了一份完整的 Student 对象
+    auto stu = stus.at(stuName);  // 这是在栈上拷贝了一份完整的 Student 对象
     stu.money -= 2650;
     stu.skills.insert("C++");
 }
@@ -1007,11 +1007,9 @@ void PeiXunCpp(string stuName) {
 
 然而，这样写是不对的！
 
-`stus.at(stuName)` 返回的是一个引用 `Student &`，但是等号左侧，却不是个引用，而是普通变量。
+`stus.at(stuName)` 返回的是一个引用 `Student &` 指向 map 中的学生对象。但是等号左侧，却是个不带任何修饰的 `auto`，他会被推导为 `Student`。如何从一个引用 `Student &` 转换为具体的 `Student`？找不到 `Student(Student &)`，但是找到了最接近的 `Student(Student const &)` 函数（这是编译器自动生成的拷贝构造函数），因此我们拷贝了一份 map 中的学生对象，到栈上的 stu 变量，之后不论如何修改，修改的都是这个栈上对象，而不会对 map 中的学生对象产生任何影响。
 
-那么这时会调用 Student 的拷贝构造函数，`Student(Student const &)`，来初始化变量 stu。
-
-结论：把引用保存到普通变量中，则引用会退化，造成深拷贝！stu 和 stus.at(stuName) 的已经是两个不同的 Student 对象，对 stu 的修改不会影响到 stus.at(stuName) 指向的那个 Student 对象了。
+结论：把引用保存到普通变量中，则引用会退化，造成深拷贝！不仅影响性能，还影响功能！stu 已经是一个独立的 Student 对象，对 stu 的修改已经不会影响到 stus.at(stuName) 指向的那个 Student 对象了。
 
 
 此时你对这个普通变量的所有修改，都不会同步到 map 中的那个 Student 中去！
