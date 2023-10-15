@@ -102,22 +102,13 @@ void ScopeProfiler::printLog(std::ostream &out) {
     }
 }
 
-#if defined(__GUNC__) || defined(__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define DefScopeProfiler ScopeProfiler _scopeProfiler(__PRETTY_FUNCTION__);
 #elif defined(_MSC_VER)
 #define DefScopeProfiler ScopeProfiler _scopeProfiler(__FUNCSIG__);
 #else
 #define DefScopeProfiler ScopeProfiler _scopeProfiler(__func__);
 #endif
-
-template <class T>
-static
-#if defined(__GUNC__) || defined(__clang__)
-__attribute__((noinline))
-#elif defined(_MSC_VER)
-__declspec(noinline)
-#endif
-void doNotOptimize(T volatile const &t) {}
 
 static void printScopeProfiler(std::ostream &out = std::cout) {
     ScopeProfiler::printLog(out);
