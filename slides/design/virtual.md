@@ -1,6 +1,6 @@
 # 让虚函数再次伟大！
 
-许多设计模式都与虚函数息息相关，今天我们来学习一些主要的。
+许多设计模式都与虚函数息息相关，今天我们来学习一些常用的。
 
 - 策略模式
 - 迭代器模式
@@ -251,8 +251,9 @@ SumReducer 和 ProductReducer 无需任何修改，体现了**开闭原则**。
 
 ```cpp
 int reduce(Reducer *reducer) {
-    int tmp = reducer.init();
+    int res = reducer.init();
     while (true) {
+        int tmp;
         cin >> tmp;
         if (tmp == -1) break;
         res = reducer.add(res, tmp);
@@ -267,8 +268,9 @@ int reduce(Reducer *reducer) {
 
 ```cpp
 int cin_reduce(Reducer *reducer) {
-    int tmp = reducer.init();
+    int res = reducer.init();
     while (true) {
+        int tmp;
         cin >> tmp;
         if (tmp == -1) break;
         res = reducer.add(res, tmp);
@@ -440,8 +442,8 @@ struct StopInputerAdapter : Inputer {
 
 ```cpp
 reduce(new StopInputerAdapter(new CinInputer(), -1), new SumReducer());      // 从 cin 读到 -1 为止
-reduce(new StopInputerAdapter(new VeectorInputer(v), -1), new SumReducer());  // 从 vector 读到 -1 为止
-reduce(new VeectorInputer(), new SumReducer());  // 从 vector 读，但无需截断
+reduce(new StopInputerAdapter(new VectorInputer(v), -1), new SumReducer());  // 从 vector 读到 -1 为止
+reduce(new VectorInputer(), new SumReducer());  // 从 vector 读，但无需截断
 ```
 
 这就是**适配器模式**：将一个类的接口添油加醋，转换成客户希望的另一个接口。
@@ -465,9 +467,10 @@ struct FilterInputerAdapter {
     optional<int> fetch() override {
         while (true) {
             auto tmp = inputer.fetch();
-            if (tmp.has_value()) {
-                if (tmp < 0)
-                    return nullopt;
+            if (!tmp.has_value()) {
+                return nullopt;
+            }
+            if (tmp >= 0) {
                 return tmp;
             }
         }
@@ -475,34 +478,34 @@ struct FilterInputerAdapter {
 };
 ```
 
-改进：Filter 的条件不应为写死的 `tmp < 0`，而应该是传入一个 FilterStrategy，允许用户扩展。
+改进：Filter 的条件不应为写死的 `tmp >= 0`，而应该是传入一个 FilterStrategy，允许用户扩展。
 
 ```cpp
 struct FilterStrategy {
     virtual bool shouldDrop(int value) = 0;  // 返回 true 表示该值应该被丢弃
 };
 
-struct FilterStrategyAbove { // 大于一定值（threshold）才能通过
+struct FilterStrategyAbove : FilterStrategy { // 大于一定值（threshold）才能通过
     int threshold;
 
     FilterStrategyAbove(int threshold) : threshold(threshold) {}
 
-    virtual bool shouldPass(int value) {
+    bool shouldPass(int value) override {
         return value > threshold;
     }
 };
 
-struct FilterStrategyBelow { // 小于一定值（threshold）才能通过
+struct FilterStrategyBelow : FilterStrategy { // 小于一定值（threshold）才能通过
     int threshold;
 
     FilterStrategyBelow(int threshold) : threshold(threshold) {}
 
-    virtual bool shouldPass(int value) {
+    bool shouldPass(int value) override {
         return value < threshold;
     }
 };
 
-struct FilterInputerAdapter {
+struct FilterInputerAdapter : Inputer {
     Inputer *inputer;
     FilterStrategy *strategy;
 
@@ -513,9 +516,10 @@ struct FilterInputerAdapter {
     optional<int> fetch() override {
         while (true) {
             auto tmp = inputer.fetch();
-            if (tmp.has_value()) {
-                if (!strategy->shouldPass(tmp))
-                    return nullopt;
+            if (!tmp.has_value()) {
+                return nullopt;
+            }
+            if (strategy->shouldPass(tmp)) {
                 return tmp;
             }
         }
@@ -526,7 +530,7 @@ struct FilterInputerAdapter {
 FilterStrategy 又可以进一步运用适配器模式：例如我们可以把 FilterStrategyAbove(0) 和 FilterStrategyBelow(100) 组合起来，实现过滤出 0～100 范围内的整数。
 
 ```cpp
-struct FilterStrategyAnd {  // 要求 a 和 b 两个过滤策略都为 true，才能通过
+struct FilterStrategyAnd : FilterStrategy {  // 要求 a 和 b 两个过滤策略都为 true，才能通过
     FilterStrategy *a;
     FilterStrategy *b;
 
@@ -534,7 +538,7 @@ struct FilterStrategyAnd {  // 要求 a 和 b 两个过滤策略都为 true，�
         : a(a), b(b)
     {}
 
-    virtual bool shouldPass(int value) {
+    bool shouldPass(int value) override {
         return a->shouldPass(value) && b->shouldPass(value);
     }
 };
@@ -543,7 +547,10 @@ struct FilterStrategyAnd {  // 要求 a 和 b 两个过滤策略都为 true，�
 ```cpp
 reduce(
     new FilterInputerAdapter(
-        new CinInputer(),
+        new StopInputerAdapter(
+            new CinInputer(),
+            -1
+        ),
         new FilterStrategyAnd(
             new FilterStrategyAbove(0),
             new FilterStrategyBelow(100)
@@ -859,6 +866,7 @@ int reduce(vector<int> v) {
 ```cpp
 struct ReducerState {
     virtual void add(int val) = 0;
+    virtual int result() = 0;
 };
 
 struct Reducer {
@@ -977,7 +985,9 @@ int reduce(Inputer *inputer, Reducer *reducer) {
             enqueue_chunk();
         }
     }
-    enqueue_chunk(); // 提交不足 64 个的残余项
+    if (chunk.size() > 0) {
+        enqueue_chunk(); // 提交不足 64 个的残余项
+    }
     g.wait();
     auto final_state = reducer->init();
     for (auto &&local_state: local_states) {
