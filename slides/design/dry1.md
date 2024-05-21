@@ -40,9 +40,9 @@
 你做了一个名叫 Alice 的项目，为了输出日志，你是这样写的：
 
 ```cpp
-log("爱丽丝计划正在启动！", "Alice");
-log("发生了寒武纪大爆发！", "Alice");
-log("这是一条提示信息！",   "Alice");
+log("爱丽丝计划正在启动！", title = "Alice");
+log("发生了寒武纪大爆发！", title = "Alice");
+log("这是一条提示信息！",   title = "Alice");
 ```
 
 这里面 title 是每条日志的标题，打印在终端上时会变成这样：
@@ -61,7 +61,7 @@ log("这是一条提示信息！",   "Alice");
 
 ```cpp
 void mylog(string msg) {
-    log(msg, "Alice");
+    log(msg, title = "Alice");
 }
 ```
 
@@ -100,9 +100,9 @@ C 编译器通过代码转译消除了汇编的重复，C 标准库通过封装�
 然后选中前面的 `"爱丽丝计划正在启动！"` 逐个修改为不同的信息。
 
 ```cpp
-log("爱丽丝计划正在启动！", "Alice");
-log("发生了寒武纪大爆发！", "Alice");
-log("这是一条提示信息！",   "Alice");
+log("爱丽丝计划正在启动！", title = "Alice");
+log("发生了寒武纪大爆发！", title = "Alice");
+log("这是一条提示信息！",   title = "Alice");
 ```
 
 ---
@@ -112,30 +112,30 @@ log("这是一条提示信息！",   "Alice");
 假如你需要给项目改个名字，不叫 Alice 了，叫 AlanWalker 了，如果不用设计模式，那你需要手忙脚乱地连改三个地方：
 
 ```cpp
-log("爱丽丝计划正在启动！", "AlanWalker");
-log("发生了寒武纪大爆发！", "AlanWalker");
-log("这是一条提示信息！",   "AlanWalker");
+log("爱丽丝计划正在启动！", title = "AlanWalker");
+log("发生了寒武纪大爆发！", title = "AlanWalker");
+log("这是一条提示信息！",   title = "AlanWalker");
 ```
 
 而且万一其中一个拼错了，然后这个拼错的地方还是一个小概率分支，那么很有可能测试时没有发现就上线了，埋下定时炸弹：
 
 ```cpp
-log("爱丽丝计划正在启动！", "AlanWalker");
+log("爱丽丝计划正在启动！", title = "AlanWalker");
 
 if (random() < 0.0001) { // 模拟小概率事件
-    log("发生了寒武纪大爆发！", "AlanWalkor"); // 名字写错了！
+    log("发生了寒武纪大爆发！", title = "AlanWalkor"); // 名字写错了！
     // 由于这一行代码很少执行到，平时测试时你根本没发现
-    // 或者干脆间歇性崩溃，你半天找不到原因所在，开始抓狂
+    // 或者干脆间歇性崩溃，你半天找不到原因所在而抓狂
 }
 
-log("这是一条提示信息！",   "AlanWalker");
+log("这是一条提示信息！",   title = "AlanWalker");
 ```
 
 面向过程设计模式允许我们把相同的东西抽离出来，相似的东西集中到一块，使你只需要修改一个地方即可：
 
 ```cpp
 void mylog(string msg) {
-    log(msg, "AlanWalker");  // 只需这里一处修改，处处生效！
+    log(msg, title = "AlanWalker");  // 只需这里一处修改，处处生效！
 }
 
 mylog("爱丽丝计划正在启动！");
@@ -151,16 +151,16 @@ mylog("这是一条提示信息！");
 
 ```cpp
 void alice() {
-    log("A 项目正在启动！",     "Alice");
-    log("发生了寒武纪大爆发！", "Alice");
-    log("这是一条提示信息！",   "Alice");
-    log("发生了私聊事件！",     "Alice");
+    log("A 项目正在启动！",     title = "Alice");
+    log("发生了寒武纪大爆发！", title = "Alice");
+    log("这是一条提示信息！",   title = "Alice");
+    log("发生了私聊事件！",     title = "Alice");
 }
 
 void bob() {
-    log("B 项目正在启动！",     "Bob");
-    log("这是一条好友请求！",   "Bob");
-    log("结交了新朋友！",       "Bob");
+    log("B 项目正在启动！",     title = "Bob");
+    log("这是一条好友请求！",   title = "Bob");
+    log("结交了新朋友！",       title = "Bob");
 }
 ```
 
@@ -168,7 +168,7 @@ void bob() {
 
 ```cpp
 void mylog(string msg) {
-    log(msg, "Alice");
+    log(msg, title = "Alice");
 }
 
 void alice() {
@@ -180,9 +180,9 @@ void alice() {
 
 void bob() {
     // Bob: 你方便了，我呢？
-    log("B 项目正在启动！",     "Bob");
-    log("这是一条好友请求！",   "Bob");
-    log("结交了新朋友！",       "Bob");
+    log("B 项目正在启动！",     title = "Bob");
+    log("这是一条好友请求！",   title = "Bob");
+    log("结交了新朋友！",       title = "Bob");
 }
 ```
 
@@ -194,11 +194,11 @@ void bob() {
 
 ```cpp
 void alicelog(string msg) {
-    log(msg, "Alice");
+    log(msg, title = "Alice");
 }
 
 void boblog(string msg) {
-    log(msg, "Bob");
+    log(msg, title = "Bob");
 }
 
 void alice() {
@@ -237,16 +237,16 @@ void alice() {
 
 ```cpp
 void alice() {
-    log("A 项目正在启动！",     "Alice");
-    log("发生了寒武纪大爆发！", "Alice");
-    log("这是一条提示信息！",   "Alice");
-    log("发生了私聊事件！",     "Alice");
+    log("A 项目正在启动！",     title = "Alice");
+    log("发生了寒武纪大爆发！", title = "Alice");
+    log("这是一条提示信息！",   title = "Alice");
+    log("发生了私聊事件！",     title = "Alice");
 }
 
 void bob() {
-    log("B 项目正在启动！",     "Bob");
-    log("这是一条好友请求！",   "Bob");
-    log("结交了新朋友！",       "Bob");
+    log("B 项目正在启动！",     title = "Bob");
+    log("这是一条好友请求！",   title = "Bob");
+    log("结交了新朋友！",       title = "Bob");
 }
 ```
 
@@ -255,17 +255,17 @@ void bob() {
 ```cpp
 void alice() {
     auto name = "Alice";
-    log("A 项目正在启动！",     name);
-    log("发生了寒武纪大爆发！", name);
-    log("这是一条提示信息！",   name);
-    log("发生了私聊事件！",     name);
+    log("A 项目正在启动！",     title = name);
+    log("发生了寒武纪大爆发！", title = name);
+    log("这是一条提示信息！",   title = name);
+    log("发生了私聊事件！",     title = name);
 }
 
 void bob() {
     auto name = "Bob";
-    log("B 项目正在启动！",     name);
-    log("这是一条好友请求！",   name);
-    log("结交了新朋友！",       name);
+    log("B 项目正在启动！",     title = name);
+    log("这是一条好友请求！",   title = name);
+    log("结交了新朋友！",       title = name);
 }
 ```
 
@@ -281,18 +281,18 @@ void bob() {
 void alice() {
     auto name = "Alice";
     auto level = LogLevel::INFO;
-    log("A 项目正在启动！",     name, level);
-    log("发生了寒武纪大爆发！", name, level);
-    log("这是一条提示信息！",   name, level);
-    log("发生了私聊事件！",     name, level);
+    log("A 项目正在启动！",     title = name, level = level);
+    log("发生了寒武纪大爆发！", title = name, level = level);
+    log("这是一条提示信息！",   title = name, level = level);
+    log("发生了私聊事件！",     title = name, level = level);
 }
 
 void bob() {
     auto name = "Bob";
     auto level = LogLevel::DEBUG;
-    log("B 项目正在启动！",     name, level);
-    log("这是一条好友请求！",   name, level);
-    log("结交了新朋友！",       name, level);
+    log("B 项目正在启动！",     title = name, level = level);
+    log("这是一条好友请求！",   title = name, level = level);
+    log("结交了新朋友！",       title = name, level = level);
 }
 ```
 
@@ -311,7 +311,7 @@ struct LogParams {
 };
 
 void mylog(string msg, LogParams params) {
-    log(msg, params.name, params.level);
+    log(msg, title = params.name, level = params.level);
 }
 
 void alice() {
@@ -340,7 +340,7 @@ void bob() {
 
 其他使用了 log 库的用户都骂骂咧咧的，说着 “我测你的码”、“*龙门粗口*” 什么的手忙脚乱改代码去了。
 
-而早有先见之明的你，只是轻轻给结构体添加了一个成员：
+而早有先见之明的你，淡然自若，只是轻轻给结构体添加了一个成员：
 
 ```cpp
 struct LogParams {
@@ -350,7 +350,7 @@ struct LogParams {
 };
 
 void mylog(string msg, LogParams params) {
-    log(msg, params.name, params.level, file = params.file);
+    log(msg, title = params.name, level = params.level, file = params.file);
 }
 ```
 
@@ -374,7 +374,7 @@ struct Logger {
     LogLevel level;
 
     void mylog(string msg) {
-        log(msg, this->name, this->level);
+        log(msg, title = this->name, level = this->level);
     }
 };
 
@@ -704,7 +704,7 @@ void bob() {
 
 <del>我们只需要修改前两一千行的函数指针分别指向 file_op1、file_op2、file_op3...</del>
 
-天哪！一个个初始化也太麻烦了！索性把这些函数指针封装成一个结构体，然后再封装两个“构造”函数创建不同类型这个结构体（实际上是同一个 Logger 类型，只是其中的函数指针不同，导致调用时效果发生不同）。
+天哪！一个个初始化也太麻烦了！索性把这些函数指针封装成一个结构体，然后再封装两个“工厂”函数创建不同类型这个结构体（实际上是同一个 Logger 类型，只是其中的函数指针不同，导致调用时效果发生不同）。
 
 ```cpp
 typedef void (*log_func_t)(string);
@@ -772,412 +772,6 @@ void file_log(string msg, FILE *file) {   // 输出到文件
 void console_log(string msg) {  // 输出到终端
     puts(msg);
 }
-```
-
-如果还是用函数指针，就无法保存 file 参数！比如你 file_log 用得到 file 指针，但是 console_log 用不到，总不能逼着所有人都和你统一参数吧？这就违背了解耦的初衷。
-
-我们决定，定义一个通用的基类，然后让 FileLogger 和 ConsoleLogger 继承它，继承后的结构体可以添加新的成员变量 file 和 socket，来保存各自用到的参数。
-因为每个不同子类需要保存状态的不同，所以每个子类的大小会不一样，而栈上的变量必须具有确定的大小，堆上的变量就不需要，所以这种多态的类必须以始终指针的形式传递。
-
-```cpp
-struct Logger {
-    log_func_t log;
-    input_func_t input;
-};
-
-struct FileLogger : Logger {
-    void log(string msg) {
-        fputs(file, msg);
-    }
-
-    void input(string &buf) {
-        fgets(file, buf);
-    }
-
-    FILE *file;
-    // 未来如果出现其他 FileLogger 需要的参数，也很容易在这里添加
-};
-
-struct ConsoleLogger : Logger {
-    void log(string msg, FILE *file) {
-        puts(msg);
-    }
-    
-    void input(string &buf) {
-        gets(buf);
-    }
-};
-
-struct NetLogger : Logger {
-    void log(string msg, SOCKET *socket) {
-        sockputs(socket, msg);
-    }
-    
-    void input(string &buf, SOCKET *socket) {
-        sockgets(socket, buf);
-    }
-
-    SOCKET *socket;
-};
-
-Logger *make_file_logger(FILE *file) {
-    return new FileLogger{
-        .log = FileLogger::log,
-        .input = FileLogger::input,
-        .file = file,
-    };
-}
-
-Logger *make_console_logger() {
-    return new ConsoleLogger{
-        .log = ConsoleLogger::log,
-        .input = ConsoleLogger::input,
-    };
-}
-
-Logger *make_net_logger(SOCKET *socket) {
-    return new NetLogger{
-        .log = NetLogger::log,
-        .input = NetLogger::input,
-        .socket = socket,
-    };
-}
-
-void alice() {
-    Logger *logger = make_file_logger(fopen("/tmp/a.txt"));
-    logger->log("A 项目正在启动！");
-    logger->log("发生了寒武纪大爆发！");
-    logger->log("这是一条提示信息！");
-    logger->input("私聊信息> ");
-    logger->log("发生了私聊事件！");
-}
-
-void bob() {
-    Logger *logger = make_console_logger();
-    logger->log("B 项目正在启动！");
-    logger->log("这是一条好友请求！");
-    logger->input("私聊信息> ");
-    logger->log("结交了新朋友！");
-}
-```
-
-后来在 C++ 中引入了“虚函数”语法糖来实现同样的效果，上面的代码可以更简洁地写成：
-
-```cpp
-struct Logger {
-    virtual void log(string msg) = 0;     // 定义 log 为虚函数，固定格式 virtual ...() = 0;
-    virtual void input(string &buf) = 0;  // 定义 input 为虚函数
-};
-
-struct FileLogger : Logger {
-    FileLogger(FILE *file_) {
-        file = file_;
-    }
-
-    void log(string msg) override {      // 子类实现 log 虚函数，固定格式为 ...() override;
-        fputs(file, msg);
-    }
-
-    void input(string &buf) override {  // 子类实现 input 虚函数
-        fgets(file, buf);
-    }
-
-    FILE *file;
-    // 未来如果出现其他 FileLogger 需要的参数，也很容易在这里添加
-};
-
-struct ConsoleLogger : Logger {
-    void log(string msg, FILE *file) override {
-        puts(msg);
-    }
-    
-    void input(string &buf) override {
-        gets(buf);
-    }
-};
-
-struct NetLogger : Logger {
-    NetLogger(SOCKET *socket_) {
-        socket = socket_;
-    }
-
-    void log(string msg, SOCKET *socket) override {
-        sockputs(socket, msg);
-    }
-    
-    void input(string &buf, SOCKET *socket) override {
-        sockgets(socket, buf);
-    }
-
-    SOCKET *socket;
-};
-```
-
-可见，虚函数是对“结构体存参数”神教的扩展，本来结构体只能存普通变量，虚函数相当于是存了函数指针，而且这个函数还能访问结构体保存的其他变量。
-
-### 虚函数的应用
-
-很多教材中都会举出这样看起来好像很酷的例子：
-
-```cpp
-struct Animal {
-    virtual void speak() = 0;
-};
-
-struct CatAnimal ：Animal {
-    void speak() override {
-        puts("喵");
-    }
-};
-struct DogAnimal ：Animal {
-    void speak() override {
-        puts("汪");
-    }
-};
-
-int main() {
-    Animal *cat = new CatAnimal();
-    Animal *dog = new DogAnimal();
-    cat->speak();
-    dog->speak();  // 不觉得这很酷吗？很符合象牙塔脑瘫脑师对面向对象的想象！
-}
-```
-
-然而，在这个案例中，虚函数可有可无，并没有发挥任何价值（你要拉答辩，可你却去擦镜子，完全搞错了方向），因为我们完全可以写普通成员函数：
-
-```cpp
-struct CatAnimal {
-    void speak() {
-        puts("喵");
-    }
-};
-struct DogAnimal {
-    void speak() {
-        puts("汪");
-    }
-};
-
-int main() {
-    CatAnimal *cat = new CatAnimal();
-    DogAnimal *dog = new DogAnimal();
-    cat->speak();
-    dog->speak();
-}
-```
-
-不是一样可以运行吗？我要这 B 虚函数有什么用？
-由于象牙塔思想钢印的广泛种植，这是很多同学对面向对象的第一印象：“原来面向对象就是成员函数，就是换了个语法，第一个参数要写到函数名左边了，然后就没了”。
-
-```cpp
-// 同学心里：不就是个只能对第一参数有效的重载嘛！
-speak(cat);
-speak(dog);
-```
-
-虚函数真正的应用场景在于，你需要把 Animal 作为另一个函数的参数时。
-
-如果用重载来实现的话，我们需要手写两次一模一样的 feed 函数，违背了“不要重复”原则。
-
-```cpp
-void feed(CatAnimal *cat) {
-    puts("小彭老师正在给宠物喂食");
-    cat->speak();
-}
-
-void feed(DogAnimal *dog) {
-    puts("小彭老师正在给宠物喂食");
-    dog->speak();
-}
-
-int main() {
-    CatAnimal *cat = new CatAnimal();
-    DogAnimal *dog = new DogAnimal();
-    feed(cat);
-    feed(dog);
-}
-```
-
-有的同学提出可以模板实现代码复用：
-
-```cpp
-template <class T>
-void feed(T *animal) {
-    puts("小彭老师正在给宠物喂食");
-    animal->speak();
-}
-
-int main() {
-    CatAnimal *cat = new CatAnimal();
-    DogAnimal *dog = new DogAnimal();
-    feed(cat);
-    feed(dog);
-}
-```
-
-然而，模板只适用于参数直接在栈上的情况，不能解决参数需要存到其他对象内部，比如 vector 的情况：
-
-```cpp
-template <class T>
-void feed(T *animal) {
-    puts("小彭老师正在给宠物喂食");
-    animal->speak();
-}
-
-int main() {
-    vector<???> animals;  // 该用何种基类来存储他们？
-    animals.push_back(new CatAnimal());
-    animals.push_back(new DogAnimal());
-    for (auto &&animal: animals) {
-        feed(animal);  // ???
-    }
-}
-```
-
-> 模板函数实现多态的解决方案是有的，那就是 std::variant + std::visit，但那是更后来出现的函数式设计模式了，今天我们先把面向对象学明白了再说。
-
-看来我们不得不弄个基类 Animal 了，得益于“子类指针可以自动转换为基类指针”的特性，我们可以把所有动物放在一个 `vector<Animal *>` 里：
-
-```cpp
-struct Animal {
-    int hungry = 100;
-};
-
-struct CatAnimal : Animal {
-};
-
-struct DogAnimal : Animal {
-};
-
-void feed(Animal *animal) {  // 不用是模板函数了！也加快了编译的速度
-    puts("小彭老师正在给宠物喂食");
-    animal->hungry = animal->hungry - 1;  // 但这样只能访问到 Animal 的成员
-}
-
-int main() {
-    vector<Animal *> animals;  // 用基类指针来存储
-    animals.push_back(new CatAnimal());  // CatAnimal * 可以自动转换为 Animal *，因为 CatAnimal 是 Animal 的子类
-    animals.push_back(new DogAnimal());
-    for (auto &&animal: animals) {
-        feed(animal);
-    }
-}
-```
-
-如果是普通成员函数，是没用的！
-
-```cpp
-struct Animal {
-    void speak() {  // 并不是虚函数...
-        puts("通用动物 speak 函数");
-    }
-};
-
-struct CatAnimal : Animal {
-    void speak() {  // 并不会替换掉基类的 speak
-        // 只有当以 CatAnimal * 调用时才能调用到这里
-        // 以 Animal * 调用时就来不到这里
-        puts("喵");
-    }
-};
-
-struct DogAnimal : Animal {
-    void speak() {
-        puts("汪");
-    }
-};
-
-void feed(Animal *animal) {
-    puts("小彭老师正在给宠物喂食");
-    animal->speak();  // 因为 speak 是实函数，这里只能调用到 Animal 的通用 speak 函数！
-};
-
-int main() {
-    vector<Animal *> animals;
-    animals.push_back(new CatAnimal());
-    animals.push_back(new DogAnimal());
-    for (auto &&animal: animals) {
-        feed(animal);
-    }
-}
-```
-
-会得到：
-
-```
-小彭老师正在给宠物喂食
-通用动物 speak 函数
-小彭老师正在给宠物喂食
-通用动物 speak 函数
-```
-
----
-
-把 speak 定义为了虚函数之后，才可以实现真正的多态！
-
-```cpp
-struct Animal {
-    virtual void speak() = 0;  // 这里的 = 0 表示这是一个纯虚函数，没有默认实现，需要继承 Animal 的各个子类来实现
-};
-
-struct CatAnimal : Animal {
-    void speak() override {  // 子类实现虚函数
-        // 不论以 CatAnimal * 还是以 Animal * 调用时都到这里
-        puts("喵");
-    }
-};
-
-struct DogAnimal : Animal {
-    void speak() override {
-        puts("汪");
-    }
-};
-
-void feed(Animal *animal) {
-    puts("小彭老师正在给宠物喂食");
-    animal->speak();
-};
-
-int main() {
-    vector<Animal *> animals;
-    animals.push_back(new CatAnimal());
-    animals.push_back(new DogAnimal());
-    for (auto &&animal: animals) {
-        feed(animal);
-    }
-}
-```
-
-会得到：
-
-```
-小彭老师正在给宠物喂食
-喵
-小彭老师正在给宠物喂食
-汪
-```
-
-注意：有任何一个纯虚函数的类都无法直接创建，只能创建他那些实现了全部纯虚函数的子类。
-
-```cpp
-Animal a;  // 编译器会报错：Animal 是个纯虚类，无法直接创建！
-CatAnimal c;  // 编译通过，因为 CatAnimal 实现了父类的全部纯虚函数 (目前只有一个 speak)
-Animal *a = new CatAnimal;  // 编译通过，CatAnimal 可以创建，然后由于 C++ 允许子类指针转换为父类指针，CatAnimal * 又可以在赋值中转换为 Animal *
-```
-
-也就是说 Animal 不能直接出现在栈上，但是可以指针或引用的形式传递或返回。
-
-```cpp
-void feed(Animal a);         // ✘
-void feed(Animal *a);        // ✔
-void feed(const Animal &a);  // ✔
-
-Animal create();             // ✘
-Animal *create();            // ✔
-unique_ptr<Animal> create(); // ✔
-
-vector<Animal> animals;             // ✘
-vector<Animal *> animals;           // ✔
-vector<unique_ptr<Animal>> animals; // ✔
 ```
 
 ---
