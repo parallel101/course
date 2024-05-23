@@ -1,0 +1,97 @@
+        ====aarch64====
+
+        ====seq+cst====
+
+Test::t2():
+        add     x2, x0, 4
+.L7:
+        ldar    w1, [x2]
+        cbz     w1, .L7
+        ldr     w1, [x0]
+        str     w1, [x0, 8]
+        ret
+Test::t1():
+        mov     w1, 1
+        str     w1, [x0], 4
+        stlr    w1, [x0]
+        ret
+
+        ====acquire+release====
+
+Test::t2():
+        add     x2, x0, 4
+.L7:
+        ldar    w1, [x2]
+        cbz     w1, .L7
+        ldr     w1, [x0]
+        str     w1, [x0, 8]
+        ret
+Test::t1():
+        mov     w1, 1
+        str     w1, [x0], 4
+        stlr    w1, [x0]
+        ret
+
+        ====relaxed====
+
+Test::t2():
+        add     x2, x0, 4
+.L7:
+        ldr     w1, [x2]
+        cbz     w1, .L7
+        ldr     w1, [x0]
+        str     w1, [x0, 8]
+        ret
+Test::t1():
+        mov     w1, 1
+        str     w1, [x0], 4
+        str     w1, [x0]
+        ret
+
+        ====x86_64====
+
+        ====relaxed====
+
+Test::t2():
+.L7:
+        mov     eax, DWORD PTR [rdi+4]
+        test    eax, eax
+        je      .L7
+        mov     eax, DWORD PTR [rdi]
+        mov     DWORD PTR [rdi+8], eax
+        ret
+Test::t1():
+        mov     DWORD PTR [rdi], 1
+        mov     DWORD PTR [rdi+4], 1
+        ret
+
+        ====acquire/release====
+
+Test::t2():
+.L7:
+        mov     eax, DWORD PTR [rdi+4]
+        test    eax, eax
+        je      .L7
+        mov     eax, DWORD PTR [rdi]
+        mov     DWORD PTR [rdi+8], eax
+        ret
+Test::t1():
+        mov     DWORD PTR [rdi], 1
+        mov     DWORD PTR [rdi+4], 1
+        ret
+
+        ====seq_cst====
+
+Test::t2():
+.L7:
+        mov     eax, DWORD PTR [rdi+4]
+        test    eax, eax
+        je      .L7
+        mov     eax, DWORD PTR [rdi]
+        mov     DWORD PTR [rdi+8], eax
+        ret
+Test::t1():
+        mov     DWORD PTR [rdi], 1
+        mov     eax, 1
+        xchg    eax, DWORD PTR [rdi+4]
+        ret
