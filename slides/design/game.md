@@ -1,16 +1,14 @@
-# 游戏开发中可能用到的设计模式
+# 游戏开发中经常用到的设计模式
 
 - 单例模式
 - 模板模式
 - 状态模式
+- 原型模式
+- CRTP 模式
 - 组件模式
 - 观察者模式
 - 发布-订阅模式
 - 访问者模式
-- 原型模式
-- CRTP 模式
-- P-IMPL 模式
-- 桥接模式
 
 ## 单例模式
 
@@ -49,6 +47,19 @@ int main() {
 }
 ```
 
+> 提示：如果要把单例对象的定义放在头文件中，务必添加 inline 修饰符，而不是 static，否则会导致多个 cpp 文件各自有一个 Game 对象。
+
+```cpp
+// Game.hpp
+
+inline Game game;
+
+inline Game &getGame() {
+    static Game game;
+    return game;
+}
+```
+
 ### 封装在类内部
 
 由于所有单例全部暴露在全局名字空间，容易产生混乱。
@@ -66,7 +77,7 @@ private:
     Game() { ... }
 
 public:
-    static Game instance;
+    inline static Game instance;  // 如果定义在头文件中，需要 inline！
 };
 
 Game::instance.updatePlayers();
@@ -84,7 +95,7 @@ private:
     Game() { ... }
 
 public:
-    static Game &instance() {
+    inline static Game &instance() {  // 这里的 inline 可以省略，因为类体内就地实现的函数自带 inline 效果
         static Game game;
         return game;
     }
@@ -97,17 +108,26 @@ Game::instance().updatePlayers();
 
 ```cpp
 template <class T>
-T &singleton() {
+inline T &singleton() {  // 这里的 inline 可以省略，因为就地实现的模板函数自带 inline 效果
+    // 只有第一次进入时会构造一遍 T，之后不会再构造
+    // 不同的 T 会实例化出不同的 singleton 实例，各自体内的 static 变量独立计算，互不干扰
     static T inst;
     return inst;
 }
 
 singleton<Game>().updatePlayers();
+singleton<Other>().someMethod();
 ```
+
+任何类型 T，只要以 `singleton<T>()` 形式获取，都能保证每个 T 都只有一份对象。（前提是你不要再 `T()` 创建对象）
 
 ## 模板模式
 
-用于游戏中一些相似的处理逻辑，把共同的部分抽象到一个基类，把不同的部分留给派生类实现。
+> 注意：模板模式和 C++ 的模板并没有必然关系！模板模式只是一种思想，可以用模板实现，也可以用虚函数实现（大多反而是用虚函数实现的）
+
+模板模式用于封装游戏中一些相似的处理逻辑，把共同的部分集中到一个基类，把不同的细节部分留给子类实现。
+
+和策略模式很像，只不过这里接收策略的直接就是基类自己。
 
 例如，一个角色固定每一帧需要移动 3 次，然后绘制 1 次。显然需要把“移动”和“绘制”作为两个虚函数接口，让子类来实现。
 
@@ -159,9 +179,11 @@ struct Game {
 
 ```cpp
 struct Character {
+protected:
     virtual void draw() = 0;
     virtual void move() = 0;
 
+public:
     void update() {
         move();
         move();
@@ -183,11 +205,137 @@ struct Game {
 
 这样调用者就很轻松了，不必关心底层细节，而 update 也只通过接口和子类通信，满足开闭原则和依赖倒置原则。
 
+### 模板模式还是策略模式：如何选择？
+
+当一个对象涉及很多策略时，用策略模式；当只需要一个策略，且需要用到基类的成员时，用模板模式。
+
+例如，一个角色的策略有移动策略和攻击策略，移动方式有“走路”、“跑步”两种，攻击策略又有“平A”、“暴击”两种。
+
+那么就用策略模式，让角色分别指向移动策略和攻击策略的指针。
+
+```cpp
+struct Character {
+    MoveStrategy *moveStrategy;
+    AttackStrategy *attackStrategy;
+
+    void update() {
+        if (isKeyPressed(GLFW_KEY_S) {
+            moveStrategy->move();
+        } else if (isKeyPressed(GLFW_KEY_W)) {
+            moveStrategy->run();
+        }
+        while (auto enemy = Game::instance().findEnemy(range)) {
+            attackStrategy->attack(enemy);
+        }
+    }
+};
+```
+
+而如果只有一个策略，比如武器类，只需要攻击策略，并且攻击策略需要知道武器的伤害值、射程、附魔属性等信息，那就适合模板模式。
+
+```cpp
+struct Weapon {
+protected:
+    double damage;
+    double charge;
+    MagicFlag magicFlags;
+    double range;
+
+    virtual void attack(Enemy *enemy);
+
+public:
+    void update() {
+        while (auto enemy = Game::instance().findEnemy(range)) {
+            attack(enemy);
+        }
+    }
+};
+```
+
+### 最常见的是 do_xxx 封装
+
+例如，一个处理字符串的虚接口类：
+
+```cpp
+struct Converter {
+    virtual void process(const char *s, size_t len) = 0;
+};
+```
+
+这个接口是考虑 **实现 Converter 子类的方便**，对于 **调用 Converter 的用户** 使用起来可能并不方便。
+
+这时候就可以运用模板模式，把原来的虚函数接口改为 protected 的函数，且名字改为 do_process。
+
+```cpp
+struct Converter {
+protected:
+    virtual void do_process(const char *s, size_t len) = 0;
+
+public:
+    void process(string_view str) {
+        return do_process(str.data(), str.size());
+    }
+
+    void process(string str) {
+        return do_process(str.data(), str.size());
+    }
+
+    void process(const char *cstr) {
+        return do_process(cstr, strlen(cstr));
+    }
+};
+```
+
+实现 Converter 的子类时，重写他的 `do_process` 函数，这些函数是 protected 的，只能被继承了 Converter 的子类访问和重写。
+
+外层用户只能通过 Converter 基类封装好的 `process` 函数，避免外层用户直接干涉底层细节。
+
+标准库中的 `std::pmr::memory_resource`、`std::codecvt` 等都运用了 do_xxx 式的模板模式封装。
+
 ## 状态模式
 
 游戏中的角色通常有多种状态，例如，一个怪物可能有“待机”、“巡逻”、“追击”、“攻击”等多种状态，而每种状态下的行为都不一样。
 
-状态模式可以把每种状态抽象为一个类，让角色持有当前状态，而不必每次都通过 if 判断来执行不同的行为。
+如果用一个枚举变量来表示当前状态，那每次就都需要用 switch 来处理不同的状态。
+
+```cpp
+enum MonsterState {
+    Idle,
+    Chase,
+    Attack,
+};
+
+struct Monster {
+    MonsterState state = Idle;
+
+    void update() {
+        switch (state) {
+            case Idle:
+                if (seesPlayer())
+                    state = Chase;
+                break;
+            case Chase:
+                if (canAttack())
+                    state = Attack;
+                else if (!seesPlayer())
+                    state = Idle;
+                break;
+            case Attack:
+                if (!seesPlayer())
+                    state = Idle;
+                break;
+        }
+    }
+};
+```
+
+这或许性能上有一定优势，缺点是，所有不同状态的处理逻辑堆积在同一个函数中，如果有多个函数（不只是 update），那么每添加一个新状态就需要修改所有函数，不符合开闭原则。
+
+而且如果不同的状态含有不同的额外数值需要存储，比如 Chase 状态需要存储当前速度，那就需要在 Monster 类中添加 speed 成员，而 state 不为 Chase 时又用不到这个成员，非常容易扰乱思维。
+
+### 状态不是枚举，而是类
+
+为此，提出了状态模式，将不同状态的处理逻辑分离到不同的类中。他把每种状态抽象为一个类，状态是一个对象，让角色持有表示当前状态的对象，用状态对象的虚函数来表示处理逻辑，而不必每次都通过 if 判断来执行不同的行为。
 
 ```cpp
 struct Monster;
@@ -236,46 +384,171 @@ struct Monster {
 };
 ```
 
-一些糟糕的开发者会使用枚举来表示状态的迁移，然后每次都用 switch 来处理不同的状态。
+## 原型模式
 
-这在性能上有一定优势，缺点是，每次都需要通过 switch 来判断当前状态，添加一个新状态时需要修改所有函数，不符合开闭原则。
+原型模式用于复制现有的对象，且新对象的**属性**和**类型**与原来相同。如何实现？
+
+1. 为什么拷贝构造函数不行？
+
+拷贝构造函数只能用于类型确定的情况，对于具有虚函数，可能具有额外成员的多态类型，会发生 object-slicing，导致拷贝出来的类型只是基类的部分，而不是完整的子类对象。
 
 ```cpp
-enum MonsterState {
-    Idle,
-    Chase,
-    Attack,
+RedBall ball;
+Ball newball = ball;  // 错误：发生了 object-slicing！现在 newball 的类型只是 Ball 了，丢失了 RedBall 的信息
+```
+
+2. 为什么拷贝指针不行？
+
+指针的拷贝是浅拷贝，而我们需要的是深拷贝。
+
+```cpp
+Ball *ball = new RedBall();
+Ball *newball = ball;  // 错误：指针的拷贝是浅拷贝！newball 和 ball 指向的仍然是同一对象
+```
+
+3. 需要调用到真正的构造函数，同时又基于指针
+
+```cpp
+Ball *ball = new RedBall();
+Ball *newball = new RedBall(*dynamic_cast<RedBall *>(ball));  // 可以，但是这里显式写出了 ball 内部的真正类型，违背了开闭原则
+```
+
+4. 将拷贝构造函数封装为虚函数
+
+原型模式将对象的拷贝方法作为虚函数，返回一个虚接口的指针，避免了直接拷贝类型。但虚函数内部会调用子类真正的构造函数，实现深拷贝。
+
+对于熟悉工厂模式的同学：原型模式相当于把每个对象变成了自己的工厂，只需要有一个现有的对象，就能不断复制出和他相同类型的对象来。
+
+```cpp
+struct Ball {
+    virtual Ball *clone() = 0;
 };
 
-struct Monster {
-    MonsterState state = Idle;
+struct RedBall : Ball {
+    Ball *clone() override {
+        return new RedBall(*this);  // 调用 RedBall 的拷贝构造函数
+    }
+};
 
-    void update() {
-        switch (state) {
-            case Idle:
-                if (seesPlayer())
-                    state = Chase;
-                break;
-            case Chase:
-                if (canAttack())
-                    state = Attack;
-                else if (!seesPlayer())
-                    state = Idle;
-                break;
-            case Attack:
-                if (!seesPlayer())
-                    state = Idle;
-                break;
-        }
+struct BlueBall : Ball {
+    Ball *clone() override {
+        return new BlueBall(*this);  // 调用 BlueBall 的拷贝构造函数
+    }
+
+    int someData;  // 如果有成员变量，也会一并被拷贝到
+};
+```
+
+好处是，调用者无需知道具体类型，只需要他是 Ball 的子类，就可以克隆出一份完全一样的子类对象来，且返回的也是指针，不会发生 object-slicing。
+
+```cpp
+Ball *ball = new RedBall();
+...
+Ball *newball = ball->clone();  // newball 的类型仍然是 RedBall
+```
+
+### clone 返回为智能指针
+
+```cpp
+struct Ball {
+    virtual unique_ptr<Ball> clone() = 0;
+};
+
+struct RedBall : Ball {
+    unique_ptr<Ball> clone() override {
+        return make_unique<RedBall>(*this);  // 调用 RedBall 的拷贝构造函数
+    }
+};
+
+struct BlueBall : Ball {
+    unique_ptr<Ball> clone() override {
+        return make_unique<BlueBall>(*this);  // 调用 BlueBall 的拷贝构造函数
+    }
+
+    int someData;  // 如果有成员变量，也会一并被拷贝到新对象中
+};
+```
+
+这样就保证了内存不会泄漏。
+
+> 如果调用者需要的是 shared_ptr，怎么办？
+
+答：unique_ptr 可以隐式转换为 shared_ptr。
+
+> 如果调用者需要的是手动 delete 的原始指针，怎么办？
+
+答：unique_ptr 可以通过 release，故意造成一次内存泄漏，成为需要手动管理的原始指针。
+
+### CRTP 模式自动实现 clone
+
+CRTP（Curiously Recurring Template Pattern）是一种模板元编程技术，它可以在编译期间把派生类的类型作为模板参数传递给基类，从而实现一些自动化的功能。
+
+特点是，继承一个 CRTP 类时，需要把子类本身作为基类的模板参数。
+
+> 并不会出现循环引用是因为，用到子类的具体类型是在基类的成员函数内部，而不是直接在基类内部，而模板类型的成员函数的实例化是惰性的，用到了才会实例化。
+
+```cpp
+template <class Derived>
+struct Pet {
+    void feed() {
+        Derived *that = static_cast<Derived *>(this);
+        that->speak();
+        that->speak();
+    }
+};
+
+struct CatPet : Pet<CatPet> {
+    void speak() {
+        puts("Meow!");
+    }
+};
+
+struct DogPet : Pet<DogPet> {
+    void speak() {
+        puts("Bark!");
     }
 };
 ```
+
+一般的象牙塔理论家教材中都会告诉你，CRTP 是用于取代虚函数，更高效地实现模板模式，好像 CRTP 就和虚函数势不两立。
+
+但小彭老师的编程实践中，CRTP 常常是和虚函数一起出现的好搭档。
+
+例如 CRTP 可以帮助原型模式实现自动化定义 clone 虚函数，稍后介绍的访问者模式中也会用到 CRTP。
+
+```cpp
+struct Ball {
+    virtual unique_ptr<Ball> clone() = 0;
+};
+
+template <class Derived>
+struct BallImpl : Ball {  // 自动实现 clone 的辅助工具类
+    unique_ptr<Ball> clone() override {
+        Derived *that = static_cast<Derived *>(this);
+        return make_unique<Derived>(*that);
+    }
+};
+
+struct RedBall : BallImpl<RedBall> {
+    // unique_ptr<Ball> clone() override {       // BallImpl 自动实现的 clone 等价于
+    //     return make_unique<RedBall>(*this);  // 调用 RedBall 的拷贝构造函数
+    // }
+};
+
+struct BlueBall : BallImpl<BlueBall> {
+    // unique_ptr<Ball> clone() override {       // BallImpl 自动实现的 clone 等价于
+    //     return make_unique<BlueBall>(*this);  // 调用 BlueBall 的拷贝构造函数
+    // }
+};
+```
+
+> 在小彭老师自主研发的 Zeno 中，对象类型 `zeno::IObject` 的深拷贝就运用了 CRTP 加持的原型模式。
 
 ## 组件模式
 
 游戏中的物体（游戏对象）通常由多个组件组成，例如，一个角色可能由“角色控制器”、“角色外观”、“角色动画”等组件组成，一个子弹可能由“子弹物理”、“子弹外观”等组件组成。
 
-组件模式是游戏领域最重要的设计模式，它将游戏对象分为多个组件，每个组件只关心自己的逻辑，而不关心其他组件的逻辑。
+组件模式是**游戏开发领域最重要的设计模式**，它将游戏对象分为多个组件，每个组件只关心自己的逻辑，而不关心其他组件的逻辑。
 
 蹩脚的游戏开发者（通常是 985 量产出来的象牙塔巨婴）会把每个组件写成一个类，然后使用“多重继承”继承出一个玩家类来，并恬不知耻地声称“我也会组件模式了”。
 
@@ -319,7 +592,7 @@ struct Player : PlayerController, PlayerAppearance, PlayerAnimation {
 ```cpp
 struct Component {
     virtual void update(GameObject *go) = 0;
-    virtual ~Component() = default;  // 注意
+    virtual ~Component() = default;  // 注意！
 };
 
 struct GameObject {
@@ -618,7 +891,7 @@ struct GameObject {
 ```cpp
 struct GameObject {
     vector<Component *> components;
-    unordered_map<type_index, vector<Component *>> subscribers;
+    unordered_map<type_index, vector<Component *>> subscribers;  // 事件总线
 
     template <class EventType>
     void subscribe(Component *component) {
@@ -627,14 +900,14 @@ struct GameObject {
 
     template <class EventType>
     void send(EventType *msg) {
-        for (auto &&c: subscribers[type_index(typeid(T))]) {
+        for (auto &&c: subscribers[type_index(typeid(EventType))]) {
             c->handleMessage(msg);
         }
     }
 
     void add(Component *component) {
         components.push_back(component);
-        component->subscribeMessages();
+        component->subscribeMessages(this);
     }
 
     void update() {
@@ -699,3 +972,137 @@ struct PlayerController : Component {
 这样，就可以实现组件之间的按需通信。
 
 ### 访问者模式
+
+```cpp
+struct Message {
+    virtual ~Message() = default;
+};
+
+struct MoveMessage {
+    glm::vec3 velocityChange;
+};
+
+struct JumpMessage {
+    double jumpHeight;
+};
+```
+
+如何定义对所有不同类型消息的处理方式？
+
+```cpp
+struct MessageVisitor;  // 前向声明
+
+struct Message {
+    virtual void accept(MessageVisitor *visitor) = 0;
+    virtual ~Message() = default;
+};
+
+struct MoveMessage {
+    glm::vec3 velocityChange;
+
+    void accept(MessageVisitor *visitor) override {
+        visitor->visit(this);  // 会调用到 visit(MoveMessage *mm) 这个重载
+    }
+};
+
+struct JumpMessage {
+    double jumpHeight;
+
+    void accept(MessageVisitor *visitor) override {
+        visitor->visit(this);  // 会调用到 visit(JumpMessage *mm) 这个重载
+    }
+};
+
+struct MessageVisitor {
+    virtual void visit(MoveMessage *mm) {}  // 默认不做任何处理
+    virtual void visit(JumpMessage *jm) {}  // 默认不做任何处理
+};
+
+struct Movable : MessageVisitor {
+    glm::vec3 position;
+    glm::vec3 velocity;
+
+    void handleMessage(Message *msg) {
+        msg->accept(this);
+    }
+
+    void visit(MoveMessage *mm) override {
+        velocity += mm->velocityChange;
+    }
+
+    void visit(JumpMessage *jm) override {
+        velocity.y += sqrt(2 * 9.8 * jm->jumpHeight);
+    }
+};
+```
+
+这就是访问者模式，同时用到了面向对象的虚函数和重载机制，实现了对所有不同类型消息都能定制一个处理方式，而不用通过低效的 `dynamic_cast` 判断消息类型。
+
+访问者模式是否符合开闭原则呢？
+
+当我们新增一种消息类型时，需要修改的地方有：
+
+1. 新增消息类型
+2. 在 `MessageVisitor` 中添加一个 `visit` 的重载
+
+当我们新增一种组件类型时，需要修改的地方有：
+
+1. 新增组件类型
+
+这三项修改都是符合开闭原则的，并不会出现牵一发而动全身的情况。
+
+但每个组件都要处理所有消息，这就是一个不符合开闭原则的设计，因此我们让所有的 visit 虚函数有一个默认实现，那就是什么都不做。这样当新增消息类型时，虽然需要每个组件都重新编译了，但是程序员无需修改任何代码，源码级别上，是满足开闭原则的。
+
+访问者模式通常用于 acceptor 数量有限，但 visitor 的组件类型千变万化的情况。
+
+- 如果消息类型有限，组件类型可能经常增加，那需要把组件类型作为 visitor，消息类型作为 acceptor。
+- 如果组件类型有限，消息类型可能经常增加，那需要把消息类型作为 visitor，组件类型作为 acceptor。
+
+- 常作为 acceptor 的有：编译器开发中的 IR 节点（代码中间表示），游戏与 UI 开发中的消息类型。
+- 常作为 visitor 的有：编译器开发中的优化 pass（会修改 IR 节点），游戏与 UI 开发中的接受消息组件类型。
+
+但是每个组件都要实现 `accept` 的重载，内容完全一样，出现了代码重复。
+
+Java 的模板是 type-erasure 的，对此束手无策。而 C++ 的模板是 refined-generic，可以利用 CRTP 自动实现这部分：
+
+```cpp
+struct Message {
+    virtual void accept(MessageVisitor *visitor) = 0;
+    virtual ~Message() = default;
+};
+
+template <class Derived>
+struct MessageImpl : Message {
+    void accept(MessageVisitor *visitor) override {
+        static_assert(std::is_base_of_v<MessageImpl, Derived>);
+        visitor->visit(static_cast<Derived *>(this));
+    }
+};
+
+struct MoveMessage : MessageImpl<MoveMessage> {
+    glm::vec3 velocityChange;
+    // 自动实现了 accept 函数
+};
+
+struct JumpMessage : MessageImpl<JumpMessage> {
+    double jumpHeight;
+};
+```
+
+> 在小彭老师自主研发的 Zeno 中，ZFX 编译器的 IR 优化系统就运用了 CRTP 加持的访问者模式。
+
+## MVC 模式
+
+设计模式是一个巨大的话题，本期先讲到这里，下集我们继续介绍 UI 开发中大名鼎鼎的 MVC 模式。
+
+MVC 模式是一种架构模式，它将应用程序分为三个核心部分：模型（Model）、视图（View）和控制器（Controller），通过分离应用程序的输入、处理和输出来提高应用程序的可维护性和可扩展性。
+
+- 模型（Model）：负责处理数据和业务逻辑，通常由数据结构和数据库组成。
+- 视图（View）：负责展示数据和用户界面，通常由 HTML、CSS 和 JavaScript 组成。
+- 控制器（Controller）：负责处理用户交互和调度模型和视图，通常由后端语言（如 PHP、Java 等）实现。
+
+MVC 模式的优点：
+
+- 低耦合：模型、视图和控制器之间的职责清晰，可以更容易地进行单独的修改和维护。
+- 可扩展性：由于模型、视图和控制器之间的低耦合性，可以更容易地添加新的功能和组件。
+- 可维护性：分离了不同的职责，使得代码更容易理解和维护。
