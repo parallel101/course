@@ -21,11 +21,9 @@ int main() {
     puts("main准备调用getGame");
     getGame();
     puts("main调用完了getGame");
+
+    puts("main准备再次调用getGame");
     getGame();
-    getGame();
-    getGame();
-    getGame();
-    getGame();
-    getGame();
+    puts("main再次调用完了getGame");
     return 0;
 }
