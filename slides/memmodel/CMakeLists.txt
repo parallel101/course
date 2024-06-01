@@ -8,4 +8,4 @@ set(SOURCES main.cpp)
 
 add_executable(main ${SOURCES})
 
-target_compile_options(main PRIVATE -fno-strict-aliasing)
+# target_compile_options(main PRIVATE -fno-strict-aliasing)
