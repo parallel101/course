@@ -509,7 +509,7 @@ struct Counter {
     Counter(int &i) : i(i) {}
 
     void operator()() const {
-        i = i + 1;  // 编译通过：i 不是保存在结构体内部的变量，而是个指向外面引用，该引用不是 const 的，可以修改
+        i = i + 1;  // 编译通过：i 不是保存在结构体内部的变量，而是个指向外面引用，只要该引用不是 const 的，就可以修改
         printf("我被调用了 %d 次\n", i);
     }
 };
@@ -635,3 +635,44 @@ int reduce(vector<int> v, AddFunc add, int init);
 就和局部变量的 auto 用起来一样，非常方便。
 
 ## 函数化的命令模式
+
+lambda 表达式产生的匿名类型，没有名字，只能通过 auto 捕获。
+
+```cpp
+auto add = [] (int x, int y) {
+    return x + y;
+};
+```
+
+而 auto 无法用在容器的模板参数里，无法持久化储存。
+
+```cpp
+vector<auto> funcs;
+funcs.push_back(add);
+```
+
+即使使用 `decltype(add)` 也只能存储 add 自己，无法兼容其他不同类型的仿函数对象。
+
+```cpp
+auto add = [] (int x, int y) {
+    return x + y;
+};
+
+auto foo = [i = 1] (int x, int y) {
+    return x - y + i;
+}; // 虽然都是匿名类型，但 foo 的类型和 add 不同
+
+vector<decltype(add)> funcs;  // 现在 funcs 里只能装 add 类型的仿函数了...
+funcs.push_back(add);
+funcs.push_back(foo); // 编译出错！无法从 decltype(foo) 转换到 decltype(add)
+```
+
+因此，当需要持久化存储一个仿函数对象时，必须采用万能的 function 容器。
+
+不论是什么类型的仿函数对象，都可以转换为 function 容器，只要函数参数类型匹配！
+
+```cpp
+vector<function<int (int, int)>> funcs;
+funcs.push_back(add);
+funcs.push_back(sub);
+```
