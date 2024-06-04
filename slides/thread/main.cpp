@@ -1,31 +1,33 @@
-#include "mtverify.hpp"
-
+#include "mtqueue.hpp"
+#include <iostream>
+#include <thread>
 using namespace std;
 
-struct Test {
-    atomic_int a_ok;
-    int a;
-    /* int a_ok; */
-    int r;
+mt_queue<string> a;
 
-    void t1() {
-        a = 1;
-        a_ok.store(1, memory_order_relaxed);
-        /* a_ok = 1; */
-    }
+void t1() {
+    a.push("啊");
+    this_thread::sleep_for(1s);
+    a.push("小彭老师");
+    this_thread::sleep_for(1s);
+    a.push("真伟大呀");
+    this_thread::sleep_for(1s);
+    a.push("EXIT");
+}
 
-    void t2() {
-        while (!a_ok.load(memory_order_relaxed));
-        /* while (!a_ok); */
-        r = a;
+void t2() {
+    while (1) {
+        auto msg = a.pop();
+        if (msg == "EXIT") break;
+        cout << "t2 收到消息：" << msg << '\n';
     }
-
-    auto repr() {
-        return r;
-    }
-};
+}
 
 int main() {
-    mtverify({&Test::t1, &Test::t2});
+    jthread th1(t1);
+    jthread th2(t2);
+    this_thread::sleep_for(1.5s);
+    th1.join();
+    th2.join();
     return 0;
 }
