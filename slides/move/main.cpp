@@ -1,69 +1,53 @@
 #include <cstdio>
-#include <cstdlib>
-#include <ctime>
-#include <functional>
+#include <iostream>
+#include <string>
 
 using namespace std;
 
-template <class Callback>
-struct Finally {
-    Callback func;
-    bool valid;
-
-    Finally() : func(), valid(false) {}
-
-    Finally(Callback func) : func(func), valid(true) {
+struct IndentGuard {
+    IndentGuard(std::string &indent_) : indent(indent_) {
+        oldIndent = indent;
+        indent += "  ";
     }
 
-    Finally(Finally &&that) noexcept : func(std::move(that.func)), valid(that.valid) {
-        that.valid = false; // 如果要支持移动语义，必须有个 bool 变量表示空状态！
+    IndentGuard(IndentGuard &&) = delete;
+
+    ~IndentGuard() {
+        puts("析构函数");
+        indent = oldIndent;
     }
 
-    Finally &operator=(Finally &&that) noexcept {
-        if (this != &that) {
-            if (valid) {
-                func();
-            }
-            func = std::move(that.func);
-            valid = that.valid;
-            that.valid = false;
+    std::string oldIndent;
+    std::string &indent;
+};
+
+struct Codegen {
+    std::string code;
+    std::string indent;
+
+    void emit(std::string text) {
+        code += indent + text + "\n";
+    }
+
+    void emit_variable(std::string name) {
+        code += indent + "int " + name + ";\n";
+    }
+
+    void codegen() {
+        emit("int main() {");
+        {
+            IndentGuard guard(indent);
+            emit_variable("i");
+            emit_variable("j");
         }
-        return *this;
-    }
-
-    void cancel() {
-        valid = false;
-    }
-
-    void trigger() {
-        if (valid) {
-            func();
-        }
-        valid = false;
-    }
-
-    ~Finally() {
-        if (valid) {
-            func();
-        }
+        emit("}");
+        emit_variable("g");
     }
 };
 
-template <class Callback> // C++17 CTAD
-Finally(Callback) -> Finally<Callback>;
-
 int main() {
-    Finally cb = [] {
-        puts("调用了 Finally 回调");
-    };
-    srand(time(NULL));
-    bool success = rand() % 2 == 0;
-    if (success) {
-        puts("操作失败，提前返回");
-        // 此处提前返回导致析构，会自动 trigger
-        return -1;
-    }
-    puts("操作成功");
-    cb.cancel(); // valid 变成 false，析构不再自动 trigger 了
+    Codegen cg;
+    cg.codegen();
+    std::cout << cg.code;
     return 0;
 }
