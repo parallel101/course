@@ -4,22 +4,6 @@
 
 using namespace std;
 
-//struct Resource {
-//    void *p;
-//
-//    Resource() {
-//        puts("分配资源");
-//        p = malloc(1);
-//    }
-//
-//    Resource(Resource &&) = delete;
-//
-//    ~Resource() {
-//        puts("释放资源");
-//        free(p);
-//    }
-//};
-
 struct Resource {
 private:
     struct Self {

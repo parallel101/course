@@ -13,7 +13,6 @@ struct IndentGuard {
     IndentGuard(IndentGuard &&) = delete;
 
     ~IndentGuard() {
-        puts("析构函数");
         indent = oldIndent;
     }
 
