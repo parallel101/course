@@ -7,14 +7,6 @@
 
 namespace reflect {
 
-struct argument_info {
-    const char *name;
-    std::size_t index;
-    std::size_t size;
-    std::size_t align;
-    std::type_info const &type;
-};
-
 struct member_info {
     const char *name;
     std::size_t offset;
@@ -36,10 +28,10 @@ struct typed_member_info : member_info {
 };
 
 struct class_meta_info {
-    const char *class_name;
+    const char *name;
     std::size_t size;
     std::size_t align;
-    std::type_info const &type_info;
+    std::type_info const &type;
 };
 
 template <class Class, class ...Members>
@@ -97,7 +89,7 @@ struct reflect::reflect_traits<Type> { \
 template <class T, class F>
 constexpr void for_each_member(T &object, F &&f) {
     using trait_type = reflect_traits<std::remove_const_t<T>>;
-    trait_type::info.for_each_member([&] (auto member) {
+    trait_type::info.for_each_member([&] (auto const &member) {
         f(member.name, object.*(member.access));
     });
 }
@@ -112,7 +104,7 @@ template <class Member, class T>
 constexpr std::conditional_t<std::is_const_v<T>, Member const, Member> &get_member(T &object, std::string const &name) {
     using trait_type = reflect_traits<std::remove_const_t<T>>;
     std::conditional_t<std::is_const_v<T>, Member const, Member> *member_p = nullptr;
-    trait_type::info.for_each_member([&] (auto member) {
+    trait_type::info.for_each_member([&] (auto const &member) {
         if (member_p) return;
         if (member.name == name) {
             if constexpr (member.template is<Member>()) {
@@ -131,7 +123,7 @@ template <class Any = std::any, class T>
 constexpr Any get_member_any(T &object, std::string const &name) {
     using trait_type = reflect_traits<std::remove_const_t<T>>;
     Any member_any;
-    trait_type::info.for_each_member([&] (auto member) {
+    trait_type::info.for_each_member([&] (auto const &member) {
         if (member_any.has_value()) return;
         if (member.name == name) {
             member_any = object.*(member.access);
@@ -169,7 +161,7 @@ template <class T>
 constexpr std::type_info const &get_member_type(std::string const &name) {
     using trait_type = reflect_traits<std::remove_const_t<T>>;
     std::type_info const *member_type = nullptr;
-    trait_type::info.for_each_member([&] (auto member) {
+    trait_type::info.for_each_member([&] (auto const &member) {
         if (member_type) return;
         if (member.name == name) {
             member_type = member.type;
@@ -228,7 +220,7 @@ template <class T>
 constexpr std::vector<std::string> get_member_names() {
     using trait_type = reflect_traits<std::remove_const_t<T>>;
     std::vector<std::string> member_names;
-    trait_type::info.for_each_member([&] (auto member) {
+    trait_type::info.for_each_member([&] (auto const &member) {
         member_names.push_back(member.name);
     });
     return member_names;
@@ -238,10 +230,27 @@ template <class T>
 constexpr std::vector<member_info> get_member_infos() {
     using trait_type = reflect_traits<std::remove_const_t<T>>;
     std::vector<member_info> members;
-    trait_type::info.for_each_member([&] (auto member) {
-        members.push_back(member.name);
+    trait_type::info.for_each_member([&] (auto const &member) {
+        members.push_back(member);
     });
     return members;
+}
+
+template <class T>
+std::ostream &print(std::ostream &os, T const &object) {
+    bool once = false;
+    for_each_member(object, [&] (const char *name, auto &member) {
+        if (once) {
+            os << ", ";
+        } else {
+            once = true;
+        }
+        os << name;
+        os << ": ";
+        print(member);
+    });
+    os << "}";
+    return os;
 }
 
 }
@@ -323,6 +332,7 @@ Test(reflect, static_for_each_member) {
 
 Test(reflect, get_class_members) {
     cr_expect((get_member_names<Student>() == std::vector<std::string>{"name", "age"}));
+    cr_expect(get_member_infos<Student>().at(0).name == std::string("name"));
 }
 
 Test(reflect, has_member) {
@@ -331,6 +341,19 @@ Test(reflect, has_member) {
     cr_expect_not(has_member<Student>("cage"));
     cr_expect_not((has_member<Student, short>("age")));
     cr_expect((has_member<Student, std::string>("name")));
+    cr_expect((member_type_is<Student, std::string>("name")));
     cr_expect_not((has_member<Student, const char *>("name")));
+    cr_expect_not((member_type_is<Student, const char *>("name")));
     cr_expect(has_member<Student>("name"));
 }
+
+consteval auto test() {
+    std::unique_ptr<int> p;
+    if (&*p == nullptr) {
+        return 1;
+    } else {
+        return 2;
+    }
+}
+
+inline constexpr auto dummy = test();

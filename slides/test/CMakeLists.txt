@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 
 project(main)
 
@@ -8,4 +8,3 @@ set(SOURCES main.cpp)
 
 add_executable(main ${SOURCES})
 target_compile_options(main PRIVATE -Wall -Wextra)
-target_link_libraries(main PRIVATE criterion)
