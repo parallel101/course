@@ -522,10 +522,13 @@ v.push_back(4); // deque 的 push_back 不会导致迭代器失效
 *it = 0;        // 可以
 ```
 
+- https://www.geeksforgeeks.org/iterator-invalidation-cpp
+- https://en.cppreference.com/w/cpp/container
+
 25. 容器元素引用失效
 
 ```cpp
-std::vector<int> v = { 1, 2, 3 };
+std::vector<int> v = {1, 2, 3};
 int &ref = v[0];
 v.push_back(4); // push_back 可能导致扩容，使元素全部移动到了新的一段内存，会使之前保存的 ref 引用失效
 ref = 0;        // 错！
@@ -534,7 +537,7 @@ ref = 0;        // 错！
 如果不需要连续内存，可以改用分段内存的 deque 容器，其可以保证元素不被移动，引用不失效。
 
 ```cpp
-std::deque<int> v = { 1, 2, 3 };
+std::deque<int> v = {1, 2, 3};
 int &ref = v[0];
 v.push_back(4); // deque 的 push_back 不会导致元素移动，使引用失效
 ref = 0;        // 可以
@@ -670,5 +673,12 @@ void t1() {
 - 避免空悬引用
 - 开 Debug 模式的 STL
 
-`-DCMAKE_BUILD_TYPE=Debug` CMake Debug: -O0 -g; CMake Release: -O3 -DNDEBUG
-`--config Debug` MSVC Debug: zenod.dll; MSVC Release: zeno.dll
+指定 CMake 的模式：`cmake -B build -DCMAKE_BUILD_TYPE=Debug`
+
+- Debug: `-O0 -g` 编译选项
+- Release: `-O3 -DNDEBUG` 编译选项
+
+指定 MSVC 的模式：`cmake --build build --config Debug`
+
+- Debug: zenod.dll 链接 Debug 的 ABI
+- Release: zeno.dll 链接 Release 的 ABI
