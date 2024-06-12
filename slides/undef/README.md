@@ -85,7 +85,7 @@ float f = *(float *)&i; // 错！
 *(int *)(uintptr_t)&i;  // 可以
 ```
 
-例外：char 和 unsigned char 总是兼容任何类型
+例外：char、signed char 和 unsigned char 总是兼容任何类型
 
 ```cpp
 int i;
@@ -103,6 +103,24 @@ float bitCast(int i) {
     } u;
     u.i = i;
     return u.f; // 错！
+}
+```
+
+特例：common initial sequence
+```cpp
+int foo(int i) {
+    union {
+        struct {
+            int tag;
+            int value;
+        } m1;
+        struct {
+            int tag;
+            float value;
+        } m2;
+    } u;
+    u.m1.tag = i;
+    return u.m2.tag;
 }
 ```
 
@@ -154,11 +172,15 @@ int *p = (int *)(((uintptr_t)buf + sizeof(int) - 1) & ~(alignof(int) - 1));  // 
 
 **算数类**
 
-7. 有符号整数的加减乘除不能溢出
+7. 有符号整数的加减乘除模不能溢出
 
 ```cpp
 int i = INT_MAX;
 i + 1;  // 错！
+```
+
+```cpp
+INT_MAX % -1; // 错！如果 a/b 的结果不可表示，那么 a/b 和 a%b 均未定义
 ```
 
 无符号可以，无符号整数保证溢出必定回环
@@ -173,13 +195,19 @@ i + 1;  // 可以，会得到 0
 ```cpp
 int i = INT_MAX;
 (int)((unsigned int)i + 1);  // 可以，会得到一个负数 INT_MIN
+// 如下写法更具有可移植性，因为无符号数向有符号数转型时若超出有符号数的表示范围则为实现定义行为
+std::bit_cast<int>((unsigned int)i + i);
 ```
 
-8. 左移或右移位数不得超过整数类型上限
+8. 左移或右移的右运算数不得为负数或超过整数类型上限，左移的左操作数为负数或移位结果溢出
 
 ```cpp
 int i = 0;
 i << 32;  // 错！
+i << -1;  // 错！
+-1 << i;  // 错！
+1 << 31;  // 错！
+1U << 31; // 可以
 ```
 
 ```cpp
@@ -187,6 +215,7 @@ int i = 0;
 int k = 32;
 (k > 0 && k < 32) ? (i << k) : 0; // 可以
 ```
+额外注意，负数的右移运算是实现定义行为。
 
 9. 除数为 0
 
@@ -194,11 +223,12 @@ int k = 32;
 int i = 42;
 int j = 0;
 i / j;  // 错！
+i % j;  // 错！
 ```
 
 **函数类**
 
-10. 返回类型不为 void 的函数，必须有 return 语句
+10. 返回类型不为 void 的函数，若其返回值被使用，必须有 return 语句
 
 ```cpp
 int func() {
@@ -277,6 +307,7 @@ cout << arr[0]; // 可以，会读到 0
 int arr[10];
 int *p = &arr[0];
 p + 1;     // 可以
+p + 10;    // 可以
 p + 11;    // 错！
 ```
 
@@ -545,7 +576,7 @@ ref = 0;        // 可以
 
 **多线程类**
 
-26. 多个线程访问同一个对象，其中至少一个线程是写访问，是未定义行为（俗称数据竞争）
+26. 多个线程（无 happens before 关系地）访问同一个对象，其中至少一个线程的访问带有副作用（写访问或带有volatile的读访问），是未定义行为（俗称数据竞争）
 
 ```cpp
 std::string s;
