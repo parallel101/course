@@ -1,3 +1,41 @@
+* [开启标准库的调试模式](#开启标准库的调试模式)
+* [未定义行为？](#未定义行为)
+   * [空指针类](#空指针类)
+      * [不能解引用空指针（通常会产生崩溃，但也可能被优化产生奇怪的现象）](#不能解引用空指针通常会产生崩溃但也可能被优化产生奇怪的现象)
+      * [不能解引用 end 迭代器](#不能解引用-end-迭代器)
+      * [this 指针不能为空](#this-指针不能为空)
+   * [指针别名类](#指针别名类)
+      * [reinterpret_cast 后以不兼容的类型访问](#reinterpret_cast-后以不兼容的类型访问)
+      * [union 访问不是激活的成员](#union-访问不是激活的成员)
+      * [T 类型指针必须对齐到 alignof(T)](#t-类型指针必须对齐到-alignof(t))
+   * [算数类](#算数类)
+      * [有符号整数的加减乘除模不能溢出](#有符号整数的加减乘除模不能溢出)
+      * [左移或右移的位数，不得超过整数类型上限，不得为负](#左移或右移的位数不得超过整数类型上限不得为负)
+      * [除数不能为 0](#除数不能为-0)
+   * [函数类](#函数类)
+      * [返回类型不为 void 的函数，必须有 return 语句](#返回类型不为-void-的函数必须有-return-语句)
+      * [函数指针被调用时，不能为空](#函数指针被调用时不能为空)
+   * [生命周期类](#生命周期类)
+      * [不能读取未初始化的变量](#不能读取未初始化的变量)
+      * [指针的加减法不能超越数组边界](#指针的加减法不能超越数组边界)
+      * [可以有指向数组尾部的指针（类似 end 迭代器），但不能解引用](#可以有指向数组尾部的指针类似-end-迭代器但不能解引用)
+      * [不能访问未初始化的指针](#不能访问未初始化的指针)
+      * [不能访问已释放的内存](#不能访问已释放的内存)
+      * [new / new[] / malloc 和 delete / delete[] / free 必须匹配](#new-%2F-new%5B%5D-%2F-malloc-和-delete-%2F-delete%5B%5D-%2F-free-必须匹配)
+      * [不要访问已经析构的对象](#不要访问已经析构的对象)
+   * [库函数类](#库函数类)
+      * [ctype.h 中一系列函数的字符参数，必须在 0~127 范围内（即只支持 ASCII 字符）](#ctypeh-中一系列函数的字符参数必须在-0127-范围内即只支持-ascii-字符)
+      * [memcpy 函数的 src 和 dst 不能为空指针](#memcpy-函数的-src-和-dst-不能为空指针)
+      * [memcpy 不能接受带有重叠的 src 和 dst](#memcpy-不能接受带有重叠的-src-和-dst)
+      * [v.back() 当 v 为空时是未定义行为](#v.back()-当-v-为空时是未定义行为)
+      * [vector 的 operator[] 当 i 越界时，是未定义行为](#vector-的-operator%5B%5D-当-i-越界时，是未定义行为)
+      * [容器迭代器失效](#容器迭代器失效)
+      * [容器元素引用失效](#容器元素引用失效)
+      * [多个线程同时访问同一个对象，其中至少一个线程的访问为写访问，是未定义行为（俗称数据竞争）](#多个线程同时访问同一个对象其中至少一个线程的访问为写访问是未定义行为俗称数据竞争)
+      * [多个线程同时对两个 mutex 上锁，但顺序相反，会产生未定义行为（俗称死锁）](#多个线程同时对两个-mutex-上锁但顺序相反会产生未定义行为俗称死锁)
+      * [对于非 recursive_mutex，同一个线程对同一个 mutex 重复上锁，会产生未定义行为（俗称递归死锁）](#对于非-recursive_mutex同一个线程对同一个-mutex-重复上锁会产生未定义行为俗称递归死锁)
+* [总结](#总结)
+
 # 开启标准库的调试模式
 
 可以帮助你监测未定义行为
@@ -7,9 +45,9 @@
 
 # 未定义行为？
 
-**空指针类**
+## 空指针类
 
-1. 不能解引用空指针（通常会产生崩溃，但也可能被优化产生奇怪的现象）
+### 不能解引用空指针（通常会产生崩溃，但也可能被优化产生奇怪的现象）
 
 只要解引用就错了，无论是否读取或写入
 
@@ -36,7 +74,7 @@ if (p != nullptr) {   // 不会被优化，正常判断
 }
 ```
 
-2. 不能解引用 end 迭代器
+### 不能解引用 end 迭代器
 
 ```cpp
 std::vector<int> v = {1, 2, 3, 4};
@@ -58,7 +96,7 @@ int *begin = v.data();
 int *end = v.data() + v.size();
 ```
 
-3. this 指针不能为空
+### this 指针不能为空
 
 ```cpp
 struct C {
@@ -75,9 +113,9 @@ void func() {
 }
 ```
 
-**指针别名类**
+## 指针别名类
 
-4. reinterpret_cast 后以不兼容的类型访问
+### reinterpret_cast 后以不兼容的类型访问
 
 ```cpp
 int i;
@@ -85,7 +123,7 @@ float f = *(float *)&i; // 错！
 *(int *)(uintptr_t)&i;  // 可以
 ```
 
-例外：char 和 unsigned char 总是兼容任何类型
+例外：char、signed char、unsigned char 和 std::byte 总是兼容任何类型
 
 ```cpp
 int i;
@@ -93,7 +131,7 @@ char *buf = (char *)&i; // 可以
 buf[0] = 1;             // 可以
 ```
 
-5. union 访问不是激活的成员
+### union 访问不是激活的成员
 
 ```cpp
 float bitCast(int i) {
@@ -106,7 +144,26 @@ float bitCast(int i) {
 }
 ```
 
-建议改用 memcpy，因为 memcpy 内部被认为是以 char 指针访问的，char 总是兼容任何类型
+特例：公共的前缀成员可以安全地访问
+
+```cpp
+int foo(int i) {
+    union {
+        struct {
+            int tag;
+            int value;
+        } m1;
+        struct {
+            int tag;
+            float value;
+        } m2;
+    } u;
+    u.m1.tag = i;
+    return u.m2.tag; // 可以
+}
+```
+
+如需在 float 和 int 之间按位转换，建议改用 memcpy，因为 memcpy 内部被认为是以 char 指针访问的，char 总是兼容任何类型
 
 ```cpp
 float bitCast(int i) {
@@ -125,7 +182,7 @@ float bitCast(int i) {
 }
 ```
 
-6. T 类型指针必须对齐到 alignof(T)
+### T 类型指针必须对齐到 alignof(T)
 
 ```cpp
 struct alignas(64) C { // 假设 alignof(int) 是 4
@@ -152,16 +209,16 @@ char buf[sizeof(int) * 2];
 int *p = (int *)(((uintptr_t)buf + sizeof(int) - 1) & ~(alignof(int) - 1));  // 可以
 ```
 
-**算数类**
+## 算数类
 
-7. 有符号整数的加减乘除不能溢出
+### 有符号整数的加减乘除模不能溢出
 
 ```cpp
 int i = INT_MAX;
 i + 1;  // 错！
 ```
 
-无符号可以，无符号整数保证溢出必定回环
+但无符号可以，无符号整数保证：溢出必定回环 (wrap-around)
 
 ```cpp
 unsigned int i = UINT_MAX;
@@ -175,30 +232,63 @@ int i = INT_MAX;
 (int)((unsigned int)i + 1);  // 可以，会得到一个负数 INT_MIN
 ```
 
-8. 左移或右移位数不得超过整数类型上限
+> 如下写法更具有可移植性，因为无符号数向有符号数转型时若超出有符号数的表示范围则为实现定义行为（编译器厂商决定结果，但不是未定义行为）
 
 ```cpp
-int i = 0;
+std::bit_cast<int>((unsigned int)i + i);
+```
+
+有符号整数的加减乘除模运算结果结果必须在表示范围内：例如对于 int a 和 int b，若 a/b 的结果不可用 int 表示，那么 a/b 和 a%b 均未定义
+
+```cpp
+INT_MIN % -1; // 错！
+INT_MIN / -1; // 错！
+```
+
+### 左移或右移的位数，不得超过整数类型上限，不得为负
+
+```cpp
+unsigned int i = 0;
+i << 31;  // 可以
 i << 32;  // 错！
+i << 0;   // 可以
+i << -1;  // 错！
 ```
+
+对于有符号整数，左移还不得破坏符号位
 
 ```cpp
 int i = 0;
-int k = 32;
-(k > 0 && k < 32) ? (i << k) : 0; // 可以
+i << 1;   // 可以
+i << 31;  // 错！
+unsigned int u = 0;
+u << 31; // 可以
 ```
 
-9. 除数为 0
+如需处理来自用户输入的位移数量，可以先做范围检测
+
+```cpp
+int shift;
+cin >> shift;
+
+unsigned int u = 0;
+int i = 0;
+(shift > 0 && shift < 32) ? (u << shift) : 0; // 可以
+(shift > 0 && shift < 31) ? (i << shift) : 0; // 可以
+```
+
+### 除数不能为 0
 
 ```cpp
 int i = 42;
 int j = 0;
 i / j;  // 错！
+i % j;  // 错！
 ```
 
-**函数类**
+## 函数类
 
-10. 返回类型不为 void 的函数，必须有 return 语句
+### 返回类型不为 void 的函数，必须有 return 语句
 
 ```cpp
 int func() {
@@ -221,7 +311,21 @@ void func() {
 
 为了避免忘记写 return 语句，建议 gcc 编译器开启 `-Werror=return-type` 选项，将不写返回语句的警告转化为错误
 
-11. 函数指针被调用时，不能为空
+注意，在有分支的非 void 函数中，必须所有可达分支都有 return 语句
+
+```cpp
+int func(int x) {
+    if (x < 0)
+        return -x;
+    if (x > 0)
+        return x;
+    // 如果调用了 func(0)，那么会抵达没有 return 的分支，触发未定义行为
+}
+```
+
+> 没有 return 的分支相当于写了一个 std::unreachable()
+
+### 函数指针被调用时，不能为空
 
 ```cpp
 typedef void (*func_t)();
@@ -253,9 +357,9 @@ int main() {
 }
 ```
 
-**生命周期类**
+## 生命周期类
 
-12. 不能读取未初始化的变量
+### 不能读取未初始化的变量
 
 ```cpp
 int i;
@@ -271,16 +375,17 @@ int arr[10] = {};
 cout << arr[0]; // 可以，会读到 0
 ```
 
-13. 指针的加减法不能超越数组边界
+### 指针的加减法不能超越数组边界
 
 ```cpp
 int arr[10];
 int *p = &arr[0];
 p + 1;     // 可以
+p + 10;    // 可以
 p + 11;    // 错！
 ```
 
-14. 可以有指向数组尾部的指针（类似 end 迭代器），但不能解引用
+### 可以有指向数组尾部的指针（类似 end 迭代器），但不能解引用
 
 ```cpp
 int arr[10];
@@ -289,7 +394,7 @@ int *end = p + 10; // 可以
 *end;              // 错！
 ```
 
-15. 不能访问未初始化的指针
+### 不能访问未初始化的指针
 
 ```cpp
 int *p;
@@ -312,7 +417,7 @@ p->dog = new Dog;
 cout << p->dog->age; // 可以
 ```
 
-16. 不能访问已释放的内存
+### 不能访问已释放的内存
 
 ```cpp
 int *p = new int;
@@ -340,7 +445,7 @@ int main() {
 }
 ```
 
-可以改用更安全的 array 或 vector 容器
+建议改用更安全的 array 或 vector 容器
 
 ```cpp
 array<int, 10> func() {
@@ -354,7 +459,7 @@ int main() {
 }
 ```
 
-17. new / new[] / malloc 和 delete / delete[] / free 必须匹配
+### new / new[] / malloc 和 delete / delete[] / free 必须匹配
 
 ```cpp
 int *p = new int;
@@ -381,7 +486,7 @@ vector<int> a(3);
 unique_ptr<int> a = make_unique<int>(42);
 ```
 
-18. 不要访问已经析构的对象
+### 不要访问已经析构的对象
 
 ```cpp
 struct C {
@@ -404,9 +509,9 @@ std::string func() {
 }
 ```
 
-**库函数类**
+## 库函数类
 
-19. ctype.h 中一系列函数的字符参数，必须在 0~127 范围内（即只支持 ASCII 字符）
+### ctype.h 中一系列函数的字符参数，必须在 0~127 范围内（即只支持 ASCII 字符）
 
 ```cpp
 isdigit('0');    // 可以，返回 true
@@ -441,7 +546,7 @@ if ('0' <= c && c <= '9')  // 代替 isdigit(c)
 if (strchr(" \n\t\r", c))  // 代替 isspace(c)
 ```
 
-20. memcpy 函数的 src 和 dst 不能为空指针
+### memcpy 函数的 src 和 dst 不能为空指针
 
 ```cpp
 void *dst = nullptr;
@@ -460,7 +565,7 @@ if (size != 0) // 可以
     memcpy(dst, src, size);
 ```
 
-21. memcpy 不能接受带有重叠的 src 和 dst
+### memcpy 不能接受带有重叠的 src 和 dst
 
 ```cpp
 char arr[10];
@@ -482,7 +587,7 @@ memmove(arr, arr + 5, 5); // 可以
 
 从 memcpy 的 src 和 dst 指针参数是 restrict 修饰的，而 memmove 没有，就可以看出来，memcpy 不允许任何形式的指针重叠，无论先后顺序
 
-22. v.back() 当 v 为空时是未定义行为
+### v.back() 当 v 为空时是未定义行为
 
 ```cpp
 std::vector<int> v = {};
@@ -490,7 +595,7 @@ int i = v.back();                  // 错！back() 并不会对 v 是否有最�
 int i = v.empty() ? 0 : v.back();  // 更安全，当 v 为空时返回 0
 ```
 
-23. vector 的 operator[] 当 i 越界时，是未定义行为
+### vector 的 operator[] 当 i 越界时，是未定义行为
 
 ```cpp
 std::vector<int> v = { 1, 2, 3 };
@@ -504,7 +609,7 @@ std::vector<int> v = { 1, 2, 3 };
 v.at(3); // 安全，会检测到越界，抛出 std::out_of_range 异常
 ```
 
-24. 容器迭代器失效
+### 容器迭代器失效
 
 ```cpp
 std::vector<int> v = { 1, 2, 3 };
@@ -525,7 +630,7 @@ v.push_back(4); // deque 的 push_back 不会导致迭代器失效
 - https://www.geeksforgeeks.org/iterator-invalidation-cpp
 - https://en.cppreference.com/w/cpp/container
 
-25. 容器元素引用失效
+### 容器元素引用失效
 
 ```cpp
 std::vector<int> v = {1, 2, 3};
@@ -543,9 +648,9 @@ v.push_back(4); // deque 的 push_back 不会导致元素移动，使引用失�
 ref = 0;        // 可以
 ```
 
-**多线程类**
+## 多线程类
 
-26. 多个线程访问同一个对象，其中至少一个线程是写访问，是未定义行为（俗称数据竞争）
+### 多个线程同时访问同一个对象，其中至少一个线程的访问为写访问，是未定义行为（俗称数据竞争）
 
 ```cpp
 std::string s;
@@ -571,7 +676,80 @@ void t2() {
 }
 ```
 
-27. 多个线程同时对两个 mutex 上锁，但顺序相反，会产生未定义行为（俗称死锁）
+更准确的说法是：多个线程（无 happens before 关系地）访问同一个对象，其中至少一个线程的访问带有副作用（写访问或带有volatile的读访问），是未定义行为
+
+```cpp
+// 八股文教材常见的错误写法！volatile 并不保证原子性和内存序，这样写是有未定义行为的。正确的做法是改用 std::atomic<int>
+volatile int ready = 0;
+int data;
+
+void t1() {
+    data = 42;
+    ready = 1;
+}
+
+void t2() {
+    while (ready == 0)
+        ;
+    printf("%d\n", data);
+}
+```
+
+建议利用 mutex，counting_semaphore，atomic 等多线程同步工具，保证多个线程访问同一个对象时，顺序有先有后，不会“同时”发生，那就是安全的
+
+```cpp
+std::string s;
+std::mutex m;
+
+void t1() {
+    std::lock_guard l(m);
+    s.push_back('a'); // 有 mutex 保护，可以
+}
+
+void t2() {
+    std::lock_guard l(m);
+    s.push_back('b'); // 有 mutex 保护，可以
+}
+```
+
+在上面的例子中，互斥锁保证了要么 t1 happens before t2，要么 t2 happens before t1，不会“同时”访问，是安全的
+
+```cpp
+std::string s;
+std::counting_semaphore<1> sem(1);
+
+void t1() {
+    s.push_back('a');
+    sem.release(); // 令 t2 必须发生在 t1 之后
+}
+
+void t2() {
+    sem.acquire(); // t2 必须等待 t1 release 后，才能开始执行
+    s.push_back('b');
+}
+```
+
+在上面的例子中，信号量保证了 t1 happens before t2，不会“同时”访问，是安全的
+
+```cpp
+std::string s;
+std::atomic<bool> ready{false};
+
+void t1() {
+    s.push_back('a');
+    ready.store(true, std::memory_order_release); // 令 s 的修改对其他 acquire 了 ready 的线程可见
+}
+
+void t2() {
+    while (!ready.load(std::memory_order_acquire)) // t2 必须等待 t1 store 后，才能开始执行
+        ;
+    s.push_back('b');
+}
+```
+
+在上面的例子中，原子变量的 acquire/release 内存序保证了 t1 happens before t2，不会“同时”访问，是安全的
+
+### 多个线程同时对两个 mutex 上锁，但顺序相反，会产生未定义行为（俗称死锁）
 
 ```cpp
 std::mutex m1, m2;
@@ -627,7 +805,7 @@ void t2() {
 }
 ```
 
-28. 对于非 recursive_mutex，同一个线程对同一个 mutex 重复上锁，会产生未定义行为（俗称递归死锁）
+### 对于非 recursive_mutex，同一个线程对同一个 mutex 重复上锁，会产生未定义行为（俗称递归死锁）
 
 ```cpp
 std::mutex m;
