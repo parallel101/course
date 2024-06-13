@@ -18,7 +18,8 @@ using namespace std;
 
 int main() {
     string program = "../build/main";
-    size_t repeats = 10000;
+    size_t repeats = 100;
+    system("ulimit -c 0");
 
     unordered_map<string, size_t> collect;
 #ifdef HAS_TBB
