@@ -1,4 +1,3 @@
-#include <iostream>
 #include "mtpool.hpp"
 
 struct Test1 {

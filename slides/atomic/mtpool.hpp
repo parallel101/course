@@ -1,15 +1,12 @@
 #pragma once
 
-#include <barrier>
-#include <chrono>
-#include <iostream>
 #include <map>
-#include <random>
 #include <string>
 #include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <barrier>
 #ifdef __linux__
 # include <sched.h>
 # include <unistd.h>
@@ -77,9 +74,6 @@ private:
                            true)
                         : false) ||
                    ...);
-            if (!testFunc) {
-                std::terminate();
-            }
         }
 
         void setupThreadLocal(std::size_t index) noexcept override {
@@ -113,6 +107,10 @@ private:
         alignas(64) TestClass m_testClass;
     };
 
+    static std::string resultToString(Result result) {
+        return std::to_string(result);
+    };
+
     struct MTTestPool final {
         MTTestPool(std::unique_ptr<MTTest> testData, std::size_t repeats)
             : m_threads(testData->numEntries()),
@@ -120,10 +118,7 @@ private:
               m_barrierEnd(testData->numEntries() + 1),
               m_repeats(repeats),
               m_testData(std::move(testData)) {
-            std::mt19937 rng(
-                std::chrono::steady_clock::now().time_since_epoch().count());
             std::size_t maxCores = std::thread::hardware_concurrency();
-            std::uniform_int_distribution<std::size_t> uni(0, maxCores - 1);
             for (std::size_t i = 0; i < m_threads.size(); ++i) {
                 m_threads[i] =
                     std::thread(&MTTestPool::testThread, this, i, i % maxCores);
@@ -140,9 +135,13 @@ private:
         }
 
         void showStatistics() {
-            std::cout << "在测试 " << m_testData->testName() << " 中:\n";
-            for (auto &&[k, v]: m_statistics) {
-                std::cout << "  " << k << " 出现了 " << v << " 次\n";
+            /* std::cout << "在测试 " << m_testData->testName() << " 中:\n"; */
+            /* for (auto &&[result, count]: m_statistics) { */
+            /*     std::cout << "  " << resultToString(result) << " 出现了 " << count << " 次\n"; */
+            /* } */
+            printf("在测试 %s 中:\n", m_testData->testName().c_str());
+            for (auto &&[result, count]: m_statistics) {
+                printf("  %s 出现了 %zu 次\n", resultToString(result).c_str(), count);
             }
         }
 
