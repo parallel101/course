@@ -88,6 +88,7 @@ private:
         }
 
         std::size_t numEntries() const noexcept override {
+            static_assert(CountEntries<TestClass>::value > 0);
             return CountEntries<TestClass>::value;
         }
 
@@ -158,12 +159,11 @@ private:
                               &cpu); // 绑定线程到固定核心
 #endif
             m_testData->setupThreadLocal(index);
-            for (int t = 0; t < 10; ++t) {
+            std::this_thread::yield();
+            for (int t = 0; t < 8; ++t) { // 热身运动
                 m_barrierBegin.arrive_and_wait(); // 等待其他线程就绪
             }
             for (std::size_t i = 0; i < m_repeats; ++i) {
-                m_barrierBegin.arrive_and_wait(); // 等待其他线程就绪
-                m_barrierBegin.arrive_and_wait(); // 等两次避免同步不完全
                 testFunc();
                 m_barrierEnd.arrive_and_wait(); // 等待统计线程开始
                 m_barrierEnd.arrive_and_wait(); // 等待统计线程结束
@@ -198,7 +198,7 @@ private:
 
 public:
     template <class TestClass>
-    static void runTest(std::size_t repeats = 100000) {
+    static void runTest(std::size_t repeats = 1000000) {
         MTTestPool pool(std::make_unique<MTTestImpl<TestClass>>(), repeats);
         pool.joinAll();
         pool.showStatistics();
