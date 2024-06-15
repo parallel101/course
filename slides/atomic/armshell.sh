@@ -1,12 +1,50 @@
 #!/bin/bash
 
-FILES=("main.cpp" "mtpool.hpp" "run.sh")
 PORT=2222
+FILES=()
+GLOBS=()
+HELP=false
+
+ARGV0="$0"
+while :; do
+    case "$1" in
+        --file)
+            FILES+=("$2")
+            shift 2;;
+        --glob)
+            GLOBS+=("$2")
+            shift 2;;
+        --port)
+            PORT="$2"
+            shift 2;;
+        --dump)
+            DUMP=true
+            shift;;
+        --help)
+            HELP=true
+            shift;;
+        *)
+            break;;
+    esac
+done
+
+if $HELP; then
+    echo "Usage: $ARGV0 [--file <file>] [--glob <pattern>] [--port <port>] [--dump] [--help]"
+    exit 0
+fi
 
 DEPS=(mktemp socat inotifywait stty sha1sum sleep stat base64 ip rm echo)
 if ! which "${DEPS[@]}" > /dev/null 2>&1; then
     echo "-- Please install: ${DEPS[@]}" >&2
     exit 1
+fi
+
+if [ "x${#GLOBS}" != "x0" ]; then
+    for x in ${GLOBS[@]}; do
+        if [ -f "$x" ]; then
+            FILES+=("$x")
+        fi
+    done
 fi
 
 ADDR=$(ip route get 1 | awk '{print $7;exit}')
@@ -20,7 +58,15 @@ fi
 echo -e "\033[0m"
 
 if [ "x${#FILES}" != "x0" ]; then
-    TMP="$(mktemp -d)"
+    if [ -d /tmp ]; then
+        TMPSHA=/tmp/.armshell-cache
+        if ! [ -d "$TMPSHA" ]; then
+            mkdir -p "$TMPSHA" || TMPSHA=
+        fi
+    fi
+    if [ "x$TMPSHA" == "x" ]; then
+        TMPSHA="$(mktemp -d)"
+    fi
     TMPLOCK="$(mktemp)"
     dt=1
     waitable=false
@@ -46,7 +92,7 @@ if [ "x${#FILES}" != "x0" ]; then
                 inotifywait -t1 -qq . -e create -e move_self -e close_write > /dev/null 2>&1
             done
             sleep 0.02
-            shafile="$TMP/$(echo "$file" | sha1sum | cut -d' ' -f1).sha1"
+            shafile="$TMPSHA/$(echo "$file" | sha1sum | cut -d' ' -f1).sha1"
             sha="$(sha1sum "$file" | cut -d' ' -f1)"
             same=false
             [ -f "$shafile" ] && [ "x$sha" == "x$(cat "$shafile")" ] && same=true

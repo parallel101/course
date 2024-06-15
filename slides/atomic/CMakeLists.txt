@@ -7,10 +7,9 @@ project(main)
 set(SOURCES main.cpp)
 
 add_compile_options(-Wall -Wextra -Werror=return-type)
-add_executable(main main.cpp)
 
-add_custom_target(run
-    COMMAND $<TARGET_FILE:main>
-    DEPENDS main
-    WORKING_DIRECTORY ${CMAKE_PROJECT_DIR}
-)
+file(GLOB sources "*.cpp")
+foreach(source IN LISTS sources)
+    get_filename_component(name ${source} NAME_WE)
+    add_executable(${name} ${source})
+endforeach()
