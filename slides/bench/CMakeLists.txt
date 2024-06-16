@@ -7,6 +7,8 @@ project(main)
 set(SOURCES main.cpp)
 
 add_compile_options(-Wall -Wextra -Werror=return-type)
+add_compile_options(-march=native)
+
 add_executable(main main.cpp test.cpp)
 
 find_package(benchmark REQUIRED)
