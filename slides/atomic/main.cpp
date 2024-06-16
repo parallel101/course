@@ -4,27 +4,11 @@ struct TestNaive {
     int data = 0;
 
     void entry(MTIndex<0>) {
-        data += 1;
+        data++;
     }
 
     void entry(MTIndex<1>) {
-        data += 1;
-    }
-
-    void teardown() {
-        MTTest::result = data;
-    }
-};
-
-struct TestVolatile {
-    volatile int data = 0;
-
-    void entry(MTIndex<0>) {
-        data += 1;
-    }
-
-    void entry(MTIndex<1>) {
-        data += 1;
+        data++;
     }
 
     void teardown() {
@@ -36,11 +20,27 @@ struct TestAtomic {
     std::atomic<int> data = 0;
 
     void entry(MTIndex<0>) {
-        data += 1;
+        data++;
     }
 
     void entry(MTIndex<1>) {
-        data += 1;
+        data++;
+    }
+
+    void teardown() {
+        MTTest::result = data;
+    }
+};
+
+struct TestAtomicRelaxed {
+    std::atomic<int> data = 0;
+
+    void entry(MTIndex<0>) {
+        data.fetch_add(1, std::memory_order::relaxed);
+    }
+
+    void entry(MTIndex<1>) {
+        data.fetch_add(1, std::memory_order::relaxed);
     }
 
     void teardown() {
@@ -67,8 +67,8 @@ struct TestAtomicWrong {
 
 int main() {
     MTTest::runTest<TestNaive>();
-    MTTest::runTest<TestVolatile>();
     MTTest::runTest<TestAtomic>();
+    MTTest::runTest<TestAtomicRelaxed>();
     MTTest::runTest<TestAtomicWrong>();
     return 0;
 }

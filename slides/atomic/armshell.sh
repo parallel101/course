@@ -58,15 +58,15 @@ fi
 echo -e "\033[0m"
 
 if [ "x${#FILES}" != "x0" ]; then
-    if [ -d /tmp ]; then
-        TMPSHA=/tmp/.armshell-cache
-        if ! [ -d "$TMPSHA" ]; then
-            mkdir -p "$TMPSHA" || TMPSHA=
-        fi
-    fi
-    if [ "x$TMPSHA" == "x" ]; then
-        TMPSHA="$(mktemp -d)"
-    fi
+    # if [ -d /tmp ]; then
+    #     TMPSHA=/tmp/.armshell-cache
+    #     if ! [ -d "$TMPSHA" ]; then
+    #         mkdir -p "$TMPSHA" || TMPSHA=
+    #     fi
+    # fi
+    # if [ "x$TMPSHA" == "x" ]; then
+    TMPSHA="$(mktemp -d)"
+    # fi
     TMPLOCK="$(mktemp)"
     dt=1
     waitable=false

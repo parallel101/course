@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 3.12)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 project(main)
 
 set(SOURCES main.cpp)
 
 add_compile_options(-Wall -Wextra -Werror=return-type)
-add_executable(main main.cpp)
+add_executable(main main.cpp test.cpp)
 
 find_package(benchmark REQUIRED)
-target_link_libraries(main benchmark::benchmark benchmark::benchmark_main)
+target_link_libraries(main benchmark::benchmark)
 
 add_custom_target(run
     COMMAND $<TARGET_FILE:main>
