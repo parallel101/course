@@ -28,11 +28,11 @@ struct ConcurrentList {
     }
 
     bool pop_back_nowait(T &value) {
-        Node *old_head = head.load(std::memory_order_relaxed);
+        Node *old_head = head.load(std::memory_order_consume);
         do {
             if (old_head == nullptr)
                 return false;
-        } while (!head.compare_exchange_weak(old_head, old_head->next, std::memory_order_acquire, std::memory_order_relaxed));
+        } while (!head.compare_exchange_weak(old_head, old_head->next, std::memory_order_consume, std::memory_order_consume));
         // load barrier
         value = std::move(old_head->value);
         delete old_head;
@@ -40,7 +40,7 @@ struct ConcurrentList {
     }
 
     T pop_back() {
-        Node *old_head = head.load(std::memory_order_relaxed);
+        Node *old_head = head.load(std::memory_order_consume);
         do {
             while (old_head == nullptr) {
 #if __cpp_lib_atomic_wait
@@ -50,9 +50,9 @@ struct ConcurrentList {
                     --retries;
                 }
 #endif
-                old_head = head.load(std::memory_order_relaxed);
+                old_head = head.load(std::memory_order_consume);
             }
-        } while (!head.compare_exchange_weak(old_head, old_head->next, std::memory_order_acquire, std::memory_order_relaxed));
+        } while (!head.compare_exchange_weak(old_head, old_head->next, std::memory_order_consume, std::memory_order_consume));
         // load barrier
         T value = std::move(old_head->value);
         delete old_head;

@@ -1,5 +1,3 @@
-#include <bit>
-#include <cstring>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -39,117 +37,117 @@ struct tag_ {
     explicit tag_() = default;
 };
 
-#define SUCCESSOR_1 _0
-#define SUCCESSOR_2 SUCCESSOR_1, _1
-#define SUCCESSOR_3 SUCCESSOR_2, _2
-#define SUCCESSOR_4 SUCCESSOR_3, _3
-#define SUCCESSOR_5 SUCCESSOR_4, _4
-#define SUCCESSOR_6 SUCCESSOR_5, _5
-#define SUCCESSOR_7 SUCCESSOR_6, _6
-#define SUCCESSOR_8 SUCCESSOR_7, _7
-#define SUCCESSOR_9 SUCCESSOR_8, _8
-#define SUCCESSOR_10 SUCCESSOR_9, _9
-#define SUCCESSOR_11 SUCCESSOR_10, _10
-#define SUCCESSOR_12 SUCCESSOR_11, _11
-#define SUCCESSOR_13 SUCCESSOR_12, _12
-#define SUCCESSOR_14 SUCCESSOR_13, _13
-#define SUCCESSOR_15 SUCCESSOR_14, _14
-#define SUCCESSOR_16 SUCCESSOR_15, _15
-#define SUCCESSOR_17 SUCCESSOR_16, _16
-#define SUCCESSOR_18 SUCCESSOR_17, _17
-#define SUCCESSOR_19 SUCCESSOR_18, _18
-#define SUCCESSOR_20 SUCCESSOR_19, _19
-#define SUCCESSOR_21 SUCCESSOR_20, _20
-#define SUCCESSOR_22 SUCCESSOR_21, _21
-#define SUCCESSOR_23 SUCCESSOR_22, _22
-#define SUCCESSOR_24 SUCCESSOR_23, _23
-#define SUCCESSOR_25 SUCCESSOR_24, _24
-#define SUCCESSOR_26 SUCCESSOR_25, _25
-#define SUCCESSOR_27 SUCCESSOR_26, _26
-#define SUCCESSOR_28 SUCCESSOR_27, _27
-#define SUCCESSOR_29 SUCCESSOR_28, _28
-#define SUCCESSOR_30 SUCCESSOR_29, _29
-#define SUCCESSOR_31 SUCCESSOR_30, _30
-#define SUCCESSOR_32 SUCCESSOR_31, _31
+#define REFLECT_SUCC_1 _0
+#define REFLECT_SUCC_2 REFLECT_SUCC_1, _1
+#define REFLECT_SUCC_3 REFLECT_SUCC_2, _2
+#define REFLECT_SUCC_4 REFLECT_SUCC_3, _3
+#define REFLECT_SUCC_5 REFLECT_SUCC_4, _4
+#define REFLECT_SUCC_6 REFLECT_SUCC_5, _5
+#define REFLECT_SUCC_7 REFLECT_SUCC_6, _6
+#define REFLECT_SUCC_8 REFLECT_SUCC_7, _7
+#define REFLECT_SUCC_9 REFLECT_SUCC_8, _8
+#define REFLECT_SUCC_10 REFLECT_SUCC_9, _9
+#define REFLECT_SUCC_11 REFLECT_SUCC_10, _10
+#define REFLECT_SUCC_12 REFLECT_SUCC_11, _11
+#define REFLECT_SUCC_13 REFLECT_SUCC_12, _12
+#define REFLECT_SUCC_14 REFLECT_SUCC_13, _13
+#define REFLECT_SUCC_15 REFLECT_SUCC_14, _14
+#define REFLECT_SUCC_16 REFLECT_SUCC_15, _15
+#define REFLECT_SUCC_17 REFLECT_SUCC_16, _16
+#define REFLECT_SUCC_18 REFLECT_SUCC_17, _17
+#define REFLECT_SUCC_19 REFLECT_SUCC_18, _18
+#define REFLECT_SUCC_20 REFLECT_SUCC_19, _19
+#define REFLECT_SUCC_21 REFLECT_SUCC_20, _20
+#define REFLECT_SUCC_22 REFLECT_SUCC_21, _21
+#define REFLECT_SUCC_23 REFLECT_SUCC_22, _22
+#define REFLECT_SUCC_24 REFLECT_SUCC_23, _23
+#define REFLECT_SUCC_25 REFLECT_SUCC_24, _24
+#define REFLECT_SUCC_26 REFLECT_SUCC_25, _25
+#define REFLECT_SUCC_27 REFLECT_SUCC_26, _26
+#define REFLECT_SUCC_28 REFLECT_SUCC_27, _27
+#define REFLECT_SUCC_29 REFLECT_SUCC_28, _28
+#define REFLECT_SUCC_30 REFLECT_SUCC_29, _29
+#define REFLECT_SUCC_31 REFLECT_SUCC_30, _30
+#define REFLECT_SUCC_32 REFLECT_SUCC_31, _31
 
-#define MEMBERS__(n, ...) \
+#define REFLECT_MEMBERS__(n, ...) \
     template <typename T, typename Visit> \
     constexpr auto members_(tag_<n>, T &&t, Visit &&visit) { \
         auto &&[__VA_ARGS__] = t; \
         return visit(__VA_ARGS__); \
     }
 
-#define MEMBERS_(n, ...) MEMBERS__(n, __VA_ARGS__)
-#define MEMBERS(n) MEMBERS_(n, SUCCESSOR_##n)
+#define REFLECT_MEMBERS_(n, ...) REFLECT_MEMBERS__(n, __VA_ARGS__)
+#define REFLECT_MEMBERS(n) REFLECT_MEMBERS_(n, REFLECT_SUCC_##n)
 
-MEMBERS(1)
-MEMBERS(2)
-MEMBERS(3)
-MEMBERS(4)
-MEMBERS(5)
-MEMBERS(6)
-MEMBERS(7)
-MEMBERS(8)
-MEMBERS(9)
-MEMBERS(10)
-MEMBERS(11)
-MEMBERS(12)
-MEMBERS(13)
-MEMBERS(14)
-MEMBERS(15)
-MEMBERS(16)
-MEMBERS(17)
-MEMBERS(18)
-MEMBERS(19)
-MEMBERS(20)
-MEMBERS(21)
-MEMBERS(22)
-MEMBERS(23)
-MEMBERS(24)
-MEMBERS(25)
-MEMBERS(26)
-MEMBERS(27)
-MEMBERS(28)
-MEMBERS(29)
-MEMBERS(30)
-MEMBERS(31)
-MEMBERS(32)
+REFLECT_MEMBERS(1)
+REFLECT_MEMBERS(2)
+REFLECT_MEMBERS(3)
+REFLECT_MEMBERS(4)
+REFLECT_MEMBERS(5)
+REFLECT_MEMBERS(6)
+REFLECT_MEMBERS(7)
+REFLECT_MEMBERS(8)
+REFLECT_MEMBERS(9)
+REFLECT_MEMBERS(10)
+REFLECT_MEMBERS(11)
+REFLECT_MEMBERS(12)
+REFLECT_MEMBERS(13)
+REFLECT_MEMBERS(14)
+REFLECT_MEMBERS(15)
+REFLECT_MEMBERS(16)
+REFLECT_MEMBERS(17)
+REFLECT_MEMBERS(18)
+REFLECT_MEMBERS(19)
+REFLECT_MEMBERS(20)
+REFLECT_MEMBERS(21)
+REFLECT_MEMBERS(22)
+REFLECT_MEMBERS(23)
+REFLECT_MEMBERS(24)
+REFLECT_MEMBERS(25)
+REFLECT_MEMBERS(26)
+REFLECT_MEMBERS(27)
+REFLECT_MEMBERS(28)
+REFLECT_MEMBERS(29)
+REFLECT_MEMBERS(30)
+REFLECT_MEMBERS(31)
+REFLECT_MEMBERS(32)
 
-#undef MEMBERS__
-#undef MEMBERS_
-#undef MEMBERS
-#undef SUCCESSOR_1
-#undef SUCCESSOR_2
-#undef SUCCESSOR_3
-#undef SUCCESSOR_4
-#undef SUCCESSOR_5
-#undef SUCCESSOR_6
-#undef SUCCESSOR_7
-#undef SUCCESSOR_8
-#undef SUCCESSOR_9
-#undef SUCCESSOR_10
-#undef SUCCESSOR_11
-#undef SUCCESSOR_12
-#undef SUCCESSOR_13
-#undef SUCCESSOR_14
-#undef SUCCESSOR_15
-#undef SUCCESSOR_16
-#undef SUCCESSOR_17
-#undef SUCCESSOR_18
-#undef SUCCESSOR_19
-#undef SUCCESSOR_20
-#undef SUCCESSOR_21
-#undef SUCCESSOR_22
-#undef SUCCESSOR_23
-#undef SUCCESSOR_24
-#undef SUCCESSOR_25
-#undef SUCCESSOR_26
-#undef SUCCESSOR_27
-#undef SUCCESSOR_28
-#undef SUCCESSOR_29
-#undef SUCCESSOR_30
-#undef SUCCESSOR_31
-#undef SUCCESSOR_32
+#undef REFLECT_MEMBERS__
+#undef REFLECT_MEMBERS_
+#undef REFLECT_MEMBERS
+#undef REFLECT_SUCC_1
+#undef REFLECT_SUCC_2
+#undef REFLECT_SUCC_3
+#undef REFLECT_SUCC_4
+#undef REFLECT_SUCC_5
+#undef REFLECT_SUCC_6
+#undef REFLECT_SUCC_7
+#undef REFLECT_SUCC_8
+#undef REFLECT_SUCC_9
+#undef REFLECT_SUCC_10
+#undef REFLECT_SUCC_11
+#undef REFLECT_SUCC_12
+#undef REFLECT_SUCC_13
+#undef REFLECT_SUCC_14
+#undef REFLECT_SUCC_15
+#undef REFLECT_SUCC_16
+#undef REFLECT_SUCC_17
+#undef REFLECT_SUCC_18
+#undef REFLECT_SUCC_19
+#undef REFLECT_SUCC_20
+#undef REFLECT_SUCC_21
+#undef REFLECT_SUCC_22
+#undef REFLECT_SUCC_23
+#undef REFLECT_SUCC_24
+#undef REFLECT_SUCC_25
+#undef REFLECT_SUCC_26
+#undef REFLECT_SUCC_27
+#undef REFLECT_SUCC_28
+#undef REFLECT_SUCC_29
+#undef REFLECT_SUCC_30
+#undef REFLECT_SUCC_31
+#undef REFLECT_SUCC_32
 
 struct tuple_ref_ {
     template <typename ...Ts>
@@ -204,20 +202,6 @@ template <typename T, typename Each>
 constexpr auto members_foreach(T &&t, Each &&each) {
     return members_apply(t, [&each] (auto &&...args) {
         return (each(args), ...);
-    });
-}
-
-template <typename To, typename T, typename Each>
-constexpr auto members_transform_to(T &&t, Each &&each) {
-    return members_apply(t, [&each] (auto &&...args) {
-        return To{each(args)...};
-    });
-}
-
-template <typename T, typename Each>
-constexpr auto members_transform(T &&t, Each &&each) {
-    return members_apply(t, [&each] (auto &&...args) {
-        return std::tuple{each(args)...};
     });
 }
 
@@ -342,15 +326,15 @@ constexpr auto members_name_(std::index_sequence<Is...>) {
 template <const char *str>
 using make_static_string = typename details_::string_builder_<details_::static_string_length_(str), str>::type;
 
-#define DEFINE_STATIC_STRING(...) \
+#define REFLECT_STATIC_STRING(...) \
 { \
     static constexpr const char _static_buffer[] = __VA_ARGS__; \
     using type = reflect::make_static_string<_static_buffer>; \
 }
 
-#define DEFINE_MEMBER_NAMES(type, ...) \
+#define REFLECT_MEMBERS(type, ...) \
 template <> \
-struct reflect::member_names_trait<type> DEFINE_STATIC_STRING(#__VA_ARGS__);
+struct reflect::member_names_trait<type> REFLECT_STATIC_STRING(#__VA_ARGS__);
 
 template <typename T>
 constexpr auto members_name() {
@@ -378,7 +362,7 @@ struct Z {
     std::string f4;
 };
 
-DEFINE_MEMBER_NAMES(Y, a, b, c);
+REFLECT_MEMBERS(Y, a, b, c);
 
 int main() {
     std::cout << std::get<1>(reflect::members_name<Y>()).value << '\n';
