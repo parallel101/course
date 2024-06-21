@@ -10,7 +10,7 @@ project(mallochook LANGUAGES CXX)
 
 add_compile_options(-Wall -Wextra -Werror=return-type)
 
-add_library(mallochook SHARED hook.cpp)
-
+add_library(mallochook SHARED hook.cpp plot.cpp)
+add_library(leakcheck SHARED check.cpp)
 add_executable(main main.cpp)
 target_link_libraries(main PRIVATE mallochook)

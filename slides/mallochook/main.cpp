@@ -1,11 +1,12 @@
-#include <cstdio>
+#include <thread>
+#include <vector>
+#include <chrono>
 
-struct alignas(64) CachelineAligned {
-    int x;
-};
+using namespace std::chrono_literals;
 
 int main() {
-    auto *p1 = new CachelineAligned[1];
-    p1->x = 2;
-    delete[] p1;
+    std::vector<int> a;
+    for (int i = 0; i < 100; i++) {
+        a.push_back(i);
+    }
 }
