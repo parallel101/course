@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <chrono>
 #include <cstdlib>
 #include <deque>
@@ -68,13 +69,175 @@ struct EnableGuard {
 
 } // namespace
 
+#if __GNUC__
+extern "C" void *__libc_malloc(size_t size) noexcept;
+extern "C" void __libc_free(void *ptr) noexcept;
+extern "C" void *__libc_calloc(size_t nmemb, size_t size) noexcept;
+extern "C" void *__libc_realloc(void *ptr, size_t size) noexcept;
+extern "C" void *__libc_reallocarray(void *ptr, size_t nmemb,
+                                     size_t size) noexcept;
+extern "C" void *__libc_valloc(size_t size) noexcept;
+extern "C" void *__libc_memalign(size_t align, size_t size) noexcept;
+#define REAL_LIBC(name) __libc_##name
+#define MAY_OVERRIDE_MALLOC 1
+#define MAY_SUPPORT_MEMALIGN 1
+
+#elif _MSC_VER
+static void *msvc_malloc(size_t size) noexcept {
+    return HeapAlloc(GetProcessHeap(), 0, size);
+}
+
+static void *msvc_calloc(size_t nmemb, size_t size) noexcept {
+    return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, nmemb * size);
+}
+
+static void msvc_free(void *ptr) noexcept {
+    HeapFree(GetProcessHeap(), 0, ptr);
+}
+
+static void *msvc_realloc(void *ptr, size_t size) noexcept {
+    return HeapReAlloc(GetProcessHeap(), 0, ptr, size);
+}
+
+static void *msvc_reallocarray(void *ptr, size_t nmemb,
+                               size_t size) noexcept {
+    return msvc_realloc(ptr, nmemb * size);
+}
+
+#define REAL_LIBC(name) msvc_##name
+#define MAY_OVERRIDE_MALLOC 1
+#define MAY_SUPPORT_MEMALIGN 0
+
+#else
+#define REAL_LIBC(name) name
+#define MAY_OVERRIDE_MALLOC 0
+#define MAY_SUPPORT_MEMALIGN 0
+#endif
+
+#if MAY_OVERRIDE_MALLOC
+extern "C" void *malloc(size_t size) noexcept {
+    EnableGuard ena;
+    void *ptr = REAL_LIBC(malloc)(size);
+    if (ena) {
+        global.on(AllocOp::Malloc, ptr, size, kNone,
+                  __builtin_return_address(0));
+    }
+    return ptr;
+}
+
+extern "C" void free(void *ptr) noexcept {
+    EnableGuard ena;
+    if (ena) {
+        global.on(AllocOp::Free, ptr, kNone, kNone,
+                  __builtin_return_address(0));
+    }
+    REAL_LIBC(free)(ptr);
+}
+
+extern "C" void *calloc(size_t nmemb, size_t size) noexcept {
+    EnableGuard ena;
+    void *ptr = REAL_LIBC(calloc)(nmemb, size);
+    if (ena) {
+        global.on(AllocOp::Malloc, ptr, nmemb * size, kNone,
+                  __builtin_return_address(0));
+    }
+    return ptr;
+}
+
+extern "C" void *realloc(void *ptr, size_t size) noexcept {
+    EnableGuard ena;
+    void *new_ptr = REAL_LIBC(realloc)(ptr, size);
+    if (ena) {
+        global.on(AllocOp::Malloc, new_ptr, size, kNone,
+                  __builtin_return_address(0));
+        if (new_ptr) {
+            global.on(AllocOp::Free, ptr, kNone, kNone,
+                      __builtin_return_address(0));
+        }
+    }
+    return new_ptr;
+}
+
+extern "C" void *reallocarray(void *ptr, size_t nmemb, size_t size) noexcept {
+    EnableGuard ena;
+    void *new_ptr = REAL_LIBC(reallocarray)(ptr, nmemb, size);
+    if (ena) {
+        global.on(AllocOp::Malloc, new_ptr, nmemb * size, kNone,
+                  __builtin_return_address(0));
+        if (new_ptr) {
+            global.on(AllocOp::Free, ptr, kNone, kNone,
+                      __builtin_return_address(0));
+        }
+    }
+    return new_ptr;
+}
+
+#if MAY_SUPPORT_MEMALIGN
+extern "C" void *valloc(size_t size) noexcept {
+    EnableGuard ena;
+    void *ptr = REAL_LIBC(valloc)(size);
+    if (ena) {
+#if __unix__
+        size_t pagesize = sysconf(_SC_PAGESIZE);
+#elif _WIN32
+        SYSTEM_INFO info;
+        info.dwPageSize = kNone;
+        GetSystemInfo(&info);
+        size_t pagesize = info.dwPageSize;
+#else
+        size_t pagesize = 0;
+#endif
+        global.on(AllocOp::Malloc, ptr, size, pagesize,
+                  __builtin_return_address(0));
+    }
+    return ptr;
+}
+
+extern "C" void *memalign(size_t align, size_t size) noexcept {
+    EnableGuard ena;
+    void *ptr = REAL_LIBC(memalign)(align, size);
+    if (ena) {
+        global.on(AllocOp::Malloc, ptr, size, align,
+                  __builtin_return_address(0));
+    }
+    return ptr;
+}
+
+extern "C" void *aligned_alloc(size_t align, size_t size) noexcept {
+    EnableGuard ena;
+    void *ptr = REAL_LIBC(memalign)(align, size);
+    if (ena) {
+        global.on(AllocOp::Malloc, ptr, size, align,
+                  __builtin_return_address(0));
+    }
+    return ptr;
+}
+
+extern "C" int posix_memalign(void **memptr, size_t align, size_t size) noexcept {
+    EnableGuard ena;
+    void *ptr = REAL_LIBC(memalign)(align, size);
+    if (ena) {
+        global.on(AllocOp::Malloc, *memptr, size, align,
+                  __builtin_return_address(0));
+    }
+    int ret = 0;
+    if (!ptr) {
+        ret = errno;
+    } else {
+        *memptr = ptr;
+    }
+    return ret;
+}
+#endif
+#endif
+
 void operator delete(void *ptr) noexcept {
     EnableGuard ena;
     if (ena) {
         global.on(AllocOp::Delete, ptr, kNone, kNone,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void operator delete[](void *ptr) noexcept {
@@ -83,7 +246,7 @@ void operator delete[](void *ptr) noexcept {
         global.on(AllocOp::DeleteArray, ptr, kNone, kNone,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void operator delete(void *ptr, std::nothrow_t const &) noexcept {
@@ -92,7 +255,7 @@ void operator delete(void *ptr, std::nothrow_t const &) noexcept {
         global.on(AllocOp::Delete, ptr, kNone, kNone,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void operator delete[](void *ptr, std::nothrow_t const &) noexcept {
@@ -101,12 +264,12 @@ void operator delete[](void *ptr, std::nothrow_t const &) noexcept {
         global.on(AllocOp::DeleteArray, ptr, kNone, kNone,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void *operator new(size_t size) noexcept(false) {
     EnableGuard ena;
-    void *ptr = malloc(size);
+    void *ptr = REAL_LIBC(malloc)(size);
     if (ena) {
         global.on(AllocOp::New, ptr, size, kNone, __builtin_return_address(0));
     }
@@ -118,7 +281,7 @@ void *operator new(size_t size) noexcept(false) {
 
 void *operator new[](size_t size) noexcept(false) {
     EnableGuard ena;
-    void *ptr = malloc(size);
+    void *ptr = REAL_LIBC(malloc)(size);
     if (ena) {
         global.on(AllocOp::NewArray, ptr, size, kNone,
                   __builtin_return_address(0));
@@ -131,7 +294,7 @@ void *operator new[](size_t size) noexcept(false) {
 
 void *operator new(size_t size, std::nothrow_t const &) noexcept {
     EnableGuard ena;
-    void *ptr = malloc(size);
+    void *ptr = REAL_LIBC(malloc)(size);
     if (ena) {
         global.on(AllocOp::New, ptr, size, kNone, __builtin_return_address(0));
     }
@@ -140,7 +303,7 @@ void *operator new(size_t size, std::nothrow_t const &) noexcept {
 
 void *operator new[](size_t size, std::nothrow_t const &) noexcept {
     EnableGuard ena;
-    void *ptr = malloc(size);
+    void *ptr = REAL_LIBC(malloc)(size);
     if (ena) {
         global.on(AllocOp::NewArray, ptr, size, kNone,
                   __builtin_return_address(0));
@@ -155,7 +318,7 @@ void operator delete(void *ptr, size_t size) noexcept {
         global.on(AllocOp::Delete, ptr, size, kNone,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void operator delete[](void *ptr, size_t size) noexcept {
@@ -164,18 +327,19 @@ void operator delete[](void *ptr, size_t size) noexcept {
         global.on(AllocOp::DeleteArray, ptr, size, kNone,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 #endif
 
 #if (__cplusplus > 201402L || defined(__cpp_aligned_new))
+#if MAY_SUPPORT_MEMALIGN
 void operator delete(void *ptr, std::align_val_t align) noexcept {
     EnableGuard ena;
     if (ena) {
         global.on(AllocOp::Delete, ptr, kNone, (size_t)align,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void operator delete[](void *ptr, std::align_val_t align) noexcept {
@@ -184,7 +348,7 @@ void operator delete[](void *ptr, std::align_val_t align) noexcept {
         global.on(AllocOp::DeleteArray, ptr, kNone, (size_t)align,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void operator delete(void *ptr, size_t size, std::align_val_t align) noexcept {
@@ -193,7 +357,7 @@ void operator delete(void *ptr, size_t size, std::align_val_t align) noexcept {
         global.on(AllocOp::Delete, ptr, size, (size_t)align,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void operator delete[](void *ptr, size_t size,
@@ -203,7 +367,7 @@ void operator delete[](void *ptr, size_t size,
         global.on(AllocOp::DeleteArray, ptr, size, (size_t)align,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void operator delete(void *ptr, std::align_val_t align,
@@ -213,7 +377,7 @@ void operator delete(void *ptr, std::align_val_t align,
         global.on(AllocOp::Delete, ptr, kNone, (size_t)align,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void operator delete[](void *ptr, std::align_val_t align,
@@ -223,12 +387,12 @@ void operator delete[](void *ptr, std::align_val_t align,
         global.on(AllocOp::DeleteArray, ptr, kNone, (size_t)align,
                   __builtin_return_address(0));
     }
-    free(ptr);
+    REAL_LIBC(free)(ptr);
 }
 
 void *operator new(size_t size, std::align_val_t align) noexcept(false) {
     EnableGuard ena;
-    void *ptr = aligned_alloc((size_t)align, size);
+    void *ptr = REAL_LIBC(memalign)((size_t)align, size);
     if (ena) {
         global.on(AllocOp::New, ptr, size, (size_t)align,
                   __builtin_return_address(0));
@@ -241,7 +405,7 @@ void *operator new(size_t size, std::align_val_t align) noexcept(false) {
 
 void *operator new[](size_t size, std::align_val_t align) noexcept(false) {
     EnableGuard ena;
-    void *ptr = aligned_alloc((size_t)align, size);
+    void *ptr = REAL_LIBC(memalign)((size_t)align, size);
     if (ena) {
         global.on(AllocOp::NewArray, ptr, size, (size_t)align,
                   __builtin_return_address(0));
@@ -255,7 +419,7 @@ void *operator new[](size_t size, std::align_val_t align) noexcept(false) {
 void *operator new(size_t size, std::align_val_t align,
                    std::nothrow_t const &) noexcept {
     EnableGuard ena;
-    void *ptr = aligned_alloc((size_t)align, size);
+    void *ptr = REAL_LIBC(memalign)((size_t)align, size);
     if (ena) {
         global.on(AllocOp::New, ptr, size, (size_t)align,
                   __builtin_return_address(0));
@@ -266,11 +430,12 @@ void *operator new(size_t size, std::align_val_t align,
 void *operator new[](size_t size, std::align_val_t align,
                      std::nothrow_t const &) noexcept {
     EnableGuard ena;
-    void *ptr = aligned_alloc((size_t)align, size);
+    void *ptr = REAL_LIBC(memalign)((size_t)align, size);
     if (ena) {
         global.on(AllocOp::NewArray, ptr, size, (size_t)align,
                   __builtin_return_address(0));
     }
     return ptr;
 }
+#endif
 #endif

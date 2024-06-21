@@ -14,3 +14,9 @@ add_library(mallochook SHARED hook.cpp plot.cpp)
 add_library(leakcheck SHARED check.cpp)
 add_executable(main main.cpp)
 target_link_libraries(main PRIVATE mallochook)
+
+find_package(tsl-robin-map REQUIRED)
+target_link_libraries(main PRIVATE tsl::robin_map)
+
+find_package(absl REQUIRED)
+target_link_libraries(main PRIVATE absl::flat_hash_set absl::node_hash_set)
