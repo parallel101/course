@@ -32,7 +32,7 @@ struct SpinBarrier {
                     return false;
             } while (--retries);
 #else
-            while (m_sync_flip.load(std::memory_order_acquire) == step)
+            while (m_sync_flip.load(std::memory_order_acquire) == old_flip)
                 ;
 #endif
             m_sync_flip.wait(old_flip, std::memory_order_acquire);
