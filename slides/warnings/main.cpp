@@ -30,7 +30,20 @@ static int *func() {
     return p;
 }
 
+static int test(int i) {
+    // UB: 返回值不 void 的函数不写 return
+    return i;
+}
+
 int main() {
+    for (int i = 0; i < 13; ++i) {
+        auto f = [] (int i) {
+        };
+        f(i + 1);
+    }
+
+    test(3);
+
     C c1;
     C c2;
     std::cout << c1.y << '\n';
@@ -43,7 +56,7 @@ int main() {
     printf("%d\n", x);
     Cat cat;
     cat.speak();
-    func(BLUE);
+    func(RED);
 
     // size_t n;
     // std::cin >> n;

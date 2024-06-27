@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 project(main)
 
 add_compile_options(
-    -Wno-error
+    -Werror
     -Wconversion
     -Wunused
     -Wall
@@ -38,6 +38,10 @@ add_compile_options(
     -Walloca
     -Wreorder
     -Woverflow
+    -Werror=return-type
+    -Wswitch
+    -Wimplicit-fallthrough
+    # -Wshadow=local
 # -Werror
 # -Wall
 # -Wextra
