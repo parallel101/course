@@ -54,5 +54,10 @@ int main() {
     std::cout << stuDes.addr.province << '\n';
     std::cout << stuDes.addr.city << '\n';
 
+    auto vec = reflect_json::deserialize<std::vector<int>>(R"json([1, 2, 3])json");
+    std::cout << vec.at(0) << '\n';
+    std::cout << vec.at(1) << '\n';
+    std::cout << vec.at(2) << '\n';
+
     return 0;
 }
