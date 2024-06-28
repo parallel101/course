@@ -1,7 +1,10 @@
 #pragma once
 
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
+#include <string>
+// #include <functional>
 
 // easy-to-use static reflection with C++14 and macros
 namespace reflect {
@@ -62,7 +65,7 @@ inline constexpr bool _has_member_test(...) {
 template <class T>
 struct reflect_trait {
     static constexpr bool has_member() {
-        return ::reflect::_has_member_test<T>(0);
+        return reflect::_has_member_test<T>(0);
     }
 
     template <class Func>
@@ -76,7 +79,7 @@ struct reflect_trait {
 
 #define REFLECT_TYPE(Type, ...) \
 template <> \
-struct ::reflect::reflect_trait<Type> { \
+struct reflect::reflect_trait<Type> { \
     using This = Type; \
     static constexpr bool has_member() { return true; }; \
     template <class Func> \
@@ -85,10 +88,13 @@ struct ::reflect::reflect_trait<Type> { \
     } \
 };
 
+#define REFLECT__TYPE_TEMPLATED_FIRST(x, ...) REFLECT__PP_EXPAND(REFLECT__PP_EXPAND x)
+#define REFLECT__TYPE_TEMPLATED_REST(x, ...) __VA_ARGS__
+
 #define REFLECT_TYPE_TEMPLATED(Type, ...) \
-template <__VA_ARGS__> \
-struct ::reflect::reflect_trait<REFLECT__PP_EXPAND(REFLECT__PP_EXPAND Type)> { \
-    using This = REFLECT__PP_EXPAND(REFLECT__PP_EXPAND Type); \
+template <REFLECT__PP_EXPAND(REFLECT__TYPE_TEMPLATED_REST Type)> \
+struct reflect::reflect_trait<REFLECT__PP_EXPAND(REFLECT__TYPE_TEMPLATED_FIRST Type)> { \
+    using This = REFLECT__PP_EXPAND(REFLECT__TYPE_TEMPLATED_FIRST Type); \
     static constexpr bool has_member() { return true; }; \
     template <class Func> \
     static constexpr void foreach_member_ptr(Func &&func) { \
@@ -108,7 +114,7 @@ static constexpr void foreach_member_ptr(Func &&func) { \
     REFLECT__PP_FOREACH(REFLECT__PER_MEMBER_PTR, __VA_ARGS__) \
 }
 
-enum class member_type {
+enum class member_kind {
     member_variable,
     member_function,
     static_variable,
@@ -116,46 +122,46 @@ enum class member_type {
 };
 
 template <class T>
-struct get_member_type;
+struct get_member_kind;
 
 template <class T, class C>
-struct get_member_type<T C::*> {
-    static constexpr member_type value = member_type::member_variable;
+struct get_member_kind<T C::*> {
+    static constexpr member_kind value = member_kind::member_variable;
 };
 
 template <class T>
-struct get_member_type<T *> {
-    static constexpr member_type value = member_type::static_variable;
+struct get_member_kind<T *> {
+    static constexpr member_kind value = member_kind::static_variable;
 };
 
 template <class T, class C, class ...Ts>
-struct get_member_type<T (C::*)(Ts...)> {
-    static constexpr member_type value = member_type::member_function;
+struct get_member_kind<T (C::*)(Ts...)> {
+    static constexpr member_kind value = member_kind::member_function;
 };
 
 template <class T, class C, class ...Ts>
-struct get_member_type<T (C::*)(Ts...) const> {
-    static constexpr member_type value = member_type::member_function;
+struct get_member_kind<T (C::*)(Ts...) const> {
+    static constexpr member_kind value = member_kind::member_function;
 };
 
 template <class T, class C, class ...Ts>
-struct get_member_type<T (C::*)(Ts...) &> {
-    static constexpr member_type value = member_type::member_function;
+struct get_member_kind<T (C::*)(Ts...) &> {
+    static constexpr member_kind value = member_kind::member_function;
 };
 
 template <class T, class C, class ...Ts>
-struct get_member_type<T (C::*)(Ts...) const &> {
-    static constexpr member_type value = member_type::member_function;
+struct get_member_kind<T (C::*)(Ts...) const &> {
+    static constexpr member_kind value = member_kind::member_function;
 };
 
 template <class T, class C, class ...Ts>
-struct get_member_type<T (C::*)(Ts...) &&> {
-    static constexpr member_type value = member_type::member_function;
+struct get_member_kind<T (C::*)(Ts...) &&> {
+    static constexpr member_kind value = member_kind::member_function;
 };
 
 template <class T, class C, class ...Ts>
-struct get_member_type<T (C::*)(Ts...) const &&> {
-    static constexpr member_type value = member_type::member_function;
+struct get_member_kind<T (C::*)(Ts...) const &&> {
+    static constexpr member_kind value = member_kind::member_function;
 };
 
 #if __cpp_noexcept_function_type
@@ -191,8 +197,8 @@ struct get_member_type<T (C::*)(Ts...) const && noexcept> {
 #endif
 
 template <class T, class ...Ts>
-struct get_member_type<T (*)(Ts...)> {
-    static constexpr member_type value = member_type::static_function;
+struct get_member_kind<T (*)(Ts...)> {
+    static constexpr member_kind value = member_kind::static_function;
 };
 
 #if __cpp_noexcept_function_type
@@ -208,7 +214,7 @@ struct _foreach_visitor {
     Func &&func;
 
     template <class U>
-    constexpr std::enable_if_t<get_member_type<U>::value == member_type::member_variable>
+    constexpr std::enable_if_t<get_member_kind<U>::value == member_kind::member_variable>
     operator()(const char *name, U member) const {
         func(name, object.*member);
     }
@@ -216,20 +222,155 @@ struct _foreach_visitor {
     constexpr void operator()(...) const {}
 };
 
+template <class T>
+using _rmcvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
 template <class T, class Func>
 constexpr void foreach_member(T &&object, Func &&func) {
     _foreach_visitor<T, Func> visitor{std::forward<T>(object), std::forward<Func>(func)};
-    reflect_trait<std::decay_t<T>>::foreach_member_ptr(visitor);
+    reflect_trait<_rmcvref_t<T>>::foreach_member_ptr(visitor);
 }
 
 template <class T, class Func>
 constexpr void foreach_member_ptr(Func &&func) {
-    reflect_trait<std::decay_t<T>>::foreach_member_ptr(func);
+    reflect_trait<_rmcvref_t<T>>::foreach_member_ptr(func);
 }
 
 template <class T>
-constexpr bool has_member() {
-    return reflect_trait<std::decay_t<T>>::has_member();
+[[nodiscard]] constexpr bool has_member() {
+    return reflect_trait<_rmcvref_t<T>>::has_member();
 }
+
+template <class MemberType, class T>
+[[nodiscard]] constexpr MemberType *try_get_member(T &&object, std::string const &name) {
+    void const *ret = nullptr;
+    reflect::foreach_member(object, [&] (const char *that_name, auto &member) {
+        if (name == that_name && std::is_same<_rmcvref_t<MemberType>, _rmcvref_t<decltype(member)>>::value) {
+            ret = &member;
+        }
+    });
+    return static_cast<MemberType *>(const_cast<void *>(ret));
+}
+
+template <class MemberType, class T>
+[[nodiscard]] constexpr MemberType &get_member(T &&object, std::string const &name) {
+    MemberType *ret = try_get_member<MemberType>(std::forward<T>(object), name);
+    if (!ret) {
+        throw std::invalid_argument("member name or type wrong");
+    }
+    return *ret;
+}
+
+template <class T>
+[[nodiscard]] constexpr bool has_member(std::string const &name) {
+    bool ret = false;
+    reflect::foreach_member_ptr<T>([&] (const char *that_name, auto) {
+        if (name == that_name) {
+            ret = true;
+        }
+    });
+    return ret;
+}
+
+template <class T>
+[[nodiscard]] constexpr bool is_member_kind(std::string const &name, member_kind kind) {
+    bool ret = false;
+    reflect::foreach_member_ptr<T>([&] (const char *that_name, auto member) {
+        if (name == that_name && get_member_kind<decltype(member)>::value == kind) {
+            ret = true;
+        }
+    });
+    return ret;
+}
+
+template <class T, class MemberPtrType>
+[[nodiscard]] constexpr bool is_member_ptr_type(std::string const &name) {
+    bool ret = false;
+    reflect::foreach_member_ptr<T>([&] (const char *that_name, auto member) {
+        if (name == that_name && std::is_same<decltype(member), MemberPtrType>::value) {
+            ret = true;
+        }
+    });
+    return ret;
+}
+
+template <class T, class MemberType>
+[[nodiscard]] constexpr bool is_member_type(std::string const &name) {
+    bool ret = false;
+    reflect::foreach_member_ptr<T>([&] (const char *that_name, auto member) {
+        if (name == that_name && std::is_same<decltype(member), MemberType T::*>::value) {
+            ret = true;
+        }
+    });
+    return ret;
+}
+
+// template <class FuncSig>
+// struct _get_function_static_visitor;
+//
+// template <class RetType, class ...Args>
+// struct _get_function_static_visitor<RetType(Args...)> {
+//     std::string const &name;
+//     std::function<RetType(Args...)> ret;
+//
+//     template <class U>
+//     std::enable_if_t<get_member_kind<U>::value == member_kind::static_function
+//     && std::is_convertible<decltype(std::declval<U>()(std::declval<Args>()...)), RetType>::value>
+//     constexpr operator()(const char *that_name, U member) const {
+//         if (name == that_name) {
+//             ret = member;
+//         }
+//     }
+//
+//     constexpr void operator()(...) const {}
+// };
+//
+// template <class FuncSig, class T>
+// struct _get_function_member_visitor;
+//
+// template <class RetType, class ...Args, class T>
+// struct _get_function_member_visitor<RetType(Args...), T> {
+//     T &&object;
+//     std::string const &name;
+//     std::function<RetType(Args...)> ret;
+//
+//     template <class U>
+//     std::enable_if_t<get_member_kind<U>::value == member_kind::member_function
+//     && std::is_convertible<decltype((object.*std::declval<U>())(std::declval<Args>()...)), RetType>::value>
+//     constexpr operator()(const char *that_name, U member) const {
+//         if (name == that_name) {
+//             ret = [&object = std::forward<T>(object), member] (auto &&...args) {
+//                 return (object.*member)(std::forward<decltype(args)>(args)...);
+//             };
+//         }
+//     }
+//
+//     template <class U>
+//     std::enable_if_t<get_member_kind<U>::value == member_kind::static_function
+//     && std::is_convertible<decltype((*std::declval<U>())(std::declval<Args>()...)), RetType>::value>
+//     constexpr operator()(const char *that_name, U member) const {
+//         if (name == that_name) {
+//             ret = [object = std::forward<T>(object), member] (auto &&...args) {
+//                 return (*member)(std::forward<decltype(args)>(args)...);
+//             };
+//         }
+//     }
+//
+//     constexpr void operator()(...) const {}
+// };
+//
+// template <class T, class FuncSig>
+// [[nodiscard]] constexpr std::function<FuncSig> get_static_function(std::string const &name) {
+//     _get_function_static_visitor<FuncSig> visitor{name, nullptr};
+//     reflect::foreach_member_ptr<T>(visitor);
+//     return visitor.ret;
+// }
+//
+// template <class FuncSig, class T>
+// [[nodiscard]] constexpr std::function<FuncSig> get_function(T &&object, std::string const &name) {
+//     _get_function_member_visitor<FuncSig, T> visitor{std::forward<T>(object), name, nullptr};
+//     reflect::foreach_member_ptr<T>(visitor);
+//     return visitor.ret;
+// }
 
 }
