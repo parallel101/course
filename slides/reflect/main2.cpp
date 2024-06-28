@@ -5,7 +5,6 @@
 #include <json/json.h>
 #include "reflect.hpp"
 
-
 struct Address {
     std::string country;
     std::string province;
@@ -91,9 +90,11 @@ int main() {
             .city = "Shanghai",
         }
     };
-    std::string bin = jsonToStr(objToJson(stu));
-    std::cout << bin << '\n';
-    auto stuDes = jsonToObj<Student>(strToJson(bin));
+
+    std::string binary = jsonToStr(objToJson(stu));
+    std::cout << binary << '\n';
+    auto stuDes = jsonToObj<Student>(strToJson(binary));
+
     std::cout << stuDes.name << '\n';
     std::cout << stuDes.age << '\n';
     std::cout << stuDes.addr.country << '\n';
