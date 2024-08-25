@@ -1,16 +1,15 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <cstddef>
+#include <cuda_runtime.h>
 #include <memory>
 #include <new>
+#include <string>
 #include <system_error>
 #include <utility>
-#include <cuda_runtime.h>
 #include <vector>
-#include <system_error>
-#include <string>
 
 namespace cupp {
 
@@ -24,50 +23,53 @@ std::error_category const &cudaErrorCategory() noexcept {
             return cudaGetErrorString(static_cast<cudaError_t>(ev));
         }
     } category;
+
     return category;
 }
 
-std::error_code make_error_code(cudaError_t e) noexcept {
+std::error_code makeCudaErrorCode(cudaError_t e) noexcept {
     return std::error_code(static_cast<int>(e), cudaErrorCategory());
 }
 
-void throwCudaError(cudaError_t err, char const *file, int line, char const *function) {
-    throw std::system_error(make_error_code(err), std::string(file) + ":" + std::to_string(line) + ": " + function);
+void throwCudaError(cudaError_t err, char const *file, int line) {
+    throw std::system_error(makeCudaErrorCode(err),
+                            std::string(file) + ":" + std::to_string(line));
 }
 
-#define CHECK_CUDA(expr) do { \
-    cudaError_t err = (expr); \
-    if (err != cudaSuccess) [[unlikely]] { \
-        ::cupp::throwCudaError(err, __FILE__, __LINE__, __FUNCTION__); \
-    } \
-} while (0)
+#define CHECK_CUDA(expr) \
+    do { \
+        cudaError_t err = (expr); \
+        if (err != cudaSuccess) [[unlikely]] { \
+            ::cupp::throwCudaError(err, __FILE__, __LINE__); \
+        } \
+    } while (0)
 
 struct CudaHostArena {
-    static cudaError_t cuda_malloc(void **ptr, size_t size) noexcept {
+    static cudaError_t doMalloc(void **ptr, size_t size) noexcept {
         return cudaMallocHost(&ptr, size);
     }
 
-    static cudaError_t cuda_free(void *ptr) noexcept {
+    static cudaError_t doFree(void *ptr) noexcept {
         return cudaFreeHost(ptr);
     }
 };
 
 struct CudaDeviceArena {
-    static cudaError_t cuda_malloc(void **ptr, size_t size) noexcept {
+    static cudaError_t doMalloc(void **ptr, size_t size) noexcept {
         return cudaMalloc(&ptr, size);
     }
 
-    static cudaError_t cuda_free(void *ptr) noexcept {
+    static cudaError_t doFree(void *ptr) noexcept {
         return cudaFree(ptr);
     }
 };
 
 struct CudaManagedArena {
-    static cudaError_t cuda_malloc(void **ptr, size_t size) noexcept {
+    static cudaError_t doMalloc(void **ptr, size_t size) noexcept {
         return cudaMallocManaged(&ptr, size);
     }
 
-    static cudaError_t cuda_free(void *ptr) noexcept {
+    static cudaError_t doFree(void *ptr) noexcept {
         return cudaFree(ptr);
     }
 };
@@ -77,15 +79,16 @@ private:
     cudaStream_t m_stream;
 
 public:
-    cudaError_t cuda_malloc(void **ptr, size_t size) const noexcept {
+    cudaError_t doMalloc(void **ptr, size_t size) const noexcept {
         return cudaMallocAsync(&ptr, size, m_stream);
     }
 
-    cudaError_t cuda_free(void *ptr) const noexcept {
+    cudaError_t doFree(void *ptr) const noexcept {
         return cudaFreeAsync(ptr, m_stream);
     }
 
-    CudaAsyncDeviceArena(cudaStream_t stream = nullptr) noexcept : m_stream(stream) {}
+    CudaAsyncDeviceArena(cudaStream_t stream = nullptr) noexcept
+        : m_stream(stream) {}
 };
 
 struct CudaAsyncPoolDeviceArena {
@@ -94,15 +97,18 @@ private:
     cudaStream_t m_stream;
 
 public:
-    cudaError_t cuda_malloc(void **ptr, size_t size) const noexcept {
+    cudaError_t doMalloc(void **ptr, size_t size) const noexcept {
         return cudaMallocFromPoolAsync(&ptr, size, m_pool, m_stream);
     }
 
-    cudaError_t cuda_free(void *ptr) const noexcept {
+    cudaError_t doFree(void *ptr) const noexcept {
         return cudaFreeAsync(ptr, m_stream);
     }
 
-    CudaAsyncPoolDeviceArena(cudaMemPool_t pool, cudaStream_t stream = nullptr) noexcept : m_pool(pool), m_stream(stream) {}
+    CudaAsyncPoolDeviceArena(cudaMemPool_t pool,
+                             cudaStream_t stream = nullptr) noexcept
+        : m_pool(pool),
+          m_stream(stream) {}
 };
 
 template <class Ptr>
@@ -117,7 +123,8 @@ struct GenericResourcePtr {
 
     GenericResourcePtr &operator=(GenericResourcePtr const &) = delete;
 
-    GenericResourcePtr(GenericResourcePtr &&other) noexcept : m_ptr(other.m_ptr) {
+    GenericResourcePtr(GenericResourcePtr &&other) noexcept
+        : m_ptr(other.m_ptr) {
         other.m_ptr = nullptr;
     }
 
@@ -141,7 +148,8 @@ struct GenericResourcePtr {
 
 struct CudaMemPool : GenericResourcePtr<cudaMemPool_t> {
 private:
-    CudaMemPool(cudaMemPool_t ptr) noexcept : GenericResourcePtr<cudaMemPool_t>(ptr) {}
+    CudaMemPool(cudaMemPool_t ptr) noexcept
+        : GenericResourcePtr<cudaMemPool_t>(ptr) {}
 
 public:
     CudaMemPool(std::nullptr_t) noexcept {}
@@ -155,7 +163,8 @@ public:
             props.allocType = cudaMemAllocationTypePinned;
         }
 
-        Builder &withLocation(cudaMemLocationType type, int node_id = 0) noexcept {
+        Builder &withLocation(cudaMemLocationType type,
+                              int node_id = 0) noexcept {
             props.location.type = type;
             props.location.id = node_id;
             return *this;
@@ -166,7 +175,8 @@ public:
             return *this;
         }
 
-        Builder &withHandleTypes(cudaMemAllocationHandleType handleTypes) noexcept {
+        Builder &
+        withHandleTypes(cudaMemAllocationHandleType handleTypes) noexcept {
             props.handleTypes = handleTypes;
             return *this;
         }
@@ -184,9 +194,9 @@ public:
         return CudaMemPool(pool);
     }
 
-
     template <class T>
-    void setAttribute(cudaMemPoolAttr attr, std::decay_t<T> const &value) const {
+    void setAttribute(cudaMemPoolAttr attr,
+                      std::decay_t<T> const &value) const {
         CHECK_CUDA(cudaMemPoolSetAttribute(*this, attr, &value));
     }
 
@@ -202,14 +212,16 @@ public:
     }
 
     ~CudaMemPool() {
-        if (*this)
+        if (*this) {
             CHECK_CUDA(cudaMemPoolDestroy(*this));
+        }
     }
 };
 
 struct CudaEvent : GenericResourcePtr<cudaEvent_t> {
 private:
-    explicit CudaEvent(cudaEvent_t ptr) noexcept : GenericResourcePtr<cudaEvent_t>(ptr) {}
+    explicit CudaEvent(cudaEvent_t ptr) noexcept
+        : GenericResourcePtr<cudaEvent_t>(ptr) {}
 
 public:
     CudaEvent(std::nullptr_t) noexcept {}
@@ -219,19 +231,30 @@ public:
         int flags = cudaEventDefault;
 
     public:
+        Builder &withBlockingSync(bool blockingSync = true) noexcept {
+            if (blockingSync) {
+                flags |= cudaEventBlockingSync;
+            } else {
+                flags &= ~cudaEventBlockingSync;
+            }
+            return *this;
+        }
+
         Builder &withDisableTiming(bool disableTiming = true) noexcept {
-            if (disableTiming)
+            if (disableTiming) {
                 flags |= cudaEventDisableTiming;
-            else
+            } else {
                 flags &= ~cudaEventDisableTiming;
+            }
             return *this;
         }
 
         Builder &withInterprocess(bool interprocess = true) noexcept {
-            if (interprocess)
+            if (interprocess) {
                 flags |= cudaEventInterprocess;
-            else
+            } else {
                 flags &= ~cudaEventInterprocess;
+            }
             return *this;
         }
 
@@ -253,15 +276,16 @@ public:
     }
 
     ~CudaEvent() {
-        if (*this)
+        if (*this) {
             CHECK_CUDA(cudaEventDestroy(*this));
+        }
     }
 };
 
 struct CudaStream : GenericResourcePtr<cudaStream_t> {
 private:
-    explicit CudaStream(cudaStream_t ptr) noexcept : GenericResourcePtr<cudaStream_t>(ptr) {
-    }
+    explicit CudaStream(cudaStream_t ptr) noexcept
+        : GenericResourcePtr<cudaStream_t>(ptr) {}
 
 public:
     CudaStream(std::nullptr_t) noexcept {}
@@ -272,10 +296,11 @@ public:
 
     public:
         Builder &withNonBlocking(bool nonBlocking = true) noexcept {
-            if (nonBlocking)
+            if (nonBlocking) {
                 flags |= cudaStreamNonBlocking;
-            else
+            } else {
                 flags &= ~cudaStreamNonBlocking;
+            }
             return *this;
         }
 
@@ -318,7 +343,8 @@ public:
         CHECK_CUDA(cudaEventRecord(event, *this));
     }
 
-    void wait(CudaEvent const &event, unsigned int flags = cudaEventWaitDefault) const {
+    void wait(CudaEvent const &event,
+              unsigned int flags = cudaEventWaitDefault) const {
         CHECK_CUDA(cudaStreamWaitEvent(*this, event, flags));
     }
 
@@ -329,7 +355,8 @@ public:
     template <class Func>
     void asyncWait(Func &&func) const {
         auto userData = std::make_unique<Func>();
-        auto callback = [] (cudaStream_t stream, cudaError_t status, void *userData) {
+        cudaStreamCallback_t callback = [](cudaStream_t stream,
+                                           cudaError_t status, void *userData) {
             std::unique_ptr<Func> func(static_cast<Func *>(userData));
             (*func)(stream, status);
         };
@@ -339,19 +366,25 @@ public:
 
     bool pollWait() {
         cudaError_t res = cudaStreamQuery(*this);
-        if (res == cudaSuccess) return true;
-        if (res == cudaErrorNotReady) return false;
+        if (res == cudaSuccess) {
+            return true;
+        }
+        if (res == cudaErrorNotReady) {
+            return false;
+        }
         CHECK_CUDA(res);
         return false;
     }
 
-    void setAttribute(cudaStreamAttrID attr, cudaStreamAttrValue const &value) const {
+    void setAttribute(cudaStreamAttrID attr,
+                      cudaStreamAttrValue const &value) const {
         CHECK_CUDA(cudaStreamSetAttribute(*this, attr, &value));
     }
 
     ~CudaStream() {
-        if (*this)
+        if (*this) {
             CHECK_CUDA(cudaStreamDestroy(*this));
+        }
     }
 };
 
@@ -368,7 +401,8 @@ struct CudaAllocator : private Arena {
     using propagate_on_container_move_assignment = std::true_type;
     using is_always_equal = std::true_type;
 
-    static_assert(alignof(T) <= 256, "CudaAllocator alignment max to 256-bytes");
+    static_assert(alignof(T) <= 256,
+                  "CudaAllocator alignment max to 256-bytes");
 
     CudaAllocator() = default;
 
@@ -376,30 +410,38 @@ struct CudaAllocator : private Arena {
 
     T *allocate(size_t size) {
         void *ptr = nullptr;
-        if (size >= std::numeric_limits<size_t>::max() / sizeof(T)) [[unlikely]]
+        if (size >= std::numeric_limits<size_t>::max() / sizeof(T))
+            [[unlikely]] {
             throw std::bad_array_new_length();
-        cudaError_t res = Arena::cuda_malloc(&ptr, size * sizeof(T));
-        if (res != cudaSuccess) [[unlikely]]
+        }
+        cudaError_t res = Arena::doMalloc(&ptr, size * sizeof(T));
+        if (res != cudaSuccess) [[unlikely]] {
             throw std::bad_alloc();
+        }
         return static_cast<T *>(ptr);
     }
 
     void deallocate(T *ptr, size_t size = 0) noexcept {
-        Arena::cuda_free(ptr);
+        Arena::doFree(ptr);
     }
 
-    template <class ...Args>
-    static constexpr std::enable_if_t<sizeof...(Args)> construct(T *p, Args &&...args) noexcept(noexcept(T(std::forward<Args>(args)...))) {
-        ::new((void *)p) T(std::forward<Args>(args)...);
+    template <class... Args>
+    static constexpr std::enable_if_t<sizeof...(Args)>
+    construct(T *p, Args &&...args) noexcept(
+        noexcept(::new(p) T(std::forward<Args>(args)...))) {
+        ::new ((void *)p) T(std::forward<Args>(args)...);
     }
 
-    static constexpr void construct(T *p) noexcept(noexcept(T())) {
-        ::new((void *)p) T;
+    static constexpr void construct(T *p) noexcept(noexcept(::new(p) T)) {
+        ::new ((void *)p) T;
+    }
+
+    static constexpr void destroy(T *p) noexcept(noexcept(p->~T())) {
+        p->~T();
     }
 
     template <class U> // cihou shabi wendous
-    constexpr CudaAllocator(CudaAllocator<U> const &other) noexcept {
-    }
+    constexpr CudaAllocator(CudaAllocator<U> const &other) noexcept {}
 
     constexpr bool operator==(CudaAllocator<T> const &other) const noexcept {
         return true;
@@ -426,18 +468,19 @@ using CudaVector = std::vector<T, CudaAllocator<T>>;
 //         if (alignment > 256) [[unlikely]]
 //             throw std::bad_alloc();
 //         void *ptr = nullptr;
-//         CHECK_CUDA(Arena::cuda_malloc(&ptr, size));
+//         CHECK_CUDA(Arena::doMalloc(&ptr, size));
 //         return ptr;
 //     }
 //
 //     void do_deallocate(void *ptr, size_t size, size_t alignment) override {
-//         CHECK_CUDA(Arena::cuda_free(ptr));
+//         CHECK_CUDA(Arena::doFree(ptr));
 //     }
 //
-//     bool do_is_equal(std::pmr::memory_resource const &other) const noexcept override {
+//     bool do_is_equal(std::pmr::memory_resource const &other) const noexcept
+//     override {
 //         return this == &other;
 //     }
 // };
 // #endif
 
-}
+} // namespace cupp
