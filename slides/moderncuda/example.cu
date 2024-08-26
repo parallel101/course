@@ -5,13 +5,13 @@ using namespace cupp;
 /*__host__*/ void host_func() {
 }
 
-/*__host__ __device__*/ constexpr void constexpr_func() {
-}
-
 __device__ void device_func() {
 }
 
 __host__ __device__ void host_device_func() {
+}
+
+constexpr void constexpr_func() {
 }
 
 __global__ void kernel() {

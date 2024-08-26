@@ -410,42 +410,40 @@ struct CudaAllocator : private Arena {
 
     T *allocate(size_t size) {
         void *ptr = nullptr;
-        if (size >= std::numeric_limits<size_t>::max() / sizeof(T))
-            [[unlikely]] {
+        if (sizeof(T) <= 1 || size > std::numeric_limits<size_t>::max() /
+                                         sizeof(T)) [[unlikely]] {
             throw std::bad_array_new_length();
         }
         cudaError_t res = Arena::doMalloc(&ptr, size * sizeof(T));
-        if (res != cudaSuccess) [[unlikely]] {
+        if (res == cudaErrorMemoryAllocation) [[unlikely]] {
             throw std::bad_alloc();
         }
+        CHECK_CUDA(("Arena::doMalloc", res));
         return static_cast<T *>(ptr);
     }
 
-    void deallocate(T *ptr, size_t size = 0) noexcept {
-        Arena::doFree(ptr);
+    void deallocate(T *ptr, size_t size = 0) {
+        CHECK_CUDA(Arena::doFree(ptr));
     }
 
     template <class... Args>
     static constexpr std::enable_if_t<sizeof...(Args)>
-    construct(T *p, Args &&...args) noexcept(
-        noexcept(::new(p) T(std::forward<Args>(args)...))) {
-        ::new ((void *)p) T(std::forward<Args>(args)...);
+    construct(T *p, Args &&...args) noexcept(noexcept(
+        ::new(static_cast<void *>(p)) T(std::forward<Args>(args)...))) {
+        ::new (static_cast<void *>(p)) T(std::forward<Args>(args)...);
     }
 
-    static constexpr void construct(T *p) noexcept(noexcept(::new(p) T)) {
-        ::new ((void *)p) T;
+    static constexpr void
+    construct(T *p) noexcept(noexcept(::new(static_cast<void *>(p)) T)) {
+        ::new (static_cast<void *>(p)) T;
     }
 
     static constexpr void destroy(T *p) noexcept(noexcept(p->~T())) {
         p->~T();
     }
 
-    template <class U> // cihou shabi wendous
+    template <class U>
     constexpr CudaAllocator(CudaAllocator<U> const &other) noexcept {}
-
-    constexpr bool operator==(CudaAllocator<T> const &other) const noexcept {
-        return true;
-    }
 
     template <class U>
     constexpr bool operator==(CudaAllocator<U> const &other) const noexcept {
