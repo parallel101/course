@@ -1,11 +1,12 @@
 #include <cuda_runtime.h>
-#include "better_cuda.cuh"
-using namespace cupp;
+#include <cooperative_groups.h>
 
 /*__host__*/ void host_func() {
 }
 
 __device__ void device_func() {
+    auto t = cooperative_groups::this_thread();
+    t.size();
 }
 
 __host__ __device__ void host_device_func() {
@@ -32,6 +33,4 @@ int main() {
         return i * 2;
     };
     host_lambda(1);
-    CudaAllocator<char, CudaAsyncDeviceArena> a;
-    auto p = CudaMemPool::Builder().withLocation(cudaMemLocationTypeDevice).build();
 }
