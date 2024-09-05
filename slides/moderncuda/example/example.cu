@@ -5,8 +5,7 @@
 }
 
 __device__ void device_func() {
-    auto t = cooperative_groups::this_thread();
-    t.size();
+    std::sin(1);
 }
 
 __host__ __device__ void host_device_func() {

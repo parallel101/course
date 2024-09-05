@@ -885,3 +885,13 @@ Reporter *makeMultipleReporter(std::vector<Reporter *> const &reporters) {
 
 }
 #endif
+
+#ifdef TINYBENCH_IMPL_MAIN
+#include <memory>
+
+[[gnu::weak]] int main() {
+    std::unique_ptr<tinybench::Reporter> rep(tinybench::makeMultipleReporter({tinybench::makeConsoleReporter()}));
+    rep->run_all();
+    return 0;
+}
+#endif

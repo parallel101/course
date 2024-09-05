@@ -1,6 +1,9 @@
 # 现代 C++ 的 CUDA 编程
 
-参考资料：https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+参考资料：
+
+- https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+- https://www.cs.sfu.ca/~ashriram/Courses/CS431/assets/lectures/Part8/GPU1.pdf
 
 ## 配置 CUDA 开发环境
 

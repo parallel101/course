@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <cstdarg>
 #include <cuda_runtime.h>
 #include <memory>
 #include <new>
@@ -11,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace cupp {
+namespace cudapp {
 
 std::error_category const &cudaErrorCategory() noexcept {
     static struct : std::error_category {
@@ -40,7 +41,7 @@ void throwCudaError(cudaError_t err, char const *file, int line) {
     do { \
         cudaError_t err = (expr); \
         if (err != cudaSuccess) [[unlikely]] { \
-            ::cupp::throwCudaError(err, __FILE__, __LINE__); \
+            ::cudapp::throwCudaError(err, __FILE__, __LINE__); \
         } \
     } while (0)
 
@@ -265,8 +266,20 @@ public:
         }
     };
 
-    void synchronize() const {
+    void join() const {
         CHECK_CUDA(cudaEventSynchronize(*this));
+    }
+
+    bool joinReady() const {
+        cudaError_t res = cudaEventQuery(*this);
+        if (res == cudaSuccess) {
+            return true;
+        }
+        if (res == cudaErrorNotReady) {
+            return false;
+        }
+        CHECK_CUDA(res);
+        return false;
     }
 
     float elapsedMillis(CudaEvent const &event) const {
@@ -315,10 +328,6 @@ public:
         return CudaStream(nullptr);
     }
 
-    void synchronize() const {
-        CHECK_CUDA(cudaStreamSynchronize(*this));
-    }
-
     void copy(void *dst, void *src, size_t size, cudaMemcpyKind kind) const {
         CHECK_CUDA(cudaMemcpyAsync(dst, src, size, kind, *this));
     }
@@ -348,23 +357,27 @@ public:
         CHECK_CUDA(cudaStreamWaitEvent(*this, event, flags));
     }
 
-    void asyncWait(cudaStreamCallback_t callback, void *userData) const {
+    void join() const {
+        CHECK_CUDA(cudaStreamSynchronize(*this));
+    }
+
+    void joinAsync(cudaStreamCallback_t callback, void *userData) const {
         CHECK_CUDA(cudaStreamAddCallback(*this, callback, userData, 0));
     }
 
     template <class Func>
-    void asyncWait(Func &&func) const {
+    void joinAsync(Func &&func) const {
         auto userData = std::make_unique<Func>();
         cudaStreamCallback_t callback = [](cudaStream_t stream,
                                            cudaError_t status, void *userData) {
             std::unique_ptr<Func> func(static_cast<Func *>(userData));
             (*func)(stream, status);
         };
-        asyncWait(callback, userData.get());
+        joinAsync(callback, userData.get());
         userData.release();
     }
 
-    bool pollWait() {
+    bool joinReady() const {
         cudaError_t res = cudaStreamQuery(*this);
         if (res == cudaSuccess) {
             return true;
@@ -418,7 +431,7 @@ struct CudaAllocator : private Arena {
         if (res == cudaErrorMemoryAllocation) [[unlikely]] {
             throw std::bad_alloc();
         }
-        CHECK_CUDA(("Arena::doMalloc", res));
+        CHECK_CUDA(res /* Arena::doMalloc */);
         return static_cast<T *>(ptr);
     }
 
@@ -458,6 +471,21 @@ struct CudaAllocator : private Arena {
 
 template <class T>
 using CudaVector = std::vector<T, CudaAllocator<T>>;
+
+#if defined(__clang__) && defined(__CUDACC__) && defined(__GLIBCXX__)
+__host__ __device__ static void printf(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+#if __CUDA_ARCH__
+    ::vprintf(fmt, (const char *)args);
+#else
+    ::vprintf(fmt, args);
+#endif
+    va_end(args);
+}
+#else
+using ::printf;
+#endif
 
 // #if __cpp_lib_memory_resource
 // template <class Arena>
