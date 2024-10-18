@@ -96,7 +96,7 @@ public:
     // 尝试取数据，如果没有，等待直到时间点，超时返回 nullopt
     std::optional<T> try_pop_until(std::chrono::steady_clock::time_point timeout) {
         std::unique_lock lock(m_mutex);
-        if (!m_cv_empty.wait_for(lock, timeout, [&] { return !m_queue.empty(); }))
+        if (!m_cv_empty.wait_until(lock, timeout, [&] { return !m_queue.empty(); }))
             return std::nullopt;
         T value = std::move(m_queue.back());
         m_queue.pop_back();
