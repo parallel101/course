@@ -61,19 +61,19 @@ struct MyList {
         Node *new_node = new Node;
         new_node->value = value;
 
-        Node *old_head = head.load(std::memory_order_relaxed);
+        Node *old_head = head.load(std::memory_order_consume);
         do
             new_node->next = old_head;
         // store barrier
-        while (!head.compare_exchange_weak(old_head, new_node, std::memory_order_release, std::memory_order_relaxed));
+        while (!head.compare_exchange_weak(old_head, new_node, std::memory_order_release, std::memory_order_consume));
     }
 
     int pop_back() {
-        Node *old_head = head.load(std::memory_order_relaxed);
+        Node *old_head = head.load(std::memory_order_consume);
         do {
             if (old_head == nullptr)
                 return -1;
-        } while (!head.compare_exchange_weak(old_head, old_head->next, std::memory_order_acquire, std::memory_order_relaxed));
+        } while (!head.compare_exchange_weak(old_head, old_head->next, std::memory_order_acquire, std::memory_order_consume));
         // load barrier
         int value = old_head->value;
         delete old_head;
