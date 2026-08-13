@@ -1,6 +1,7 @@
 #include "benchmark.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -16,17 +17,15 @@ constexpr std::size_t kPageBytes = 4096;
 constexpr std::size_t kCacheLineBytes = 64;
 constexpr std::size_t kFloatsPerCacheLine = kCacheLineBytes / sizeof(float);
 constexpr std::size_t kFirstColumn = kFloatsPerCacheLine;
-constexpr std::size_t kPixelsPerRow = 32;
-constexpr std::size_t kLinesPerTile =
-    kPixelsPerRow / kFloatsPerCacheLine;
+constexpr std::size_t kMaxPixelsPerRow = 256;
 constexpr std::size_t kKernelRadius = 4;
 constexpr std::size_t kRows = 2 * kKernelRadius + 1;
 constexpr std::size_t kAssumedL1Ways = 8;
 constexpr std::size_t kConflictRowStride = 1024;
 constexpr std::size_t kPaddedRowStride =
     kConflictRowStride + kFloatsPerCacheLine;
-constexpr std::size_t kIterationsPerSample = 32768;
-constexpr std::size_t kWarmupIterations = 16;
+constexpr std::size_t kPixelsPerSample = 1U << 20;
+constexpr std::size_t kWarmupPixels = 1U << 12;
 constexpr std::size_t kSamples = 21;
 
 constexpr float kCenterWeight = 70.0F / 256.0F;
@@ -39,10 +38,8 @@ static_assert(kConflictRowStride * sizeof(float) == kPageBytes);
 static_assert(kPaddedRowStride * sizeof(float) ==
               kPageBytes + kCacheLineBytes);
 static_assert(kFirstColumn * sizeof(float) % kCacheLineBytes == 0);
-static_assert(kPixelsPerRow % kFloatsPerCacheLine == 0);
-static_assert(kFirstColumn + kPixelsPerRow <= kConflictRowStride);
+static_assert(kFirstColumn + kMaxPixelsPerRow <= kConflictRowStride);
 static_assert(kRows + 1 > kAssumedL1Ways);
-static_assert(kLinesPerTile + 1 <= kAssumedL1Ways);
 
 struct KernelConfig {
     std::span<float const> input;
@@ -59,6 +56,13 @@ struct BenchmarkResult {
 struct BenchmarkComparison {
     BenchmarkResult conflict;
     BenchmarkResult padded;
+};
+
+struct TileResult {
+    std::size_t pixels{};
+    std::size_t linesPerRow{};
+    std::size_t paddedMaxLinesPerSet{};
+    BenchmarkComparison comparison;
 };
 
 struct PageAlignedFloats {
@@ -143,6 +147,7 @@ float gaussianAt(
            kMiddleWeight * middle + kFarWeight * far + kEdgeWeight * edge;
 }
 
+template <std::size_t Pixels>
 #if defined(__GNUC__) || defined(__clang__)
 [[gnu::noinline]]
 #endif
@@ -150,6 +155,9 @@ void verticalGaussian9(
     float const *__restrict input, float *__restrict output,
     std::size_t const rowStride, std::size_t const repetitions)
 {
+    static_assert(Pixels % kFloatsPerCacheLine == 0);
+    static_assert(kFirstColumn + Pixels <= kConflictRowStride);
+
     auto const centerOffset = centerIndex(rowStride);
     auto const *const center =
         std::assume_aligned<32>(input + centerOffset);
@@ -174,7 +182,7 @@ void verticalGaussian9(
 
     for (auto repetition = std::size_t{0}; repetition < repetitions;
          ++repetition) {
-        for (auto x = std::size_t{0}; x < kPixelsPerRow; ++x) {
+        for (auto x = std::size_t{0}; x < Pixels; ++x) {
             auto const near = minusOne[x] + plusOne[x];
             auto const middle = minusTwo[x] + plusTwo[x];
             auto const far = minusThree[x] + plusThree[x];
@@ -193,12 +201,14 @@ bool isClose(float const actual, float const expected)
     return std::abs(actual - expected) <= tolerance;
 }
 
+template <std::size_t Pixels>
 void validate(Problem &problem)
 {
     auto const first = centerIndex(problem.config.rowStride);
-    verticalGaussian9(problem.config.input.data(), problem.config.output.data(),
-                      problem.config.rowStride, 1);
-    for (auto x = std::size_t{0}; x < kPixelsPerRow; ++x) {
+    verticalGaussian9<Pixels>(problem.config.input.data(),
+                              problem.config.output.data(),
+                              problem.config.rowStride, 1);
+    for (auto x = std::size_t{0}; x < Pixels; ++x) {
         auto const expected = gaussianAt(
             problem.config.input, first + x, problem.config.rowStride);
         if (not isClose(problem.config.output[first + x], expected)) {
@@ -208,17 +218,19 @@ void validate(Problem &problem)
     }
 }
 
+template <std::size_t Pixels>
 double measure(Problem &problem)
 {
+    static_assert(kPixelsPerSample % Pixels == 0);
+    constexpr auto repetitions = kPixelsPerSample / Pixels;
     auto const start = bench::Clock::now();
-    verticalGaussian9(problem.config.input.data(), problem.config.output.data(),
-                      problem.config.rowStride, kIterationsPerSample);
+    verticalGaussian9<Pixels>(problem.config.input.data(),
+                              problem.config.output.data(),
+                              problem.config.rowStride, repetitions);
     auto const stop = bench::Clock::now();
     auto const elapsedNs =
         std::chrono::duration<double, std::nano>(stop - start).count();
-    auto const pixels =
-        static_cast<double>(kPixelsPerRow * kIterationsPerSample);
-    return elapsedNs / pixels;
+    return elapsedNs / static_cast<double>(kPixelsPerSample);
 }
 
 BenchmarkResult summarize(std::vector<double> &samples)
@@ -231,15 +243,19 @@ BenchmarkResult summarize(std::vector<double> &samples)
     };
 }
 
-BenchmarkComparison benchmark(Problem &conflict, Problem &padded)
+template <std::size_t Pixels>
+TileResult benchmark(Problem &conflict, Problem &padded)
 {
-    validate(conflict);
-    validate(padded);
-    verticalGaussian9(conflict.config.input.data(),
-                      conflict.config.output.data(), conflict.config.rowStride,
-                      kWarmupIterations);
-    verticalGaussian9(padded.config.input.data(), padded.config.output.data(),
-                      padded.config.rowStride, kWarmupIterations);
+    static_assert(kWarmupPixels % Pixels == 0);
+    constexpr auto warmupRepetitions = kWarmupPixels / Pixels;
+    validate<Pixels>(conflict);
+    validate<Pixels>(padded);
+    verticalGaussian9<Pixels>(
+        conflict.config.input.data(), conflict.config.output.data(),
+        conflict.config.rowStride, warmupRepetitions);
+    verticalGaussian9<Pixels>(
+        padded.config.input.data(), padded.config.output.data(),
+        padded.config.rowStride, warmupRepetitions);
 
     auto conflictSamples = std::vector<double>{};
     auto paddedSamples = std::vector<double>{};
@@ -247,18 +263,60 @@ BenchmarkComparison benchmark(Problem &conflict, Problem &padded)
     paddedSamples.reserve(kSamples);
     for (auto sample = std::size_t{0}; sample < kSamples; ++sample) {
         if ((sample & 1U) == 0) {
-            conflictSamples.push_back(measure(conflict));
-            paddedSamples.push_back(measure(padded));
+            conflictSamples.push_back(measure<Pixels>(conflict));
+            paddedSamples.push_back(measure<Pixels>(padded));
         } else {
-            paddedSamples.push_back(measure(padded));
-            conflictSamples.push_back(measure(conflict));
+            paddedSamples.push_back(measure<Pixels>(padded));
+            conflictSamples.push_back(measure<Pixels>(conflict));
         }
     }
 
+    constexpr auto linesPerRow = Pixels / kFloatsPerCacheLine;
     return {
-        .conflict = summarize(conflictSamples),
-        .padded = summarize(paddedSamples),
+        .pixels = Pixels,
+        .linesPerRow = linesPerRow,
+        .paddedMaxLinesPerSet = std::min(kRows, linesPerRow) + 1,
+        .comparison = {
+            .conflict = summarize(conflictSamples),
+            .padded = summarize(paddedSamples),
+        },
     };
+}
+
+void printResultRow(TileResult const &result)
+{
+    auto const &conflictResult = result.comparison.conflict;
+    auto const &paddedResult = result.comparison.padded;
+    std::cout << result.pixels << '\t' << result.linesPerRow << '\t'
+              << result.paddedMaxLinesPerSet << '\t'
+              << conflictResult.medianNsPerPixel << " ["
+              << conflictResult.p10NsPerPixel << ", "
+              << conflictResult.p90NsPerPixel << "]\t"
+              << paddedResult.medianNsPerPixel << " ["
+              << paddedResult.p10NsPerPixel << ", "
+              << paddedResult.p90NsPerPixel << "]\t"
+              << conflictResult.medianNsPerPixel /
+                     paddedResult.medianNsPerPixel
+              << "x\n";
+}
+
+void printResults(std::span<TileResult const> const results)
+{
+    std::cout
+        << "9-tap separable Gaussian vertical pass; " << kPixelsPerSample
+        << " pixels/layout/sample\n"
+        << "tile\tlines\tpadded max lines/set\t4096 B ns/pixel [p10, p90]"
+           "\t4160 B ns/pixel [p10, p90]\tslowdown\n"
+        << std::fixed << std::setprecision(3);
+    for (auto const &result : results) {
+        printResultRow(result);
+    }
+    std::cout << "4096 B always places 9 corresponding source lines plus "
+                 "output in one set: 10 lines > "
+              << kAssumedL1Ways << " ways.\n"
+              << "with 64 B row padding, max occupancy is min(9, tile lines) "
+                 "+ output; it exceeds "
+              << kAssumedL1Ways << " ways from 128 pixels onward.\n";
 }
 
 } // namespace
@@ -269,31 +327,12 @@ int main()
 
     auto conflict = Problem{kConflictRowStride};
     auto padded = Problem{kPaddedRowStride};
-    auto const results = benchmark(conflict, padded);
-    auto const &conflictResult = results.conflict;
-    auto const &paddedResult = results.padded;
-
-    std::cout << "9-tap separable Gaussian vertical pass, " << kPixelsPerRow
-              << " aligned float pixels\n"
-              << "row stride\trow bytes\tns/pixel [p10, p90]\tslowdown\n"
-              << kConflictRowStride << '\t'
-              << kConflictRowStride * sizeof(float) << '\t' << std::fixed
-              << std::setprecision(3) << conflictResult.medianNsPerPixel
-              << " [" << conflictResult.p10NsPerPixel << ", "
-              << conflictResult.p90NsPerPixel << "]\t"
-              << conflictResult.medianNsPerPixel /
-                     paddedResult.medianNsPerPixel
-              << "x\n"
-              << kPaddedRowStride << '\t'
-              << kPaddedRowStride * sizeof(float) << '\t'
-              << paddedResult.medianNsPerPixel << " ["
-              << paddedResult.p10NsPerPixel << ", "
-              << paddedResult.p90NsPerPixel << "]\t1.000x\n"
-              << "4096 B pitch maps each group of 9 corresponding source "
-                 "lines plus output to one set: 10 lines > "
-              << kAssumedL1Ways << " ways.\n"
-              << "the tile spans " << kLinesPerTile
-              << " lines/row; 64 B padding rotates rows and caps the padded "
-                 "case at "
-              << kLinesPerTile + 1 << " lines/set.\n";
+    auto const results = std::array{
+        benchmark<16>(conflict, padded),
+        benchmark<32>(conflict, padded),
+        benchmark<64>(conflict, padded),
+        benchmark<128>(conflict, padded),
+        benchmark<256>(conflict, padded),
+    };
+    printResults(results);
 }

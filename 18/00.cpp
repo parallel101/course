@@ -13,7 +13,7 @@ namespace {
 
 constexpr std::size_t kRows = 128;
 constexpr std::size_t kMinColumns = 1008;
-constexpr std::size_t kMaxColumns = 1036;
+constexpr std::size_t kMaxColumns = 1040;
 constexpr std::size_t kWarmupIterations = 16;
 constexpr std::size_t kIterationsPerSample = 256;
 constexpr std::size_t kSamples = 31;

@@ -16,7 +16,7 @@ flags=(
 
 targets=("$@")
 if (( ${#targets[@]} == 0 )); then
-    targets=(00 01 02 03 04 05)
+    targets=(00 01 02 03 04 05 06)
 fi
 
 mkdir -p bin
